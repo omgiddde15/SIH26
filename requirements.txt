@@ -1,0 +1,7 @@
+streamlit
+torch
+torchvision
+kornia
+opencv-python-headless
+numpy
+matplotlib
