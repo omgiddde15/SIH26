@@ -451,7 +451,7 @@ if s_active is not None and r_active is not None:
         st.image(
             cv2.cvtColor(s_active, cv2.COLOR_BGR2RGB),
             caption=f"Source: {st.session_state.get('source_filename', 'source.jpeg')} [{s_active.shape[1]}×{s_active.shape[0]} px]",
-            use_container_width=True
+            width="stretch"
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -460,7 +460,7 @@ if s_active is not None and r_active is not None:
         st.image(
             cv2.cvtColor(r_active, cv2.COLOR_BGR2RGB),
             caption=f"Reference: {st.session_state.get('reference_filename', 'reference.jpeg')} [{r_active.shape[1]}×{r_active.shape[0]} px]",
-            use_container_width=True
+            width="stretch"
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -590,19 +590,51 @@ if "registration_result" in st.session_state:
         r_c1, r_c2 = st.columns(2)
         with r_c1:
             st.markdown("<div class='img-box'>", unsafe_allow_html=True)
-            st.image(reg_src, caption="Warped Source Image (Aligned to Reference Grid)", use_container_width=True)
+            st.image(reg_src, caption="Warped Source Image (Aligned to Reference Grid)", width="stretch")
             st.markdown("</div>", unsafe_allow_html=True)
         with r_c2:
             st.markdown("<div class='img-box'>", unsafe_allow_html=True)
-            st.image(ref_g, caption="Reference Base Image (Ground Truth Frame)", use_container_width=True)
+            st.image(ref_g, caption="Reference Base Image (Ground Truth Frame)", width="stretch")
             st.markdown("</div>", unsafe_allow_html=True)
 
     with tab_blend:
-        overlay = cv2.addWeighted(ref_g.astype(float), 0.5, reg_src.astype(float), 0.5, 0).astype(np.uint8)
-        st.image(overlay, caption="Composite Blend: 50% Reference Base + 50% Warped Source", use_container_width=True)
+        ref_g = cv2.cvtColor(r_active, cv2.COLOR_BGR2GRAY) if len(r_active.shape) == 3 else r_active
+        registered = res["registered_image"]
+
+        st.write("Reference shape:", ref_g.shape)
+        st.write("Registered shape:", registered.shape)
+        st.write("Reference dtype:", ref_g.dtype)
+        st.write("Registered dtype:", registered.dtype)
+
+        if registered.shape[:2] != ref_g.shape[:2]:
+            registered = cv2.resize(
+                registered,
+                (ref_g.shape[1], ref_g.shape[0]),
+                interpolation=cv2.INTER_LINEAR
+            )
+
+        if len(registered.shape) == 3:
+            registered = cv2.cvtColor(registered, cv2.COLOR_BGR2GRAY)
+
+        ref_f = ref_g.astype(np.float32)
+        reg_f = registered.astype(np.float32)
+
+        overlay = cv2.addWeighted(
+            ref_f,
+            0.5,
+            reg_f,
+            0.5,
+            0
+        ).astype(np.uint8)
+
+        st.image(
+            overlay,
+            caption="Composite Blend (50/50)",
+            width="stretch"
+        )
 
     with tab_diff:
-        diff = cv2.absdiff(ref_g, reg_src)
+        diff = cv2.absdiff(ref_g, registered)
         fig_diff, ax_diff = plt.subplots(figsize=(8, 3.2))
         fig_diff.patch.set_facecolor('#0b0e14')
         ax_diff.set_facecolor('#121824')
@@ -625,7 +657,7 @@ if "registration_result" in st.session_state:
         st.image(
             cv2.cvtColor(res["match_visualization"], cv2.COLOR_BGR2RGB),
             caption=f"{res['final_inliers']} Geometrically Verified Correspondences (Yellow Vectors: Source → Reference)",
-            use_container_width=True
+            width="stretch"
         )
 
     with col_ev2:
