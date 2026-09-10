@@ -1,0 +1,4 @@
+Method,Successful Pairs,Total Pairs Tested,Mean Check RMSE,Median Check RMSE,Mean Final Inlier Ratio,Mean Spatial Occupancy,Mean Spatial CV,Mean Runtime,Pairs < 1px (%)
+SIFT,3,4,0.1132,0.1168,1.0,0.9852,0.5023,1.12,100.0
+LoFTR,4,4,0.5584,0.0719,0.9871,0.9445,0.486,26.13,75.0
+SuperGlue,3,4,0.3719,0.3203,0.9967,0.963,0.5931,11.56,100.0

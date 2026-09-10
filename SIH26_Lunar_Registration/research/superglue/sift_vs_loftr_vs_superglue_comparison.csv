@@ -1,0 +1,4 @@
+Method,Candidate Matches,Initial Inliers,Final Inliers,Inlier Ratio,Fit RMSE,Mean Check RMSE,Median Check RMSE,Best Check RMSE,Worst Check RMSE,Check Median,Check Max,Check RMSE < 1 px (%),Spatial Occupancy,Spatial CV,Runtime
+SIFT,18530,18490,40.0,1.0,0.1265,0.8747,0.8928,0.8136,0.9132,0.7615,1.46,100.0,0.7778,0.8129,87.53
+LoFTR + RANSAC,5979,5800,39.8,0.995,1.0573,0.9601,0.9492,0.8386,1.0825,0.8408,1.694,80.0,0.9111,0.6917,48.44
+SuperGlue,1487,1457,40.0,1.0,0.6343,0.8985,0.8856,0.8717,0.9502,0.7437,1.6735,100.0,0.6667,0.8641,95.69

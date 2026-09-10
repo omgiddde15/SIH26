@@ -1,0 +1,5 @@
+Pair,SIFT,LoFTR,SuperGlue,Best Accuracy,Best Spatial,Fastest,Notes
+pair_01,Failed: insufficient ratio matches (2 < 4),Success,Failed: insufficient matches (3 < 4),LoFTR,LoFTR,LoFTR,SIFT failed (insufficient ratio matches (2 < 4)); SuperGlue failed (insufficient matches (3 < 4))
+pair_02,Success,Success,Success,LoFTR,SuperGlue,SIFT,All matchers succeeded
+pair_03,Success,Success,Success,LoFTR,LoFTR,SIFT,All matchers succeeded
+pair_04,Success,Success,Success,LoFTR,LoFTR,SIFT,All matchers succeeded

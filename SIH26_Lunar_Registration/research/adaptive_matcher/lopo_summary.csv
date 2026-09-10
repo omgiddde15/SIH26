@@ -1,0 +1,5 @@
+Fold,Held-Out Pair,Selected Matcher,Validation Status,Fallback,Adaptive Check RMSE,SIFT Check RMSE,LoFTR Check RMSE,SuperGlue Check RMSE,Adaptive Runtime,Best Valid Accuracy Method,Fastest Valid Method,Adaptive Successful?,Adaptive Best Accuracy?,Adaptive Best Speed?,Scientific Note
+Fold 1,pair_01,LoFTR,VALID,No,1.7188,,1.7188,,3.19,LoFTR,LoFTR,Yes,Yes,Yes,Fit RMSE is never used as a substitute for held-out Check RMSE.
+Fold 2,pair_02,SIFT,VALID,No,0.0045,0.0045,0.0034,0.0,1.56,SuperGlue,SIFT,Yes,No,Yes,Fit RMSE is never used as a substitute for held-out Check RMSE.
+Fold 3,pair_03,SIFT,VALID,No,0.0072,0.0072,0.0031,0.0,1.03,SuperGlue,SIFT,Yes,No,Yes,Fit RMSE is never used as a substitute for held-out Check RMSE.
+Fold 4,pair_04,SIFT,VALID,No,0.0034,0.0034,0.0039,0.0,1.32,SuperGlue,SIFT,Yes,No,Yes,Fit RMSE is never used as a substitute for held-out Check RMSE.

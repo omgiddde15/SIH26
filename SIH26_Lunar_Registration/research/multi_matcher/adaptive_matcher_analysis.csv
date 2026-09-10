@@ -1,0 +1,5 @@
+Pair,Best Method,Image Characteristics,Reason for Best Method
+pair_01,LoFTR,"Res: 146x513, Contrast Std: 14.02, Scale Diff: 0.855",Extreme low contrast & resolution (146x513). SIFT/SuperGlue fail; only LoFTR converges.
+pair_02,LoFTR,"Res: 600x1000, Contrast Std: 29.27, Scale Diff: 1.0",Sub-pixel dense feature regression captures global context across repeating patterns.
+pair_03,LoFTR,"Res: 600x900, Contrast Std: 46.15, Scale Diff: 1.0",Sub-pixel dense feature regression captures global context across repeating patterns.
+pair_04,LoFTR,"Res: 600x900, Contrast Std: 28.15, Scale Diff: 1.0",Sub-pixel dense feature regression captures global context across repeating patterns.

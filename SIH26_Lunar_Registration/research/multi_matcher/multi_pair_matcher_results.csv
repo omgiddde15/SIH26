@@ -1,0 +1,13 @@
+Pair,Method,Candidate Matches,Initial Inliers,Estimation Points,Check Points,Fit RMSE,Mean Check RMSE,Median Check RMSE,Max Check Error,<1px Percentage,Final Inlier Ratio,Spatial Occupancy,Spatial CV,Runtime,Status
+pair_01,SIFT,2,0,0,0,,,,,0.0,0.0,0.0,,0.08,Failed: insufficient ratio matches (2 < 4)
+pair_01,LoFTR,166,49,35,14,1.5752,1.9999,1.8907,2.9957,0.0,0.9486,0.7778,0.7432,3.6,Success
+pair_01,SuperGlue,3,0,0,0,,,,,0.0,0.0,0.0,,1.39,Failed: insufficient matches (3 < 4)
+pair_02,SIFT,2883,2878,40,14,0.2639,0.1346,0.1564,0.2582,100.0,1.0,1.0,0.5174,1.24,Success
+pair_02,LoFTR,8591,8591,40,14,0.0783,0.0808,0.0682,0.162,100.0,1.0,1.0,0.4339,35.96,Success
+pair_02,SuperGlue,766,752,40,14,0.862,0.3226,0.3203,0.5005,100.0,1.0,1.0,0.3895,13.06,Success
+pair_03,SIFT,2157,2151,40,14,0.2576,0.1179,0.1168,0.2095,100.0,1.0,0.9556,0.5355,0.75,Success
+pair_03,LoFTR,7739,7739,40,14,0.0657,0.082,0.0756,0.1567,100.0,1.0,1.0,0.3834,32.16,Success
+pair_03,SuperGlue,549,536,40,14,0.9312,0.3094,0.2905,0.5429,100.0,0.995,0.9778,0.6135,11.03,Success
+pair_04,SIFT,2310,2306,40,14,0.1513,0.087,0.0657,0.1616,100.0,1.0,1.0,0.4541,1.38,Success
+pair_04,LoFTR,7739,7739,40,14,0.0789,0.0708,0.0658,0.1422,100.0,1.0,1.0,0.3834,32.8,Success
+pair_04,SuperGlue,527,522,40,14,0.7688,0.4837,0.3589,0.9154,80.0,0.995,0.9111,0.7763,10.58,Success

@@ -1,4 +1,12 @@
 import os
+import sys
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(APP_DIR)
+
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
+
 import ssl
 import time
 import cv2
@@ -7,6 +15,8 @@ import torch
 import matplotlib.pyplot as plt
 import streamlit as st
 from kornia.feature import LoFTR
+from app.research_ui import render_research_lab
+from app.registration_core import compute_matching_scale
 
 # Disable SSL verification for model weight downloads on constrained platforms
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -48,31 +58,63 @@ def calculate_spatial_grid(points, image_shape, rows=3, cols=3):
         grid[row, col] += 1
     return grid
 
-def register_images(source_image, reference_image, max_per_cell=6, ransac_threshold=3.0):
+def register_images(source_image, reference_image, max_per_cell=6, ransac_threshold=3.0, max_loftr_dim=1000, max_pixel_budget=1000000):
     """
     LOCKED CORE REGISTRATION PIPELINE:
-    CLAHE -> LoFTR -> RANSAC -> Quality + Spatial Selection -> Final Homography -> Warped Result -> Telemetry Metrics.
+    CLAHE -> Memory-Safe Aspect-Ratio Scaling -> LoFTR -> Coordinate Back-Mapping ->
+    RANSAC -> Quality + Spatial Selection -> Final Homography -> Warped Result -> Telemetry Metrics.
     """
     start_time = time.perf_counter()
     matcher = load_loftr_matcher()
 
-    # Step 1: Preprocessing & CLAHE
+    # Step 1: Preprocessing & CLAHE (kept at original resolution)
     source_gray, source_clahe = preprocess_image(source_image)
     reference_gray, reference_clahe = preprocess_image(reference_image)
+    s_h, s_w = source_gray.shape
+    r_h, r_w = reference_gray.shape
 
-    # Step 2: LoFTR Feature Matching
-    source_tensor = torch.from_numpy(source_clahe.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
-    reference_tensor = torch.from_numpy(reference_clahe.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+    # Step 2: Memory-Safe Aspect-Ratio Scaling for LoFTR
+    scale_s, s_w_match, s_h_match = compute_matching_scale((s_h, s_w), max_dim=max_loftr_dim, max_budget=max_pixel_budget)
+    scale_r, r_w_match, r_h_match = compute_matching_scale((r_h, r_w), max_dim=max_loftr_dim, max_budget=max_pixel_budget)
+
+    if scale_s < 1.0:
+        s_match = cv2.resize(source_clahe, (s_w_match, s_h_match), interpolation=cv2.INTER_AREA)
+    else:
+        s_match = source_clahe
+        s_w_match, s_h_match = s_w, s_h
+
+    if scale_r < 1.0:
+        r_match = cv2.resize(reference_clahe, (r_w_match, r_h_match), interpolation=cv2.INTER_AREA)
+    else:
+        r_match = reference_clahe
+        r_w_match, r_h_match = r_w, r_h
+
+    sx0 = float(s_w) / float(s_w_match)
+    sy0 = float(s_h) / float(s_h_match)
+    sx1 = float(r_w) / float(r_w_match)
+    sy1 = float(r_h) / float(r_h_match)
+
+    # Step 3: LoFTR Feature Matching
+    source_tensor = torch.from_numpy(s_match.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+    reference_tensor = torch.from_numpy(r_match.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
 
     with torch.no_grad():
         output = matcher({"image0": source_tensor, "image1": reference_tensor})
 
-    mkpts0 = output["keypoints0"].cpu().numpy()
-    mkpts1 = output["keypoints1"].cpu().numpy()
+    mkpts0_match = output["keypoints0"].cpu().numpy()
+    mkpts1_match = output["keypoints1"].cpu().numpy()
     confidence = output["confidence"].cpu().numpy()
 
-    if len(mkpts0) < 4:
-        raise RuntimeError(f"LoFTR detected insufficient candidate matches ({len(mkpts0)}). Minimum 4 required.")
+    if len(mkpts0_match) < 4:
+        raise RuntimeError(f"LoFTR detected insufficient candidate matches ({len(mkpts0_match)}). Minimum 4 required.")
+
+    # Step 4: Map Keypoint Coordinates Back to ORIGINAL Image Coordinates
+    mkpts0 = mkpts0_match.copy()
+    mkpts1 = mkpts1_match.copy()
+    mkpts0[:, 0] *= sx0
+    mkpts0[:, 1] *= sy0
+    mkpts1[:, 0] *= sx1
+    mkpts1[:, 1] *= sy1
 
     # Step 3: Initial RANSAC Homography
     H_initial, mask_initial = cv2.findHomography(
@@ -182,6 +224,8 @@ def register_images(source_image, reference_image, max_per_cell=6, ransac_thresh
         "homography_matrix": H_final.tolist(),
         "runtime": float(time.perf_counter() - start_time),
         "device": _DEVICE,
+        "scale_source": float(scale_s),
+        "scale_ref": float(scale_r),
     }
 
 
@@ -389,7 +433,12 @@ st.markdown("""
 
 # --- DEMO DATA LOADER HELPER ---
 DEV_SOURCE_PATH = os.path.join("data", "source", "source.jpeg")
+if not os.path.exists(DEV_SOURCE_PATH):
+    DEV_SOURCE_PATH = os.path.join("SIH26_Lunar_Registration", "data", "source", "source.jpeg")
+
 DEV_REFERENCE_PATH = os.path.join("data", "reference", "reference.jpeg")
+if not os.path.exists(DEV_REFERENCE_PATH):
+    DEV_REFERENCE_PATH = os.path.join("SIH26_Lunar_Registration", "data", "reference", "reference.jpeg")
 
 col_util1, col_util2 = st.columns([3, 1])
 with col_util2:
@@ -464,6 +513,56 @@ if s_active is not None and r_active is not None:
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # 🧠 Memory-Safe Engine & Resolution Settings
+    with st.expander("🧠 Memory-Safe Engine & Resolution Settings", expanded=False):
+        mode_opt = st.selectbox(
+            "LoFTR Feature Matching Mode",
+            ["Fast Matching (Speed Priority)", "Memory-Safe (Balanced, Default)", "High Resolution", "Custom"],
+            index=0,
+            key="memory_safe_matching_mode",
+            help="Controls intermediate tensor resolution during LoFTR feature matching. The final homography and warping are always executed at full original reference resolution."
+        )
+        if mode_opt == "High Resolution":
+            default_dim, default_budget = 2000, 2.5
+        elif mode_opt == "Memory-Safe (Balanced, Default)":
+            default_dim, default_budget = 1600, 1.8
+        elif mode_opt == "Custom":
+            default_dim, default_budget = 1000, 1.0
+        else:  # Fast Matching (Speed Priority)
+            default_dim, default_budget = 1000, 1.0
+
+        c_ms1, c_ms2 = st.columns(2)
+        with c_ms1:
+            cfg_max_dim = st.number_input(
+                "Max Dimension (px)",
+                min_value=400,
+                max_value=4000,
+                value=default_dim,
+                step=100,
+                key="memory_safe_max_dimension",
+                help="Upper bound on the longest edge of input tensors fed into LoFTR."
+            )
+        with c_ms2:
+            cfg_max_budget_m = st.number_input(
+                "Max Pixel Budget (M px)",
+                min_value=0.2,
+                max_value=10.0,
+                value=float(default_budget),
+                step=0.1,
+                key="memory_safe_pixel_budget",
+                help="Upper bound on the total pixel count (H × W) for LoFTR input tensors."
+            )
+            cfg_max_budget = int(cfg_max_budget_m * 1e6)
+
+        st.caption(f"Active matching constraint: Max Dimension = **{cfg_max_dim} px** | Max Pixel Budget = **{cfg_max_budget/1e6:.1f}M px**")
+        st.markdown(
+            "<span style='color: #8b949e; font-size: 0.8rem;'>"
+            "Large images are automatically downscaled for feature matching. "
+            "Matching coordinates are mapped back to the original image frame before geometric estimation."
+            "</span>",
+            unsafe_allow_html=True
+        )
+
     st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
     if st.button("🚀 INITIATE REGISTRATION SEQUENCE", type="primary", use_container_width=True):
         st.session_state.pop("registration_result", None)
@@ -473,7 +572,7 @@ if s_active is not None and r_active is not None:
             st.info("Executing Scientific Registration Pipeline: CLAHE → LoFTR → RANSAC → Spatial Selection → Homography...")
         
         try:
-            res = register_images(s_active, r_active)
+            res = register_images(s_active, r_active, max_loftr_dim=cfg_max_dim, max_pixel_budget=cfg_max_budget)
             st.session_state["registration_result"] = res
             status_placeholder.empty()
         except Exception as e:
@@ -492,6 +591,10 @@ if "registration_result" in st.session_state:
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
     
     # Telemetry Status Bar
+    scale_text = ""
+    if res.get("scale_source", 1.0) < 1.0 or res.get("scale_ref", 1.0) < 1.0:
+        scale_text = f" | SCALE: <span style='color: #00f2ff; font-weight: bold;'>SRC {res.get('scale_source', 1.0):.2f}x / REF {res.get('scale_ref', 1.0):.2f}x</span>"
+
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1a24; border: 1px solid #1a3c54; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px;">
         <div>
@@ -499,7 +602,7 @@ if "registration_result" in st.session_state:
             <span style="margin-left: 12px; font-weight: 600; color: #58a6ff; font-size: 0.9rem;">GEOMETRIC CONVERGENCE ACHIEVED</span>
         </div>
         <div style="font-family: monospace; font-size: 0.82rem; color: #8b949e;">
-            EXECUTION TIME: <span style="color: #00f2ff; font-weight: bold;">{res['runtime']:.2f}s</span> | COMPUTE: <span style="color: #00f2ff; font-weight: bold;">{res['device'].upper()}</span>
+            EXECUTION TIME: <span style="color: #00f2ff; font-weight: bold;">{res['runtime']:.2f}s</span> | COMPUTE: <span style="color: #00f2ff; font-weight: bold;">{res['device'].upper()}</span>{scale_text}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -711,6 +814,7 @@ if "registration_result" in st.session_state:
             - **Maximum Error**: `{res['max_error']:.4f} px`
             - **Inlier Retention Rate**: `{res['final_inlier_ratio']*100:.2f}%` ({res['final_inliers']}/{res['selected_matches']})
             - **Occupied Spatial Cells**: `{res['occupied_cells']} / 9`
+            - **Matching Scale**: `Source: {res.get('scale_source', 1.0):.3f}x | Reference: {res.get('scale_ref', 1.0):.3f}x`
             """)
 
 # --- FOOTER ---
@@ -719,3 +823,6 @@ st.markdown("""
     Smart India Hackathon (SIH) 2026 — Lunar Image Registration System | Chandrayaan-2 Research Pipeline
 </div>
 """, unsafe_allow_html=True)
+
+with st.expander("🔬 RESEARCH LAB — EXPERIMENTAL", expanded=False):
+    render_research_lab()

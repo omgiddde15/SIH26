@@ -1,0 +1,3 @@
+Pair,Method,Failure Stage,Failure Reason
+pair_01,SIFT,ratio_filtering,insufficient ratio matches (2 < 4)
+pair_01,SuperGlue,feature_matching,insufficient matches (3 < 4)

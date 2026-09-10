@@ -1,0 +1,17 @@
+Pair,Method,Selected Matcher,Fallback Used?,Source Res,Ref Res,Contrast,Texture,Candidate Matches,Initial Inliers,Final Inliers,Final Inlier Ratio,Fit RMSE,Held-out Check RMSE,Spatial Occupancy,Spatial CV,Runtime,Status,Decision Reason
+pair_01,SIFT,SIFT,No,146x513,194x528,LOW (std=14.02),HIGH (grad=25.65),1,0,0,0.0,,,0.0,,0.06,Failed: insufficient ratio matches (1 < 4),Fixed SIFT baseline
+pair_01,LoFTR,LoFTR,No,146x513,194x528,LOW (std=14.02),HIGH (grad=25.65),166,49,38,1.0,1.437,1.7188,0.8889,0.5329,2.82,Success,Fixed LoFTR baseline
+pair_01,SuperGlue,SuperGlue,No,146x513,194x528,LOW (std=14.02),HIGH (grad=25.65),16,6,6,1.0,0.8662,,0.2222,1.8708,1.18,Failed: insufficient inliers for held-out validation (6 < 8; 0 check points),Fixed SuperGlue baseline
+pair_01,Adaptive,LoFTR,No,146x513,194x528,LOW (std=14.02),HIGH (grad=25.65),166,49,38,1.0,1.437,1.7188,0.8889,0.5329,2.78,Success,Low intensity contrast (std 14.02 < 20.0) suppresses gradient/corner detectors (SIFT/SuperPoint).; Small resolution (528 px < 600 px) yields insufficient classical keypoints.; LoFTR selected for dense feature regression across low-contrast lunar regolith.
+pair_02,SIFT,SIFT,No,600x1000,600x1000,MEDIUM (std=29.27),HIGH (grad=74.78),4036,4026,54,1.0,0.004,0.0045,1.0,0.0,1.25,Success,Fixed SIFT baseline
+pair_02,LoFTR,LoFTR,No,600x1000,600x1000,MEDIUM (std=29.27),HIGH (grad=74.78),8591,8591,54,1.0,0.003,0.0034,1.0,0.0,29.48,Success,Fixed LoFTR baseline
+pair_02,SuperGlue,SuperGlue,No,600x1000,600x1000,MEDIUM (std=29.27),HIGH (grad=74.78),832,826,54,1.0,0.0,0.0,1.0,0.0,13.93,Success,Fixed SuperGlue baseline
+pair_02,Adaptive,SIFT,No,600x1000,600x1000,MEDIUM (std=29.27),HIGH (grad=74.78),4036,4026,54,1.0,0.004,0.0045,1.0,0.0,1.74,Success,Standard resolution (1000 px) with moderate-to-high contrast (std 29.27).; High texture density (gradient mean 74.78 >= 18.0).; SIFT expected to deliver 25x faster runtime (<1.5s) with sub-pixel held-out precision.
+pair_03,SIFT,SIFT,No,600x900,600x900,HIGH (std=46.15),HIGH (grad=67.78),3352,3340,54,1.0,0.0068,0.0072,1.0,0.0,1.32,Success,Fixed SIFT baseline
+pair_03,LoFTR,LoFTR,No,600x900,600x900,HIGH (std=46.15),HIGH (grad=67.78),7739,7739,54,1.0,0.0027,0.0031,1.0,0.0,23.64,Success,Fixed LoFTR baseline
+pair_03,SuperGlue,SuperGlue,No,600x900,600x900,HIGH (std=46.15),HIGH (grad=67.78),722,712,54,1.0,0.0,0.0,1.0,0.0,10.17,Success,Fixed SuperGlue baseline
+pair_03,Adaptive,SIFT,No,600x900,600x900,HIGH (std=46.15),HIGH (grad=67.78),3352,3340,54,1.0,0.0068,0.0072,1.0,0.0,1.02,Success,Standard resolution (900 px) with moderate-to-high contrast (std 46.15).; High texture density (gradient mean 67.78 >= 18.0).; SIFT expected to deliver 25x faster runtime (<1.5s) with sub-pixel held-out precision.
+pair_04,SIFT,SIFT,No,600x900,600x900,MEDIUM (std=28.15),HIGH (grad=68.48),3946,3940,54,1.0,0.0032,0.0034,1.0,0.0,1.17,Success,Fixed SIFT baseline
+pair_04,LoFTR,LoFTR,No,600x900,600x900,MEDIUM (std=28.15),HIGH (grad=68.48),7739,7739,54,1.0,0.0032,0.0039,1.0,0.0,23.98,Success,Fixed LoFTR baseline
+pair_04,SuperGlue,SuperGlue,No,600x900,600x900,MEDIUM (std=28.15),HIGH (grad=68.48),664,657,54,1.0,0.0,0.0,1.0,0.0,9.26,Success,Fixed SuperGlue baseline
+pair_04,Adaptive,SIFT,No,600x900,600x900,MEDIUM (std=28.15),HIGH (grad=68.48),3946,3940,54,1.0,0.0032,0.0034,1.0,0.0,1.25,Success,Standard resolution (900 px) with moderate-to-high contrast (std 28.15).; High texture density (gradient mean 68.48 >= 18.0).; SIFT expected to deliver 25x faster runtime (<1.5s) with sub-pixel held-out precision.

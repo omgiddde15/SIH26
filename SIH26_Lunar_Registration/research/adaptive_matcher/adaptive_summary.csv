@@ -1,0 +1,5 @@
+Method,Successful Pairs,Total Pairs,Success Rate (%),Mean Check RMSE,Median Check RMSE,Mean Inlier Ratio,Mean Spatial Occupancy,Mean Spatial CV,Mean Runtime (s)
+SIFT,3,4,75.0,0.005,0.0045,1.0,1.0,0.0,1.25
+LoFTR,4,4,100.0,0.4323,0.0036,1.0,0.9722,0.1332,19.98
+SuperGlue,3,4,75.0,0.0,0.0,1.0,1.0,0.0,11.12
+Adaptive,4,4,100.0,0.4335,0.0058,1.0,0.9722,0.1332,1.7

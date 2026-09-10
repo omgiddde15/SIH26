@@ -1,0 +1,3 @@
+Pair,Method,Failure Stage,Failure Reason,Recovery Event
+pair_01,SIFT,ratio_filtering,insufficient ratio matches (1 < 4),None (Fixed)
+pair_01,SuperGlue,held_out_validation,insufficient inliers (6 < 8; 0 check points),None (Fixed)

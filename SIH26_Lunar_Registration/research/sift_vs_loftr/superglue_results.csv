@@ -1,0 +1,6 @@
+Seed,Method,Candidate Matches,Estimation Points,Check Points,Fit RMSE,Check RMSE,Check Mean Error,Check Median Error,Check Max Error,Final Inlier Count,Final Inlier Ratio,Spatial Occupancy,Spatial CV,Runtime
+1,SuperGlue,1487,40,14,0.5077,0.8717,0.7704,0.8314,1.4479,40,1.0,0.5556,0.9785,95.69
+2,SuperGlue,1487,40,14,0.7567,0.909,0.8038,0.853,1.8121,40,1.0,0.6667,0.7874,95.69
+3,SuperGlue,1487,40,14,0.6624,0.8856,0.7686,0.8757,1.4809,40,1.0,0.6667,0.7945,95.69
+4,SuperGlue,1487,40,14,0.5597,0.8758,0.717,0.4634,1.7626,40,1.0,0.6667,0.9728,95.69
+5,SuperGlue,1487,40,14,0.6852,0.9502,0.8208,0.6949,1.864,40,1.0,0.7778,0.7874,95.69
