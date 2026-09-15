@@ -1,0 +1,2 @@
+pair,method,accepted_tiles,attempted_tiles,final_inliers,final_inlier_ratio,spatial_occupancy,spatial_cv,check_rmse_px,check_mean_px,check_median_px,check_max_px,checks_lt_1px_pct,runtime_s
+Pair 01,Quickness V4,2,3,307,0.9303030303030303,0.6666666666666666,0.7640224678347494,10.564547538757324,10.1670560836792,9.550125122070312,15.713415145874023,0.0,45.14291460000095

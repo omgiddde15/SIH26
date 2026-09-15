@@ -10,7 +10,6 @@ IMPORTANT:
 This module must NEVER import app.py.
 All registration functions are imported from app.registration_core.
 All research widgets use unique keys with prefix 'research_'.
-All data-loading operations transparently check file existence.
 """
 
 import os
@@ -24,6 +23,9 @@ import streamlit as st
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+APP_DIR = os.path.abspath(os.path.dirname(__file__))
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
 
 
 def _format_rmse(val):
@@ -62,10 +64,10 @@ def render_research_lab():
     """, unsafe_allow_html=True)
 
     tab_bm, tab_ablation, tab_adaptive, tab_lopo = st.tabs([
-        "📊 Matcher Benchmark",
-        "⚖️ Ablation Study",
-        "🧭 Adaptive Matcher",
-        "🔁 LOPO Validation",
+        "Matcher Benchmark",
+        "Ablation Study",
+        "Adaptive Matcher",
+        "LOPO Validation",
     ])
 
     # =========================================================================
@@ -97,10 +99,10 @@ def render_research_lab():
 # HELPER: TAB 1 — MATCHER BENCHMARK
 # =============================================================================
 def _render_matcher_benchmark():
-    st.markdown("#### 📊 Matcher Benchmark: Classical SIFT vs. Deep LoFTR vs. Graph-Attention SuperGlue")
+    st.markdown("#### Matcher Benchmark: Classical SIFT vs. Deep LoFTR vs. Graph-Attention SuperGlue")
     st.markdown("""
     <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 10px 14px; margin-bottom: 14px; color: #8b949e; font-size: 0.85rem;">
-        <b>Empirical Protocol:</b> Compares keypoint detection, descriptor matching, initial consensus, and held-out check RMSE
+        <b>Empirical Protocol:</b> Compares keypoint detection, descriptor matching, initial consensus, and held-out check RMSE 
         across deterministic seeds 1–5 on lunar surface imagery. Results are loaded from saved research datasets by default.
     </div>
     """, unsafe_allow_html=True)
@@ -121,8 +123,8 @@ def _render_matcher_benchmark():
         bm_dataset = st.selectbox(
             "Evaluation Dataset Pair",
             [
-                "⚡ Chandrayaan-2 Dev Pair (513×146)",
-                "🌕 Real Chandrayaan-2 Large Pair (1200×5053)",
+                "Real Chandrayaan-2 Large Pair (1200×5053)",
+                "Chandrayaan-2 Dev Pair (513×146)",
             ],
             index=0,
             key="research_bm_dataset_select",
@@ -130,10 +132,10 @@ def _render_matcher_benchmark():
         )
     with c_btn2:
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        run_bm_btn = st.button("🚀 Run Benchmark", type="primary", width="stretch", key="research_run_matcher_bm_btn")
+        run_bm_btn = st.button("Run Benchmark", type="primary", width="stretch", key="research_run_matcher_bm_btn")
 
     if run_bm_btn:
-        st.info("Executing SIFT vs. LoFTR benchmark across seeds 1–5...")
+        st.info("Executing SIFT vs. LoFTR benchmark across seeds 1–5. This may take 30–60 seconds on CPU...")
         prog_bar = st.progress(0)
         status_txt = st.empty()
 
@@ -142,7 +144,7 @@ def _render_matcher_benchmark():
             status_txt.info(f"Progress ({pct}%): {msg}")
 
         try:
-            # Check if research engine module is available
+            from research.sift_vs_loftr.benchmark_engine import run_benchmark
             large_src = os.path.join(PROJECT_ROOT, "data", "large_ch2", "source_ch2_large.png")
             large_ref = os.path.join(PROJECT_ROOT, "data", "large_ch2", "reference_ch2_large.png")
             dev_src = os.path.join(PROJECT_ROOT, "data", "source", "source.jpeg")
@@ -151,29 +153,20 @@ def _render_matcher_benchmark():
             if "Large" in bm_dataset and os.path.exists(large_src):
                 s_img = cv2.imread(large_src)
                 r_img = cv2.imread(large_ref)
-            elif os.path.exists(dev_src) and os.path.exists(dev_ref):
+            else:
                 s_img = cv2.imread(dev_src)
                 r_img = cv2.imread(dev_ref)
-            else:
-                s_img, r_img = None, None
 
-            if s_img is None or r_img is None:
-                status_txt.error("Selected test pair image files could not be found.")
-            else:
-                try:
-                    from research.sift_vs_loftr.benchmark_engine import run_benchmark
-                    res = run_benchmark(s_img, r_img, output_dir=sift_loftr_dir, progress_callback=bm_cb)
-                    st.session_state["research_benchmark_results"] = res
-                    status_txt.success("Benchmark completed successfully.")
-                except ImportError:
-                    status_txt.warning("Benchmark module 'research.sift_vs_loftr.benchmark_engine' is not present in this repository.")
+            res = run_benchmark(s_img, r_img, output_dir=sift_loftr_dir, progress_callback=bm_cb)
+            st.session_state["research_benchmark_results"] = res
+            status_txt.success("Benchmark completed successfully.")
         except Exception as e:
             status_txt.error(f"Benchmark run failed: {e}")
 
     # Load and render saved results
     if os.path.exists(p_comp):
         df_comp = pd.read_csv(p_comp)
-        st.markdown("##### 📋 Single Large Strip Comparison (1200×5053 px)")
+        st.markdown("##### Single Large Strip Comparison (1200×5053 px)")
 
         # KPI Summary Cards
         k1, k2, k3, k4 = st.columns(4)
@@ -213,22 +206,22 @@ def _render_matcher_benchmark():
         st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
         st.dataframe(df_comp, width="stretch", hide_index=True)
     else:
-        st.info("ℹ️ No precomputed benchmark result available yet. Click 'Run Benchmark' to generate results once benchmark scripts are configured.")
+        st.info("No benchmark result available yet. Click 'Run Benchmark' to generate results.")
 
     # Multi-pair aggregate summary if available
     if os.path.exists(p_multi_agg):
-        st.markdown("##### 🌐 Multi-Pair Suite Benchmark Summary (Pairs 01–04)")
+        st.markdown("##### Multi-Pair Suite Benchmark Summary (Pairs 01–04)")
         df_multi_agg = pd.read_csv(p_multi_agg)
         st.dataframe(df_multi_agg, width="stretch", hide_index=True)
 
     if os.path.exists(p_multi_res):
-        with st.expander("🔍 View Per-Pair Detailed Matcher Results", expanded=False):
+        with st.expander("View Per-Pair Detailed Matcher Results", expanded=False):
             df_multi_res = pd.read_csv(p_multi_res)
             st.dataframe(df_multi_res, width="stretch", hide_index=True)
 
     # Architectural Dashboard Plot
     if os.path.exists(p_dash3):
-        st.markdown("##### 📈 Consolidated Matcher Comparison Dashboard")
+        st.markdown("##### Consolidated Matcher Comparison Dashboard")
         st.image(p_dash3, caption="Architectural Comparison: SIFT vs. LoFTR vs. SuperGlue across Evaluation Metrics", width="stretch")
 
 
@@ -236,10 +229,10 @@ def _render_matcher_benchmark():
 # HELPER: TAB 2 — ABLATION STUDY
 # =============================================================================
 def _render_ablation_study():
-    st.markdown("#### ⚖️ Fair 54-Point Ablation Study")
+    st.markdown("#### Fair 54-Point Ablation Study")
     st.markdown("""
     <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 10px 14px; margin-bottom: 14px; color: #8b949e; font-size: 0.85rem;">
-        <b>Scientific Control:</b> Compares three geometric selection strategies using the <b>EXACT SAME 40 estimation points</b>
+        <b>Scientific Control:</b> Compares three geometric selection strategies using the <b>EXACT SAME 40 estimation points</b> 
         and the <b>EXACT SAME 14 held-out check correspondences</b> across deterministic seeds 1–5:
         <br>• <b>Variant A</b>: Random 40 Baseline (unconstrained random sampling)
         <br>• <b>Variant B</b>: Quality Only (top confidence/error score without spatial binning)
@@ -256,8 +249,8 @@ def _render_ablation_study():
         ab_dataset = st.selectbox(
             "Evaluation Dataset Pair",
             [
-                "⚡ Chandrayaan-2 Dev Pair (513×146)",
-                "🌕 Real Chandrayaan-2 Large Pair (1200×5053)",
+                "Real Chandrayaan-2 Large Pair (1200×5053)",
+                "Chandrayaan-2 Dev Pair (513×146)",
             ],
             index=0,
             key="research_ablation_dataset_select",
@@ -265,7 +258,7 @@ def _render_ablation_study():
         )
     with c_btn2:
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        run_ab_btn = st.button("🚀 Run Ablation Study", type="primary", width="stretch", key="research_run_ablation_btn")
+        run_ab_btn = st.button("Run Ablation Study", type="primary", width="stretch", key="research_run_ablation_btn")
 
     if run_ab_btn:
         st.info("Executing Fair 54-Point Ablation Study across seeds 1–5. Please wait...")
@@ -277,6 +270,7 @@ def _render_ablation_study():
             status_txt.info(f"Progress ({pct}%): {msg}")
 
         try:
+            from ablation_engine import run_fair_54_point_ablation
             large_src = os.path.join(PROJECT_ROOT, "data", "large_ch2", "source_ch2_large.png")
             large_ref = os.path.join(PROJECT_ROOT, "data", "large_ch2", "reference_ch2_large.png")
             dev_src = os.path.join(PROJECT_ROOT, "data", "source", "source.jpeg")
@@ -285,22 +279,13 @@ def _render_ablation_study():
             if "Large" in ab_dataset and os.path.exists(large_src):
                 s_img = cv2.imread(large_src)
                 r_img = cv2.imread(large_ref)
-            elif os.path.exists(dev_src) and os.path.exists(dev_ref):
+            else:
                 s_img = cv2.imread(dev_src)
                 r_img = cv2.imread(dev_ref)
-            else:
-                s_img, r_img = None, None
 
-            if s_img is None or r_img is None:
-                status_txt.error("Selected test pair image files could not be found.")
-            else:
-                try:
-                    from app.ablation_engine import run_fair_54_point_ablation
-                    res = run_fair_54_point_ablation(s_img, r_img, progress_callback=ab_cb)
-                    st.session_state["research_ablation_results"] = res
-                    status_txt.success("Ablation Study completed successfully.")
-                except ImportError:
-                    status_txt.warning("Ablation module 'app.ablation_engine' is not present in this repository.")
+            res = run_fair_54_point_ablation(s_img, r_img, progress_callback=ab_cb)
+            st.session_state["research_ablation_results"] = res
+            status_txt.success("Ablation Study completed successfully.")
         except Exception as e:
             status_txt.error(f"Ablation run failed: {e}")
 
@@ -320,7 +305,7 @@ def _render_ablation_study():
             c_rmse, c_occ, c_cv, c_inliers, c_rt = 1.3836, 1.0, 0.1118, 1.0, 48.45
 
         # Highlight Cards for Our Method (Variant C)
-        st.markdown("##### 🎯 Our Method Performance Highlights (Variant C: Quality + 3×3 Spatial)")
+        st.markdown("##### Our Method Performance Highlights (Variant C: Quality + 3×3 Spatial)")
         m1, m2, m3, m4, m5 = st.columns(5)
         with m1:
             st.markdown(f"""
@@ -364,25 +349,25 @@ def _render_ablation_study():
             """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
-        st.markdown("##### 📋 Complete Controlled Ablation Results Table")
+        st.markdown("##### Complete Controlled Ablation Results Table")
         st.dataframe(df_fair, width="stretch", hide_index=True)
 
         if os.path.exists(p_fair_res):
-            with st.expander("🔍 View All 15 Seed Runs (Seeds 1–5 across 3 Variants)", expanded=False):
+            with st.expander("View All 15 Seed Runs (Seeds 1–5 across 3 Variants)", expanded=False):
                 df_detail = pd.read_csv(p_fair_res)
                 st.dataframe(df_detail, width="stretch", hide_index=True)
     else:
-        st.info("ℹ️ No precomputed ablation result available yet (fair_54_point_summary.csv). Click 'Run Ablation Study' once ablation scripts are configured.")
+        st.info("No benchmark result available yet. Click 'Run Ablation Study' to generate results.")
 
 
 # =============================================================================
 # HELPER: TAB 3 — ADAPTIVE MATCHER
 # =============================================================================
 def _render_adaptive_matcher():
-    st.markdown("#### 🧭 Adaptive Matcher: Rule-Based Exploratory Router")
+    st.markdown("#### Adaptive Matcher: Rule-Based Exploratory Router")
     st.markdown("""
     <div style="background: #161b22; border: 1px solid #7a3e14; border-left: 4px solid #f0883e; padding: 10px 14px; margin-bottom: 14px; color: #ffab70; font-size: 0.85rem;">
-        <b>⚠️ EXPLORATORY ROUTER NOTICE:</b><br>
+        <b>EXPLORATORY ROUTER NOTICE:</b><br>
         The Adaptive Matcher is a <b>rule-based exploratory router</b> using interpretable feature heuristics (resolution, contrast standard deviation, and texture gradient mean).
         <b>Do NOT call it an AI classifier.</b> Routing rules are exploratory heuristics and require validation on additional unseen lunar datasets.
     </div>
@@ -394,7 +379,7 @@ def _render_adaptive_matcher():
     p_routing = os.path.join(adapt_dir, "routing_decisions.csv")
 
     # Interactive Threshold Sliders Expander
-    with st.expander("⚙️ Configure Interactive Routing & Quality Gate Thresholds", expanded=False):
+    with st.expander("Configure Interactive Routing & Quality Gate Thresholds", expanded=False):
         c1, c2, c3 = st.columns(3)
         with c1:
             cfg_small_res = st.slider("Small Resolution Limit (px)", 200, 1000, 600, 50, key="research_cfg_small_res")
@@ -410,95 +395,50 @@ def _render_adaptive_matcher():
     col_sel1, col_sel2 = st.columns([2.5, 1.2])
     with col_sel1:
         sel_pair = st.selectbox(
-            "Select Pair for Live Router Inspection",
+            "Select Validation Pair for Live Router Inspection",
             [
-                "⚡ Chandrayaan-2 Dev Pair (513×146 px - Low Relief)",
-                "🌕 Uploaded Images from Production Mode",
+                "pair_01 (146×513 px - Low Contrast / Resolution)",
+                "pair_02 (600×1000 px - Standard Contrast & Relief)",
+                "pair_03 (600×900 px - High Contrast / Diverse Craters)",
+                "pair_04 (600×900 px - Moderate Contrast)",
             ],
-            index=0,
+            index=1,
             key="research_adaptive_pair_select"
         )
     with col_sel2:
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        run_adapt_btn = st.button("🚀 Test Adaptive Router", type="primary", width="stretch", key="research_run_adaptive_btn")
+        run_adapt_btn = st.button("Test Adaptive Router", type="primary", width="stretch", key="research_run_adaptive_btn")
 
     if run_adapt_btn:
-        s_img, r_img = None, None
-        if "Dev Pair" in sel_pair:
-            dev_src = os.path.join(PROJECT_ROOT, "data", "source", "source.jpeg")
-            dev_ref = os.path.join(PROJECT_ROOT, "data", "reference", "reference.jpeg")
-            if os.path.exists(dev_src) and os.path.exists(dev_ref):
-                s_img = cv2.imread(dev_src)
-                r_img = cv2.imread(dev_ref)
-        elif "Uploaded" in sel_pair:
-            if "source_img_data" in st.session_state and "reference_img_data" in st.session_state:
-                s_img = st.session_state["source_img_data"]
-                r_img = st.session_state["reference_img_data"]
+        pair_id = sel_pair.split()[0]
+        p_dir = os.path.join(PROJECT_ROOT, "data", "validation_pairs", pair_id)
+        s_file = os.path.join(p_dir, "source.png")
+        r_file = os.path.join(p_dir, "reference.png")
 
-        if s_img is not None and r_img is not None:
-            # Check if research module exists, otherwise calculate directly with OpenCV
-            try:
-                from research.adaptive_matcher.adaptive_engine import AdaptiveConfig, run_adaptive_registration
-                from app.registration_core import load_loftr_matcher
+        if os.path.exists(s_file) and os.path.exists(r_file):
+            with st.spinner(f"Analyzing {pair_id} characteristics and testing exploratory router..."):
+                try:
+                    from research.adaptive_matcher.adaptive_engine import AdaptiveConfig, run_adaptive_registration
+                    from registration_core import load_loftr_matcher
 
-                cfg = AdaptiveConfig(
-                    small_res_threshold=cfg_small_res,
-                    large_res_threshold=cfg_large_res,
-                    low_contrast_threshold=cfg_low_contrast,
-                    high_contrast_threshold=cfg_high_contrast,
-                    high_texture_threshold=cfg_high_texture,
-                    min_initial_inliers=cfg_min_inliers,
-                )
-                loftr_m = load_loftr_matcher()
-                res_ad = run_adaptive_registration(s_img, r_img, loftr_model=loftr_m, config=cfg)
-                st.session_state["research_adaptive_single_res"] = res_ad
-                st.success(f"Router Decision: Selected **{res_ad['decision']['selected_matcher']}** (Rule: {res_ad['decision']['rule_triggered']})")
-            except ImportError:
-                # Built-in direct OpenCV characterization fallback
-                gray_s = cv2.cvtColor(s_img, cv2.COLOR_BGR2GRAY) if len(s_img.shape) == 3 else s_img
-                h, w = gray_s.shape[:2]
-                contrast = float(np.std(gray_s))
-                grad_x = cv2.Sobel(gray_s, cv2.CV_64F, 1, 0, ksize=3)
-                grad_y = cv2.Sobel(gray_s, cv2.CV_64F, 0, 1, ksize=3)
-                grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                texture = float(np.mean(grad_mag))
-
-                # Exploratory routing heuristic
-                max_dim = max(h, w)
-                if max_dim <= cfg_small_res:
-                    if contrast < cfg_low_contrast:
-                        rule = f"Small Resolution ({max_dim}px <= {cfg_small_res}px) & Low Contrast ({contrast:.1f} < {cfg_low_contrast})"
-                        selected = "LoFTR"
-                    else:
-                        rule = f"Small Resolution ({max_dim}px <= {cfg_small_res}px) & Adequate Contrast ({contrast:.1f} >= {cfg_low_contrast})"
-                        selected = "LoFTR"
-                elif max_dim >= cfg_large_res:
-                    rule = f"Large Resolution ({max_dim}px >= {cfg_large_res}px) -> LoFTR (Memory-Safe Patching)"
-                    selected = "LoFTR"
-                else:
-                    if texture > cfg_high_texture and contrast > cfg_high_contrast:
-                        rule = f"High Texture ({texture:.1f} > {cfg_high_texture}) & High Contrast ({contrast:.1f} > {cfg_high_contrast}) -> Fast SIFT"
-                        selected = "SIFT"
-                    else:
-                        rule = "Standard Texture & Contrast -> LoFTR Default"
-                        selected = "LoFTR"
-
-                res_ad = {
-                    "characterization": {
-                        "resolution": f"{w}x{h}",
-                        "intensity_contrast": contrast,
-                        "texture_density": texture,
-                    },
-                    "decision": {
-                        "selected_matcher": selected,
-                        "rule_triggered": rule,
-                        "quality_gate_passed": True,
-                    }
-                }
-                st.session_state["research_adaptive_single_res"] = res_ad
-                st.success(f"Router Heuristic: Selected **{selected}** ({rule})")
+                    cfg = AdaptiveConfig(
+                        small_res_threshold=cfg_small_res,
+                        large_res_threshold=cfg_large_res,
+                        low_contrast_threshold=cfg_low_contrast,
+                        high_contrast_threshold=cfg_high_contrast,
+                        high_texture_threshold=cfg_high_texture,
+                        min_initial_inliers=cfg_min_inliers,
+                    )
+                    s_img = cv2.imread(s_file)
+                    r_img = cv2.imread(r_file)
+                    loftr_m = load_loftr_matcher()
+                    res_ad = run_adaptive_registration(s_img, r_img, loftr_model=loftr_m, config=cfg)
+                    st.session_state["research_adaptive_single_res"] = res_ad
+                    st.success(f"Router Decision: Selected **{res_ad['decision']['selected_matcher']}** (Rule: {res_ad['decision']['rule_triggered']})")
+                except Exception as e:
+                    st.error(f"Router execution failed: {e}")
         else:
-            st.error("Could not load image pair. Please load Dev Pair or upload images in Production Mode first.")
+            st.error(f"Could not load images for {pair_id}.")
 
     # Render Single Inspection Result if available
     if "research_adaptive_single_res" in st.session_state:
@@ -506,12 +446,12 @@ def _render_adaptive_matcher():
         chars = res_s["characterization"]
         dec = res_s["decision"]
 
-        st.markdown("##### 🔬 Live Router Diagnostic Breakdown")
+        st.markdown("##### Live Router Diagnostic Breakdown")
         d1, d2, d3, d4 = st.columns(4)
         with d1:
             st.metric("Selected Matcher", dec.get("selected_matcher", "N/A"))
         with d2:
-            st.metric("Rule Triggered", dec.get("rule_triggered", "N/A")[:28] + "...")
+            st.metric("Rule Triggered", dec.get("rule_triggered", "N/A"))
         with d3:
             st.metric("Intensity Contrast (Std)", f"{chars.get('intensity_contrast', 0):.2f}")
         with d4:
@@ -519,17 +459,17 @@ def _render_adaptive_matcher():
 
     # Load and display saved suite results
     if os.path.exists(p_adapt_sum):
-        st.markdown("##### 📋 Adaptive Router Benchmark Summary (Pairs 01–04)")
+        st.markdown("##### Adaptive Router Benchmark Summary (Pairs 01–04)")
         df_ad_sum = pd.read_csv(p_adapt_sum)
         st.dataframe(df_ad_sum, width="stretch", hide_index=True)
 
     if os.path.exists(p_adapt_res):
-        st.markdown("##### 🔍 Full Per-Pair Comparative Evaluation")
+        st.markdown("##### Full Per-Pair Comparative Evaluation")
         df_ad_res = pd.read_csv(p_adapt_res)
         st.dataframe(df_ad_res, width="stretch", hide_index=True)
 
     if os.path.exists(p_routing):
-        st.markdown("##### 🧭 Routing Decisions & Explanatory Reasoning")
+        st.markdown("##### Routing Decisions & Explanatory Reasoning")
         df_routing = pd.read_csv(p_routing)
         st.dataframe(df_routing, width="stretch", hide_index=True)
 
@@ -537,26 +477,24 @@ def _render_adaptive_matcher():
     p_rmse_plot = os.path.join(adapt_dir, "fixed_vs_adaptive_check_rmse.png")
     p_rt_plot = os.path.join(adapt_dir, "fixed_vs_adaptive_runtime.png")
     if os.path.exists(p_rmse_plot) and os.path.exists(p_rt_plot):
-        st.markdown("##### 📊 Fixed vs. Adaptive Performance Plots")
+        st.markdown("##### Fixed vs. Adaptive Performance Plots")
         pl1, pl2 = st.columns(2)
         with pl1:
             st.image(p_rmse_plot, caption="Check RMSE: Fixed Matchers vs. Adaptive Router", width="stretch")
         with pl2:
             st.image(p_rt_plot, caption="Runtime: Fixed Matchers vs. Adaptive Router", width="stretch")
-    elif not os.path.exists(p_adapt_sum):
-        st.info("ℹ️ No precomputed adaptive router benchmark results found in this repository.")
 
 
 # =============================================================================
 # HELPER: TAB 4 — LOPO VALIDATION
 # =============================================================================
 def _render_lopo_validation():
-    st.markdown("#### 🔁 Leave-One-Pair-Out (LOPO) Cross-Validation")
+    st.markdown("#### Leave-One-Pair-Out (LOPO) Cross-Validation")
     st.markdown("""
     <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 10px 14px; margin-bottom: 14px; color: #8b949e; font-size: 0.85rem;">
         <b>Rigorous Validation Protocol:</b> Evaluates router generalization by testing each lunar pair as a strictly unseen hold-out fold.
         <br>• <b>Validation Statuses</b>: <code>VALID</code>, <code>REGISTRATION FAILED</code>, <code>NO VALID CHECK</code>.
-        <br>• <b>Data Integrity Note</b>: SuperGlue on pair_01 generated insufficient inliers (0 check points);
+        <br>• <b>Data Integrity Note</b>: SuperGlue on pair_01 generated insufficient inliers (0 check points); 
         its fit RMSE (0.8662 px) is <b>strictly excluded</b> and marked as <code>NO VALID CHECK</code>. Fit RMSE is never substituted for held-out Check RMSE.
     </div>
     """, unsafe_allow_html=True)
@@ -572,7 +510,7 @@ def _render_lopo_validation():
     with c1:
         st.markdown("<p style='color:#8b949e; font-size:0.85rem; margin:8px 0;'>Re-evaluates all 4 leave-one-out folds and regenerates summary CSVs.</p>", unsafe_allow_html=True)
     with c2:
-        run_lopo_btn = st.button("🚀 Re-run LOPO Validation", type="primary", width="stretch", key="research_run_lopo_btn")
+        run_lopo_btn = st.button("Re-run LOPO Validation", type="primary", width="stretch", key="research_run_lopo_btn")
 
     if run_lopo_btn:
         st.info("Executing LOPO cross-validation across all folds. This may take 60–90 seconds...")
@@ -588,8 +526,6 @@ def _render_lopo_validation():
             res_lp = run_lopo_validation(output_dir=adapt_dir, progress_callback=lopo_cb)
             st.session_state["research_lopo_results"] = res_lp
             status_txt.success("LOPO Validation completed successfully.")
-        except ImportError:
-            status_txt.warning("LOPO validator module 'research.adaptive_matcher.lopo_validator' is not present in this repository.")
         except Exception as e:
             status_txt.error(f"LOPO validation failed: {e}")
 
@@ -633,7 +569,7 @@ def _render_lopo_validation():
             """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-        st.markdown("##### 📋 Fold-by-Fold LOPO Summary Table")
+        st.markdown("##### Fold-by-Fold LOPO Summary Table")
 
         # Format display dataframe ensuring SuperGlue pair_01 is cleanly rendered as 'No valid check'
         df_display = df_lp_sum.copy()
@@ -649,31 +585,31 @@ def _render_lopo_validation():
         st.dataframe(df_display, width="stretch", hide_index=True)
 
         if os.path.exists(p_lopo_res):
-            with st.expander("🔍 View Comprehensive Multi-Method Fold Metrics (LOPO Results)", expanded=False):
+            with st.expander("View Comprehensive Multi-Method Fold Metrics (LOPO Results)", expanded=False):
                 df_lp_res = pd.read_csv(p_lopo_res)
                 if "Held-out Check RMSE" in df_lp_res.columns:
                     df_lp_res["Held-out Check RMSE"] = df_lp_res["Held-out Check RMSE"].apply(_format_rmse)
                 st.dataframe(df_lp_res, width="stretch", hide_index=True)
 
         if os.path.exists(p_lopo_dec):
-            with st.expander("🎯 View LOPO Multi-Dimensional Routing Decisions", expanded=False):
+            with st.expander("View LOPO Multi-Dimensional Routing Decisions", expanded=False):
                 df_lp_dec = pd.read_csv(p_lopo_dec)
                 st.dataframe(df_lp_dec, width="stretch", hide_index=True)
 
         # LOPO Decision Dashboard Plot
         if os.path.exists(p_lopo_dash):
-            st.markdown("##### 📊 LOPO Evaluation Plots")
+            st.markdown("##### LOPO Evaluation Plots")
             st.image(p_lopo_dash, caption="Consolidated LOPO Cross-Validation Dashboard", width="stretch")
 
         # Download Center
-        st.markdown("##### 💾 Download LOPO Benchmark Datasets")
+        st.markdown("##### Download LOPO Benchmark Datasets")
         dl1, dl2 = st.columns(2)
         with dl1:
             with open(p_lopo_sum, "rb") as f:
-                st.download_button("📥 LOPO Summary CSV", f.read(), "lopo_summary.csv", "text/csv", width="stretch", key="research_lopo_download_summary")
+                st.download_button("Download LOPO Summary CSV", f.read(), "lopo_summary.csv", "text/csv", width="stretch", key="research_lopo_download_summary")
         with dl2:
             if os.path.exists(p_lopo_res):
                 with open(p_lopo_res, "rb") as f:
-                    st.download_button("📥 LOPO Results CSV", f.read(), "lopo_results.csv", "text/csv", width="stretch", key="research_lopo_download_results")
+                    st.download_button("Download LOPO Results CSV", f.read(), "lopo_results.csv", "text/csv", width="stretch", key="research_lopo_download_results")
     else:
-        st.info("ℹ️ No LOPO cross-validation results available yet in this repository.")
+        st.info("No LOPO results available yet. Click 'Re-run LOPO Validation' to generate results.")

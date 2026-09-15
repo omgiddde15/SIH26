@@ -34,11 +34,14 @@ from typing import Dict, Any, Tuple, Optional, List
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+APP_DIR = os.path.join(PROJECT_ROOT, "app")
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
 SUPERGLUE_REPO = os.path.join(PROJECT_ROOT, "research", "superglue_repo")
 if SUPERGLUE_REPO not in sys.path:
     sys.path.insert(0, SUPERGLUE_REPO)
 
-from app.registration_core import (
+from registration_core import (
     preprocess_image,
     compute_matching_scale,
     calculate_spatial_grid,
@@ -325,6 +328,27 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
     s_h, s_w = source_img.shape[:2]
     r_h, r_w = reference_img.shape[:2]
 
+    # Resource-safety guard:
+    # Full-image SIFT is resource-prohibitive on massive rasters.
+    max_dim = max(s_h, s_w, r_h, r_w)
+    if max_dim > 4000:
+        return {
+            "method": "SIFT",
+            "success": False,
+            "failure_stage": "resource_guard",
+            "failure_reason": (
+                f"Full-image SIFT disabled for large image "
+                f"(max_dim={max_dim} > 4000). "
+                "SIFT quadratic feature matching is resource-prohibitive on massive rasters."
+            ),
+            "runtime": time.perf_counter() - t0,
+            "n_candidates": 0,
+            "n_inliers": 0,
+            "inlier_ratio": 0.0,
+            "spatial_occupancy": 0.0,
+            "spatial_cv": 0.0,
+        }
+
     s_gray = cv2.cvtColor(source_img, cv2.COLOR_BGR2GRAY) if len(source_img.shape) == 3 else source_img
     r_gray = cv2.cvtColor(reference_img, cv2.COLOR_BGR2GRAY) if len(reference_img.shape) == 3 else reference_img
 
@@ -530,6 +554,32 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
     SuperPoint + SuperGlue baseline matcher.
     """
     t0 = time.perf_counter()
+    # Resource-safety guard:
+    # The current full-image SuperGlue implementation is not
+    # safe for very large lunar rasters. Large images must use
+    # the geoguided tiled SuperGlue implementation instead.
+    max_dim = max(
+        max(source_img.shape[:2]),
+        max(reference_img.shape[:2])
+    )
+
+    if max_dim > 4000:
+        return {
+            "method": "SuperGlue",
+            "success": False,
+            "failure_stage": "resource_guard",
+            "failure_reason": (
+                f"Full-image SuperGlue disabled for large image "
+                f"(max_dim={max_dim} > 4000). "
+                "Use geoguided tiled SuperGlue."
+            ),
+            "runtime": time.perf_counter() - t0,
+            "n_candidates": 0,
+            "n_inliers": 0,
+            "inlier_ratio": 0.0,
+            "spatial_occupancy": 0.0,
+            "spatial_cv": 0.0,
+        }
     if sg_model is None:
         sg_model = Matching({
             "superpoint": {"nms_radius": 4, "keypoint_threshold": 0.005, "max_keypoints": 1024},
@@ -800,44 +850,144 @@ def run_adaptive_registration(
     fallback_res = None
     fallback_reason = None
 
-    # Quality Gate & Fallback logic
-    if not q_gate["passed"]:
-        fallback_used = True
-        fallback_reason = "; ".join(q_gate["reasons"])
+        # Quality Gate & Multi-Fallback logic
+    #
+    # Try the remaining matchers in a deterministic order.
+    # A matcher is accepted only when its own quality gate passes.
+    # If every available matcher fails the gate, registration fails.
 
-        # Decide fallback target
-        if primary_choice in ["SIFT", "SuperGlue"]:
-            fallback_choice = "LoFTR"
-        else:
-            fallback_choice = "SIFT"
+    fallback_used = False
+    fallback_choice = None
+    fallback_res = None
+    fallback_reason = None
+    fallback_blocked = False
+    blocked_fallbacks = []
 
-        fallback_res = matcher_map[fallback_choice]()
-        q_gate_fb = evaluate_quality_gate(fallback_res, config)
+    matcher_order = [
+        "LoFTR",
+        "SIFT",
+        "SuperGlue",
+    ]
 
-        if fallback_res.get("success", False) and q_gate_fb["passed"]:
-            active_res = fallback_res
-        elif fallback_res.get("success", False):
-            # Fallback produced some inliers, use best available
-            active_res = fallback_res
-        else:
-            # If fallback also failed, return failure payload
+    tried_results = {
+        primary_choice: primary_res
+    }
+
+    active_res = None
+    final_matcher_used = None
+
+    # Primary accepted.
+    if q_gate["passed"]:
+        active_res = primary_res
+        final_matcher_used = primary_choice
+
+    else:
+        fallback_reason = "; ".join(
+            q_gate["reasons"]
+        )
+
+        max_dim = max(
+            source_img.shape[0],
+            source_img.shape[1],
+            reference_img.shape[0],
+            reference_img.shape[1],
+        )
+
+        executed_fallbacks = []
+
+        for candidate in matcher_order:
+
+            if candidate == primary_choice:
+                continue
+
+            # Resource policy guard: Block expensive full-image fallback on very large rasters
+            if max_dim > 4000 and candidate in ("SIFT", "SuperGlue"):
+                blocked_res = {
+                    "method": candidate,
+                    "success": False,
+                    "failure_stage": "resource_guard",
+                    "failure_reason": (
+                        f"Full-image {candidate} fallback blocked by resource policy "
+                        f"(max_dim={max_dim} > 4000)."
+                    ),
+                    "runtime": 0.0,
+                    "n_candidates": 0,
+                    "n_inliers": 0,
+                    "inlier_ratio": 0.0,
+                    "spatial_occupancy": 0.0,
+                    "spatial_cv": 0.0,
+                }
+                tried_results[candidate] = blocked_res
+                blocked_fallbacks.append(candidate)
+                continue
+
+            candidate_res = matcher_map[candidate]()
+            tried_results[candidate] = candidate_res
+            executed_fallbacks.append(candidate)
+
+            candidate_gate = evaluate_quality_gate(
+                candidate_res,
+                config
+            )
+
+            # Keep the most recently attempted fallback
+            # visible in the returned payload.
+            fallback_choice = candidate
+            fallback_res = candidate_res
+
+            if candidate_gate["passed"]:
+                active_res = candidate_res
+                final_matcher_used = candidate
+                break
+
+        fallback_used = len(executed_fallbacks) > 0
+        fallback_blocked = len(blocked_fallbacks) > 0 and not fallback_used
+
+        # None of the matchers passed.
+        if active_res is None:
             total_time = time.perf_counter() - t_start
+
+            if max_dim > 4000 and primary_choice == "LoFTR":
+                failure_msg = (
+                    f"Primary matcher (LoFTR) failed quality gate ({fallback_reason}). "
+                    f"Large-image fallback matchers (SIFT, SuperGlue) were intentionally "
+                    f"blocked by the resource policy (max_dim={max_dim} > 4000)."
+                )
+            else:
+                failure_msg = (
+                    "All available matchers failed "
+                    "the quality gate."
+                )
+
             return {
                 "success": False,
                 "characterization": pair_chars,
                 "difficulty_profile": profile,
                 "decision": decision,
+
                 "primary_choice": primary_choice,
                 "primary_result": primary_res,
                 "quality_gate": q_gate,
-                "fallback_used": True,
+
+                "fallback_used": fallback_used,
                 "fallback_choice": fallback_choice,
                 "fallback_result": fallback_res,
-                "fallback_reason": fallback_reason,
-                "failure_reason": f"Both primary ({primary_choice}) and fallback ({fallback_choice}) failed quality gate.",
-                "runtime": round(total_time, 2),
-            }
+                "fallback_blocked": fallback_blocked,
+                "blocked_fallbacks": blocked_fallbacks,
 
+                "fallback_reason": fallback_reason,
+
+                "all_matcher_results": tried_results,
+
+                "final_matcher_used": None,
+
+                "failure_reason": failure_msg,
+
+                "runtime": round(
+                    time.perf_counter() - t_start,
+                    2
+                ),
+            }
     # Step 5: Common Downstream Registration Layer
     try:
         pts0_down = active_res["inlier_pts0"]
@@ -865,6 +1015,8 @@ def run_adaptive_registration(
             "fallback_used": fallback_used,
             "fallback_choice": fallback_choice,
             "fallback_result": fallback_res,
+            "fallback_blocked": fallback_blocked,
+            "blocked_fallbacks": blocked_fallbacks,
             "fallback_reason": fallback_reason,
             "final_matcher_used": fallback_choice if fallback_used else primary_choice,
             "downstream": downstream,
@@ -888,6 +1040,8 @@ def run_adaptive_registration(
             "fallback_used": fallback_used,
             "fallback_choice": fallback_choice,
             "fallback_result": fallback_res,
+            "fallback_blocked": fallback_blocked,
+            "blocked_fallbacks": blocked_fallbacks,
             "fallback_reason": fallback_reason,
             "failure_reason": f"Common downstream registration failed: {str(e)}",
             "runtime": round(total_time, 2),

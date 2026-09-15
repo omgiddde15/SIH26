@@ -1,0 +1,23 @@
+{
+  "pair": "ch2_ohr_ncp_20251109T0909533595__ch2_ohr_ncp_20251109T1305444583",
+  "method": "robust affine calibration using independent visual localization",
+  "calibration_points": 20,
+  "ransac_inliers": 19,
+  "inlier_ratio": 0.95,
+  "ransac_threshold_px": 15.0,
+  "affine_matrix": [
+    [
+      1.0096281427369134,
+      -0.0018561583370570167,
+      -62.466870375243815
+    ],
+    [
+      -0.004323268138938012,
+      1.0001851923117777,
+      39.40291045200965
+    ]
+  ],
+  "constant_translation_dx": -63.0,
+  "constant_translation_dy": 38.0,
+  "status": "AFFINE_CALIBRATION_DIAGNOSTIC"
+}

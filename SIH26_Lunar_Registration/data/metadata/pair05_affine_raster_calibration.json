@@ -1,0 +1,21 @@
+{
+  "method": "RANSAC_affine",
+  "ransac_threshold_px": 8.0,
+  "calibration_points": 20,
+  "ransac_inliers": 15,
+  "inlier_ratio": 0.75,
+  "median_dx": 1.5,
+  "median_dy": 3.0,
+  "affine_matrix": [
+    [
+      1.006972128137025,
+      0.0006272106277179145,
+      -4.738098122441462
+    ],
+    [
+      -0.014218182908349832,
+      1.0010213337918588,
+      9.016982560980143
+    ]
+  ]
+}
