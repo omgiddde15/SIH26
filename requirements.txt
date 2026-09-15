@@ -5,3 +5,5 @@ opencv-python-headless
 numpy
 matplotlib
 reportlab
+pypdf
+pypdfium2
