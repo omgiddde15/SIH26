@@ -143,6 +143,8 @@ def init_auth_db() -> None:
         )
         conn.commit()
 
+    _bootstrap_deployment_user()
+
 
 def _get_conn() -> sqlite3.Connection:
     return sqlite3.connect(DB_PATH)
@@ -180,6 +182,75 @@ def create_user(full_name: str, email: str, password: str) -> Tuple[bool, str]:
             return False, "An account with this email already exists. Please sign in instead."
 
     return True, "Account created successfully. You may now sign in."
+
+
+def _get_bootstrap_secret(key: str) -> Optional[str]:
+    """Safely retrieve a bootstrap secret from Streamlit secrets or environment variables."""
+    # 1. Attempt Streamlit secrets retrieval
+    try:
+        if key in st.secrets:
+            val = st.secrets[key]
+            if val is not None and str(val).strip():
+                return str(val)
+        key_lower = key.lower()
+        if key_lower in st.secrets:
+            val = st.secrets[key_lower]
+            if val is not None and str(val).strip():
+                return str(val)
+        for section in ("auth", "lunarreg", "general"):
+            if section in st.secrets and isinstance(st.secrets[section], dict):
+                sec_dict = st.secrets[section]
+                if key in sec_dict and sec_dict[key] is not None and str(sec_dict[key]).strip():
+                    return str(sec_dict[key])
+                if key_lower in sec_dict and sec_dict[key_lower] is not None and str(sec_dict[key_lower]).strip():
+                    return str(sec_dict[key_lower])
+    except Exception:
+        pass
+
+    # 2. Fallback to environment variables
+    if key in os.environ:
+        val = os.environ[key]
+        if val is not None and str(val).strip():
+            return str(val)
+    key_lower = key.lower()
+    if key_lower in os.environ:
+        val = os.environ[key_lower]
+        if val is not None and str(val).strip():
+            return str(val)
+
+    return None
+
+
+def _bootstrap_deployment_user() -> None:
+    """
+    Optionally provision an initial deployment operator account from Streamlit secrets
+    or environment variables.
+    Idempotent: skips provisioning if user already exists or secrets are absent.
+    Never overwrites existing passwords.
+    Surfaces unexpected database/programming errors for deployment diagnostics.
+    """
+    name = _get_bootstrap_secret("LUNARREG_BOOTSTRAP_NAME")
+    email = _get_bootstrap_secret("LUNARREG_BOOTSTRAP_EMAIL")
+    password = _get_bootstrap_secret("LUNARREG_BOOTSTRAP_PASSWORD")
+
+    if not (name and email and password):
+        return
+
+    name_clean = name.strip()
+    email_norm = email.strip().lower()
+
+    if not name_clean or not email_norm:
+        return
+
+    conn = _get_conn()
+    try:
+        cur = conn.execute("SELECT id FROM users WHERE email = ?", (email_norm,))
+        if cur.fetchone() is not None:
+            return
+    finally:
+        conn.close()
+
+    create_user(name_clean, email_norm, password)
 
 
 def authenticate_user(email: str, password: str) -> Optional[Tuple[str, str, str]]:
