@@ -1,0 +1,49 @@
+{
+  "phase": 17,
+  "experiment_name": "Controlled Image-Space Scale Sensitivity Study",
+  "label": "synthetic/image-space scale sensitivity (NOT physical lunar scale invariance)",
+  "predetermined_scale_factors": [
+    0.5,
+    0.75,
+    1.0,
+    1.25,
+    1.5,
+    2.0
+  ],
+  "source_image": "C:\\Users\\Dell\\Downloads\\souse.jpeg",
+  "reference_image": "C:\\Users\\Dell\\Downloads\\ref.jpeg",
+  "anchor_source": "C:\\Users\\Dell\\Videos\\SIH26_Lunar_Registration\\research\\multimodal\\phase11_results\\phase11_loftr_anchor_pairs.json",
+  "anchor_is_ground_truth": false,
+  "descriptor": {
+    "name": "SSC-style 2-D adaptation",
+    "patch_size": 7,
+    "radius": 4.0,
+    "dimension": 21,
+    "frozen": true
+  },
+  "matcher": {
+    "knn_k": 2,
+    "mutual_consistency": true,
+    "nndr_threshold": 0.9,
+    "frozen": true
+  },
+  "downstream": {
+    "model": "Projective Homography",
+    "ransac_threshold_px": 3.0,
+    "ransac_confidence": 0.995,
+    "spatial_selection": "3x3 binning max 6 pts/cell",
+    "held_out_validation_seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "frozen": true
+  },
+  "production_safety": {
+    "production_code_modified": false,
+    "automatic_winner_promotion": false,
+    "adaptive_routing_modified": false
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "phase": "Phase 20 \u2014 Final SIH26166 Deliverable + Demo Readiness Audit",
+  "timestamp": "2026-09-23T12:29:09+0530",
+  "canonical_project_path": "C:\\Users\\Dell\\Videos\\SIH26_Lunar_Registration",
+  "production_entry_points": {
+    "ui_application": "app/app.py",
+    "user_facing_adapter": "app/adaptive_adapter.py (safe_run_adaptive_registration)",
+    "registration_engine": "research/adaptive_matcher/adaptive_engine.py (run_adaptive_registration)",
+    "pdf_generator": "app/pdf_generator.py (generate_scientific_pdf_report)",
+    "pdf_validator": "app/pdf_generator.py (validate_pdf_report)"
+  },
+  "phase20_artifacts": {
+    "demo_validation_markdown": "research\\multimodal\\phase20_results\\phase20_demo_validation.md",
+    "demo_cases_csv": "research\\multimodal\\phase20_results\\phase20_demo_cases.csv",
+    "claim_boundaries_markdown": "research\\multimodal\\phase20_results\\phase20_claim_boundaries.md",
+    "requirement_evidence_matrix_csv": "research\\multimodal\\phase20_results\\phase20_requirement_evidence_matrix.csv",
+    "production_architecture_markdown": "research\\multimodal\\phase20_results\\phase20_production_architecture.md",
+    "judge_demo_script_markdown": "research\\multimodal\\phase20_results\\phase20_judge_demo_script.md",
+    "final_ppt_content_markdown": "research\\multimodal\\phase20_results\\phase20_final_ppt_content.md",
+    "judge_90sec_pitch_markdown": "research\\multimodal\\phase20_results\\phase20_judge_90sec_pitch.md",
+    "judge_3min_demo_script_markdown": "research\\multimodal\\phase20_results\\phase20_judge_3min_demo_script.md",
+    "judge_qa_markdown": "research\\multimodal\\phase20_results\\phase20_judge_qa.md",
+    "final_readiness_report_markdown": "research\\multimodal\\phase20_results\\phase20_final_readiness_report.md",
+    "demo_generated_artifacts_directory": "research\\multimodal\\phase20_results\\demo_artifacts"
+  },
+  "frozen_production_thresholds": {
+    "min_candidate_matches": 10,
+    "min_initial_inliers": 8,
+    "min_inlier_ratio": 0.2,
+    "min_spatial_occupancy": 0.33,
+    "ransac_threshold": 3.0,
+    "downstream_geometric_minimum": 4,
+    "spatial_grid": "3x3",
+    "max_points_per_cell": 6,
+    "validation_seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  }
+}

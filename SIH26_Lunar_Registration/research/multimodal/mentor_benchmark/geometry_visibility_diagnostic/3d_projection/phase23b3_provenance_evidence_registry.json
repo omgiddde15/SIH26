@@ -1,0 +1,183 @@
+{
+  "metadata": {
+    "phase": "23B.3",
+    "script": "run_phase23b3_reference_provenance_audit.py",
+    "generated": "2026-09-24T07:36:30Z"
+  },
+  "candidates": [
+    {
+      "id": "CAND_B01",
+      "name": "ISRO TMC-2 South Polar Ortho-Mosaic (5 m/px)",
+      "producer": "ISRO SAC / ISSDC",
+      "instrument": "TMC-2 aboard Chandrayaan-2",
+      "native_resolution_m": 5.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "IAU_MOON (selenocentric, R=1737.4 km)",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Ortho-mosaic, optical",
+      "documentation": "Arya et al. (2021), ISSDC product catalogue",
+      "local_file_available": false,
+      "exact_content_test": "NOT_POSSIBLE -- no local file",
+      "phase23b3_classification": "COMPATIBLE_BUT_UNVERIFIED",
+      "phase23b3_rationale": "Resolution, projection, radius, and datum style all compatible. No authoritative product label, product ID, or content match available. Non-inference rule: 5 m/px + Polar Stereographic is NOT sufficient identification."
+    },
+    {
+      "id": "CAND_B02",
+      "name": "NASA LROC WAC Global Mosaic (100 m resampled)",
+      "producer": "NASA / USGS Astrogeology",
+      "instrument": "LROC WAC",
+      "native_resolution_m": 100.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "MOON_ME_DE421",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Global mosaic, optical",
+      "documentation": "Robinson et al. (2010), https://pds.lroc.asu.edu/",
+      "local_file_available": false,
+      "exact_content_test": "NOT_APPLICABLE -- resolution mismatch",
+      "phase23b3_classification": "MISMATCH",
+      "phase23b3_rationale": "Native resolution 100 m is 20x coarser than delivered 5 m rasters. Genuine 5 m ground detail cannot be present in an upsampled 100 m product."
+    },
+    {
+      "id": "CAND_B03",
+      "name": "NASA LROC NAC South Polar Mosaic (resampled to 5 m)",
+      "producer": "NASA / USGS Astrogeology",
+      "instrument": "LROC NAC",
+      "native_resolution_m": 0.5,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "MOON_ME_DE421",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Mosaic, optical, resampled",
+      "documentation": "Robinson et al. (2010), https://pds.lroc.asu.edu/",
+      "local_file_available": false,
+      "exact_content_test": "NOT_POSSIBLE -- no local file",
+      "phase23b3_classification": "COMPATIBLE_BUT_UNVERIFIED",
+      "phase23b3_rationale": "A 5 m resampled LROC NAC polar mosaic is technically plausible. MOON_ME_DE421 is authoritative. No local file available for content comparison. No product identifier in delivered metadata links to LROC NAC. Non-inference rule applies: compatibility is not identification."
+    },
+    {
+      "id": "CAND_B04",
+      "name": "NASA LOLA LDEM 5 m South Polar DEM",
+      "producer": "NASA GSFC",
+      "instrument": "LOLA aboard LRO",
+      "native_resolution_m": 5.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "MOON_ME_DE421",
+      "datum_radius_m": 1737400.0,
+      "product_type": "DEM (elevation), not optical",
+      "documentation": "Smith et al. (2010), https://imbrium.mit.edu/",
+      "local_file_available": false,
+      "exact_content_test": "NOT_APPLICABLE -- modality mismatch (DEM vs optical uint8)",
+      "phase23b3_classification": "MISMATCH",
+      "phase23b3_rationale": "LOLA is a laser altimeter elevation product (float/int elevation). Delivered rasters are uint8 optical imagery. Modality mismatch rules out direct source identity."
+    },
+    {
+      "id": "CAND_B05",
+      "name": "USGS Astropedia South Polar Optical Mosaic",
+      "producer": "USGS Astrogeology Science Center",
+      "instrument": "Multiple (Clementine, LRO)",
+      "native_resolution_m": 5.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "MOON_ME_DE421 (modern products)",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Optical mosaic",
+      "documentation": "https://astrogeology.usgs.gov/maps",
+      "local_file_available": false,
+      "exact_content_test": "NOT_POSSIBLE -- no local file",
+      "phase23b3_classification": "COMPATIBLE_BUT_UNVERIFIED",
+      "phase23b3_rationale": "USGS publishes south-polar optical mosaics. Specific product not identified. No product ID in delivered metadata. Compatibility alone is insufficient."
+    },
+    {
+      "id": "CAND_B06",
+      "name": "SIH 2026 Benchmark Delivery Container",
+      "producer": "SIH 2026 Benchmark Organiser",
+      "instrument": "N/A (packaging)",
+      "native_resolution_m": 5.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "UNKNOWN",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Benchmark delivery packaging layer",
+      "documentation": "Delivery directory structure and naming convention",
+      "local_file_available": true,
+      "exact_content_test": "N/A -- container layer, not the upstream reference product",
+      "phase23b3_classification": "PACKAGING_ARTIFACT_DIRECTLY_SUPPORTED",
+      "phase23b3_rationale": "The SIH 2026 benchmark delivery container is directly identified from the delivery directory and naming convention. This establishes only that the benchmark delivery container is the immediate local container of the raster; it does not identify the upstream reference product or geodetic realization. Classification: PACKAGING_ARTIFACT_DIRECTLY_SUPPORTED. Do not classify the container as a directly identified reference product."
+    },
+    {
+      "id": "CAND_B07",
+      "name": "ISRO CH-2 TMC-2 Single-Strip Ortho-Image",
+      "producer": "ISRO SAC",
+      "instrument": "TMC-2 aboard Chandrayaan-2",
+      "native_resolution_m": 5.0,
+      "projection": "Polar Stereographic, South Pole",
+      "geodetic_frame": "IAU_MOON (MOON_ME via Chandrayaan-2 pipeline)",
+      "datum_radius_m": 1737400.0,
+      "product_type": "Single-pass ortho-image strip",
+      "documentation": "PDS4 XML SelenoTagging/AutoLCP records",
+      "local_file_available": false,
+      "exact_content_test": "NOT_APPLICABLE -- width mismatch",
+      "phase23b3_classification": "MISMATCH",
+      "phase23b3_rationale": "PAIR_01 reference raster width 5916 px x 5 m = 29.58 km exceeds a single TMC-2 nadir swath (~16 km at 100 km orbit altitude). This width is consistent with a mosaic product, not a single TMC-2 acquisition strip. PAIRS 02, 03, 04 (~12-16 km wide) are borderline, but the identical Pair 02/03 overlap proves the reference is a static pre-existing source, not a per-pair strip."
+    }
+  ],
+  "documentation_sources": [
+    {
+      "source_id": "DOC_01",
+      "producer": "ISRO / ISSDC",
+      "title": "PDS4 XML Product Label (OHRC Level-2 delivery)",
+      "url": "Delivered locally (4 XML files)",
+      "product_identifier_found": "OHRC source product ID only",
+      "reference_map_product_named": false,
+      "relevant_statement": "<ReferenceUsed>System</ReferenceUsed> -- does not name a specific map product",
+      "evidence_classification": "C -- MERELY DESCRIBED GENERICALLY"
+    },
+    {
+      "source_id": "DOC_02",
+      "producer": "ISRO / ISSDC",
+      "title": "GeoTIFF provenance tags (Software, ImageDescription, Artist, DateTime, Copyright, GDAL_METADATA)",
+      "url": "Embedded in delivered TIF files",
+      "product_identifier_found": "None",
+      "reference_map_product_named": false,
+      "relevant_statement": "All provenance TIFF tags (IDs 270, 271, 305, 306, 315, 33432, 42112) are ABSENT from all four delivered reference GeoTIFFs.",
+      "evidence_classification": "NOT_FOUND_IN_AUDITED_INPUTS"
+    },
+    {
+      "source_id": "DOC_03",
+      "producer": "SIH 2026 Benchmark Organiser",
+      "title": "SIH 2026 benchmark delivery package (directory structure, naming convention)",
+      "url": "C:\\Users\\Dell\\Downloads\\SIH data\\data_for_sih_2026\\ohrc\\",
+      "product_identifier_found": "Benchmark packaging layer only",
+      "reference_map_product_named": false,
+      "relevant_statement": "The delivery naming convention <OHRC_ID>_reference_at_5m.tif confirms the benchmark container identity but does not name the upstream reference map product used to generate these GeoTIFFs.",
+      "evidence_classification": "VERIFIED for container; NOT_FOUND_IN_AUDITED_INPUTS for upstream product"
+    },
+    {
+      "source_id": "DOC_04",
+      "producer": "NASA / ASU LROC Team",
+      "title": "LROC Instrument Paper (Robinson et al. 2010, Space Sci. Rev.)",
+      "url": "https://doi.org/10.1007/s11214-010-9634-2",
+      "product_identifier_found": "N/A -- general instrument description",
+      "reference_map_product_named": false,
+      "relevant_statement": "Documents LROC geodetic frame as MOON_ME_DE421. Relevant only if delivered reference is from LROC products (unverified).",
+      "evidence_classification": "COMPATIBLE_BUT_UNVERIFIED"
+    },
+    {
+      "source_id": "DOC_05",
+      "producer": "ISRO SAC",
+      "title": "Chandrayaan-2 TMC-2 cartographic products (Arya et al. 2021)",
+      "url": "https://doi.org/10.1007/s12524-021-01367-4",
+      "product_identifier_found": "N/A -- general TMC-2 cartographic description",
+      "reference_map_product_named": false,
+      "relevant_statement": "Documents TMC-2 5 m ortho-mosaic capability using MOON_ME / IAU_MOON. Relevant only if delivered reference is from TMC-2 products (unverified).",
+      "evidence_classification": "COMPATIBLE_BUT_UNVERIFIED"
+    },
+    {
+      "source_id": "DOC_06",
+      "producer": "USGS Astrogeology Science Center",
+      "title": "Lunar South Pole Mosaic Products (Astropedia)",
+      "url": "https://astrogeology.usgs.gov/maps",
+      "product_identifier_found": "N/A -- public archive description only",
+      "reference_map_product_named": false,
+      "relevant_statement": "USGS publishes multiple south-polar 5 m optical mosaics. Specific product matching delivered raster has not been identified from available audited inputs.",
+      "evidence_classification": "COMPATIBLE_BUT_UNVERIFIED"
+    }
+  ]
+}

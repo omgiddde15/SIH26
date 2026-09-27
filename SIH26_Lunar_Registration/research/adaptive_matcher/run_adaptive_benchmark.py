@@ -548,7 +548,7 @@ def generate_adaptive_plots(df_results, df_decisions, df_summary, output_dir):
     # Plot 4: Matcher-Selection Accuracy & Decision Distribution
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4.5), dpi=150)
     fig.patch.set_facecolor("#0e1117"); ax1.set_facecolor("#161b22"); ax2.set_facecolor("#161b22")
-
+    
     # Left: Selection Correctness
     corr_counts = df_decisions["Selection Correct?"].value_counts()
     c_labels = list(corr_counts.index)

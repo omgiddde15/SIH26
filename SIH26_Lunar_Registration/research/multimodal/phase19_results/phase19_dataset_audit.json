@@ -1,0 +1,137 @@
+{
+  "datasets": [
+    {
+      "dataset_name": "validation_pairs/pair_01",
+      "source_path": "data\\validation_pairs\\pair_01\\source.png",
+      "reference_path": "data\\validation_pairs\\pair_01\\reference.png",
+      "verified_sensor_identity": "Chandrayaan-2 Optical (Intra-sensor test pair)",
+      "source_dimensions": [
+        146,
+        513
+      ],
+      "reference_dimensions": [
+        194,
+        528
+      ],
+      "provenance": "Controlled optical benchmark pair curated for validation testing",
+      "metadata_available": false,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    },
+    {
+      "dataset_name": "validation_pairs/pair_02",
+      "source_path": "data\\validation_pairs\\pair_02\\source.png",
+      "reference_path": "data\\validation_pairs\\pair_02\\reference.png",
+      "verified_sensor_identity": "Chandrayaan-2 Optical (Intra-sensor test pair)",
+      "source_dimensions": [
+        600,
+        1000
+      ],
+      "reference_dimensions": [
+        600,
+        1000
+      ],
+      "provenance": "Controlled optical benchmark pair curated for validation testing",
+      "metadata_available": false,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    },
+    {
+      "dataset_name": "validation_pairs/pair_03",
+      "source_path": "data\\validation_pairs\\pair_03\\source.png",
+      "reference_path": "data\\validation_pairs\\pair_03\\reference.png",
+      "verified_sensor_identity": "Chandrayaan-2 Optical (Intra-sensor test pair)",
+      "source_dimensions": [
+        600,
+        900
+      ],
+      "reference_dimensions": [
+        600,
+        900
+      ],
+      "provenance": "Controlled optical benchmark pair curated for validation testing",
+      "metadata_available": false,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    },
+    {
+      "dataset_name": "validation_pairs/pair_04",
+      "source_path": "data\\validation_pairs\\pair_04\\source.png",
+      "reference_path": "data\\validation_pairs\\pair_04\\reference.png",
+      "verified_sensor_identity": "Chandrayaan-2 Optical (Intra-sensor test pair)",
+      "source_dimensions": [
+        600,
+        900
+      ],
+      "reference_dimensions": [
+        600,
+        900
+      ],
+      "provenance": "Controlled optical benchmark pair curated for validation testing",
+      "metadata_available": false,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    },
+    {
+      "dataset_name": "data/pair05 (Large OHRC strips)",
+      "source_path": "data\\pair05\\ch2_ohr_ncp_20200824T0806596861.png",
+      "reference_path": "data\\pair05\\ch2_ohr_ncp_20200824T1003365280.png",
+      "verified_sensor_identity": "Chandrayaan-2 OHRC (Orbiter High Resolution Camera)",
+      "source_dimensions": [
+        1200,
+        9015
+      ],
+      "reference_dimensions": [
+        1200,
+        9369
+      ],
+      "provenance": "Official Chandrayaan-2 NCP product naming (ch2_ohr_ncp_*); documented in data/metadata/image_footprints.csv",
+      "metadata_available": true,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    },
+    {
+      "dataset_name": "Benchmark Crop Pair (souse.jpeg <-> ref.jpeg)",
+      "source_path": "C:\\Users\\Dell\\Downloads\\souse.jpeg",
+      "reference_path": "C:\\Users\\Dell\\Downloads\\ref.jpeg",
+      "verified_sensor_identity": "UNKNOWN / UNVERIFIED (Informally labeled IIRS <-> OHRC in research notes; zero embedded metadata)",
+      "source_dimensions": [
+        398,
+        420
+      ],
+      "reference_dimensions": [
+        394,
+        420
+      ],
+      "provenance": "Local test crops located in Downloads; no accompanying PDS4 label or camera calibration",
+      "metadata_available": false,
+      "physical_ground_truth": false,
+      "independent_validation_possible": true
+    }
+  ],
+  "sensor_combinations": {
+    "OHRC_to_OHRC": {
+      "status": "AVAILABLE",
+      "dataset_reference": "data/pair05, data/large_ch2 (Chandrayaan-2 OHRC strips)",
+      "verified": true
+    },
+    "OHRC_to_TMC": {
+      "status": "NOT AVAILABLE IN CURRENT VERIFIED DATA",
+      "dataset_reference": null,
+      "verified": false,
+      "note": "Chandrayaan-1 TMC zip archives exist in Downloads/image souse, but no calibrated, paired OHRC-TMC scenes are present in repository."
+    },
+    "OHRC_to_IIRS": {
+      "status": "PARTIALLY AVAILABLE AS UNCALIBRATED RESEARCH BENCHMARK",
+      "dataset_reference": "souse.jpeg <-> ref.jpeg (Informal research benchmark; verified PDS4 metadata absent)",
+      "verified": false,
+      "note": "Subject to Phase 17 metadata audit finding: sensor identity is unverified human convention."
+    },
+    "TMC_to_IIRS": {
+      "status": "NOT AVAILABLE IN CURRENT VERIFIED DATA",
+      "dataset_reference": null,
+      "verified": false,
+      "note": "No paired TMC-IIRS scenes exist in the current dataset repository."
+    }
+  }
+}

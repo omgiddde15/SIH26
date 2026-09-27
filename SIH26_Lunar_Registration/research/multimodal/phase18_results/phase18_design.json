@@ -1,0 +1,23 @@
+{
+  "phase": 18,
+  "title": "Sub-Pixel Accuracy Validation and Feasibility Study",
+  "reference_image": "C:\\Users\\Dell\\Downloads\\ref.jpeg",
+  "image_dimensions": [
+    394,
+    420
+  ],
+  "reporting_bins": [
+    "<= 0.25 px",
+    "<= 0.50 px",
+    "<= 1.00 px",
+    "> 1.00 px"
+  ],
+  "spatial_selection_rule": "3x3 grid, max 6 pts/cell (cap 54 points)",
+  "ransac_parameters": {
+    "model": "Projective Homography",
+    "thresh_px": 3.0,
+    "confidence": 0.995
+  },
+  "conditions_evaluated": 8,
+  "total_per_match_records": 432
+}

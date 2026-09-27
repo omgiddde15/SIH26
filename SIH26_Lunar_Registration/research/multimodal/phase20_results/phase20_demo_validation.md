@@ -1,0 +1,15 @@
+# LunarReg Phase 20 — End-to-End Demo Validation Summary
+
+The 5 canonical demonstration scenarios were executed directly via `app.adaptive_adapter.safe_run_adaptive_registration` under frozen production configuration:
+
+| case_id | category | source_file | reference_file | source_dims | reference_dims | primary_matcher | final_matcher_used | fallback_used | fallback_choice | candidate_count | initial_inliers | inlier_ratio | spatial_occupancy | selected_points | ransac_status | fit_rmse | held_out_rmse | runtime_sec | success | failure_reason | safe_rejection_verified | pdf_generated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| DEMO_1_OPTICAL_NOMINAL | Optical Distortion Baseline (Pair 04) | source.png | reference.png | 600x900 | 600x900 | SIFT | SIFT | False | None | 3946 | 3940 | 0.9985 | 1.0 | 54 | CONVERGED_VALID | 0.0032 | 0.0034 | 1.77 | True | None | N/A | True |
+| DEMO_2_VIEWPOINT_VARIATION | Viewpoint Variation (Pair 02) | source.png | reference.png | 600x1000 | 600x1000 | SIFT | SIFT | False | None | 4036 | 4026 | 0.9975 | 1.0 | 54 | CONVERGED_VALID | 0.004 | 0.0045 | 1.5 | True | None | N/A | True |
+| DEMO_2B_ILLUMINATION_VARIATION | Illumination Variation (Pair 03) | source.png | reference.png | 600x900 | 600x900 | SIFT | SIFT | False | None | 3352 | 3340 | 0.9964 | 1.0 | 54 | CONVERGED_VALID | 0.0068 | 0.0072 | 1.39 | True | None | N/A | True |
+| DEMO_3_SCALE_VARIATION | Scale Variation (Pair 01) | source.png | reference.png | 146x513 | 194x528 | LoFTR | LoFTR | False | None | 166 | 49 | 0.2952 | 0.8889 | 38 | CONVERGED_VALID | 1.437 | 1.7188 | 4.03 | True | None | N/A | True |
+| DEMO_4_CROSS_SENSOR_DIFFICULT | Cross-Sensor Crop Pair (souse.jpeg <-> ref.jpeg) | souse.jpeg | ref.jpeg | 398x420 | 394x420 | LoFTR | None | True | SuperGlue | 199 | 12 | 0.0603 | 0.5556 | 0 | REJECTED_BY_GATE | — | — | 9.05 | False | All available matchers failed the quality gate. | True | False |
+
+### Key Findings:
+- **Optical Pairs (`DEMO_1` to `DEMO_3`)**: Succeeded decisively, achieving up to 4,026 inliers, 100% spatial occupancy, held-out RMSE < 0.01 px (nominal) and 1.72 px (scale-varying), with full 7-page PDF reports validated via Chromium PDFium.
+- **Difficult Cross-Sensor Pair (`DEMO_4`)**: Safely intercepted by the production quality gate (inlier ratio 6.03% < 20.0%). Zero hallucinated warps produced (`registered_image is None`).

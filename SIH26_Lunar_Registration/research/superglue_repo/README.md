@@ -289,7 +289,7 @@ You should get the following table for YFCC (or something very close to it, see 
 ```txt
 Evaluation Results (mean over 4000 pairs):
 AUC@5    AUC@10  AUC@20  Prec    MScore
-39.02    59.51   75.72   98.72   23.61
+39.02    59.51   75.72   98.72   23.61  
 ```
 
 </details>
@@ -299,7 +299,7 @@ AUC@5    AUC@10  AUC@20  Prec    MScore
 <details>
   <summary>[Click to expand]</summary>
 
-The Phototourism results shown in the paper were produced using similar data as the test set from the [Image Matching Challenge 2020](https://vision.uvic.ca/image-matching-challenge/), which holds the ground truth data private for the test set. We list the pairs we used in `assets/phototourism_test_pairs.txt`. To reproduce similar numbers on this test set, please submit to the challenge benchmark. While the challenge is still live, we cannot share the test set publically since we want to help maintain the integrity of the challenge.
+The Phototourism results shown in the paper were produced using similar data as the test set from the [Image Matching Challenge 2020](https://vision.uvic.ca/image-matching-challenge/), which holds the ground truth data private for the test set. We list the pairs we used in `assets/phototourism_test_pairs.txt`. To reproduce similar numbers on this test set, please submit to the challenge benchmark. While the challenge is still live, we cannot share the test set publically since we want to help maintain the integrity of the challenge. 
 
 </details>
 

@@ -1,0 +1,828 @@
+{
+  "metadata": {
+    "project": "LunarReg",
+    "phase": "23A.5",
+    "description": "Physical projection residual attribution sensitivity matrix",
+    "governing_discipline": "RESEARCH-ONLY \u2014 PRODUCTION CODE 100% FROZEN",
+    "disclaimer": "Optical distortion is not modeled; distortion uncertainty is unquantified."
+  },
+  "corner_geolocation_tests": [
+    {
+      "pair": "OHRC_PAIR_01",
+      "corner": "UL",
+      "delivered_u": 0.0,
+      "delivered_v": 0.0,
+      "tie_lat": -89.468902,
+      "tie_lon": 245.779169,
+      "tie_map_x": -14687.1,
+      "tie_map_y": -6607.06,
+      "sph_lat": -89.498037,
+      "sph_lon": 238.554907,
+      "sph_map_x": -12985.91,
+      "sph_map_y": -7940.67,
+      "sphere_vs_tiepoint_residual_m": 2161.61,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -690.93,
+      "dem_vs_tiepoint_residual_m": 1973.28
+    },
+    {
+      "pair": "OHRC_PAIR_01",
+      "corner": "UR",
+      "delivered_u": 624.0,
+      "delivered_v": 0.0,
+      "tie_lat": -89.38196,
+      "tie_lon": 239.729533,
+      "tie_map_x": -16185.96,
+      "tie_map_y": -9447.12,
+      "sph_lat": -89.406595,
+      "sph_lon": 233.437538,
+      "sph_map_x": -14453.08,
+      "sph_map_y": -10719.12,
+      "sphere_vs_tiepoint_residual_m": 2149.62,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -995.19,
+      "dem_vs_tiepoint_residual_m": 1885.09
+    },
+    {
+      "pair": "OHRC_PAIR_01",
+      "corner": "LL",
+      "delivered_u": 0.0,
+      "delivered_v": 4872.0,
+      "tie_lat": -89.329873,
+      "tie_lon": 158.660785,
+      "tie_map_x": 7394.49,
+      "tie_map_y": -18927.59,
+      "sph_lat": -89.26746,
+      "sph_lon": 155.810211,
+      "sph_map_x": 9102.16,
+      "sph_map_y": -20262.89,
+      "sphere_vs_tiepoint_residual_m": 2167.77,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_01",
+      "corner": "LR",
+      "delivered_u": 624.0,
+      "delivered_v": 4872.0,
+      "tie_lat": -89.256269,
+      "tie_lon": 164.845526,
+      "tie_map_x": 5895.79,
+      "tie_map_y": -21768.45,
+      "sph_lat": -89.199509,
+      "sph_lon": 161.667599,
+      "sph_map_x": 7634.87,
+      "sph_map_y": -23041.99,
+      "sphere_vs_tiepoint_residual_m": 2155.53,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "corner": "UL",
+      "delivered_u": 0.0,
+      "delivered_v": 0.0,
+      "tie_lat": -84.574934,
+      "tie_lon": 26.723277,
+      "tie_map_x": 74030.77,
+      "tie_map_y": 147044.95,
+      "sph_lat": -84.534252,
+      "sph_lon": 26.62823,
+      "sph_map_x": 74340.89,
+      "sph_map_y": 148272.81,
+      "sphere_vs_tiepoint_residual_m": 1266.42,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "corner": "UR",
+      "delivered_u": 648.0,
+      "delivered_v": 0.0,
+      "tie_lat": -84.540314,
+      "tie_lon": 27.813661,
+      "tie_map_x": 77306.51,
+      "tie_map_y": 146540.15,
+      "sph_lat": -84.500318,
+      "sph_lon": 27.696392,
+      "sph_map_x": 77571.41,
+      "sph_map_y": 147774.37,
+      "sphere_vs_tiepoint_residual_m": 1262.33,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "corner": "LL",
+      "delivered_u": 0.0,
+      "delivered_v": 5059.0,
+      "tie_lat": -85.353908,
+      "tie_lon": 29.93406,
+      "tie_map_x": 70340.62,
+      "tie_map_y": 122157.99,
+      "sph_lat": -85.313799,
+      "sph_lon": 29.792019,
+      "sph_map_x": 70642.86,
+      "sph_map_y": 123389.24,
+      "sphere_vs_tiepoint_residual_m": 1267.8,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -3849.67,
+      "dem_vs_tiepoint_residual_m": 2197.09
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "corner": "LR",
+      "delivered_u": 648.0,
+      "delivered_v": 5059.0,
+      "tie_lat": -85.313377,
+      "tie_lon": 31.180635,
+      "tie_map_x": 73618.91,
+      "tie_map_y": 121652.04,
+      "sph_lat": -85.274117,
+      "sph_lon": 31.012436,
+      "sph_map_x": 73875.87,
+      "sph_map_y": 122889.67,
+      "sphere_vs_tiepoint_residual_m": 1264.02,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -4154.61,
+      "dem_vs_tiepoint_residual_m": 2270.25
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "corner": "UL",
+      "delivered_u": 0.0,
+      "delivered_v": 0.0,
+      "tie_lat": -84.575787,
+      "tie_lon": 24.207834,
+      "tie_map_x": 67495.2,
+      "tie_map_y": 150128.72,
+      "sph_lat": -84.508629,
+      "sph_lon": 24.023233,
+      "sph_map_x": 67842.09,
+      "sph_map_y": 152209.68,
+      "sphere_vs_tiepoint_residual_m": 2109.67,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "corner": "UR",
+      "delivered_u": 600.0,
+      "delivered_v": 0.0,
+      "tie_lat": -84.544478,
+      "tie_lon": 25.227569,
+      "tie_map_x": 70561.88,
+      "tie_map_y": 149764.53,
+      "sph_lat": -84.478065,
+      "sph_lon": 25.018852,
+      "sph_map_x": 70869.5,
+      "sph_map_y": 151849.67,
+      "sphere_vs_tiepoint_residual_m": 2107.71,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "corner": "LL",
+      "delivered_u": 0.0,
+      "delivered_v": 5054.0,
+      "tie_lat": -85.366665,
+      "tie_lon": 27.30356,
+      "tie_map_x": 64482.36,
+      "tie_map_y": 124913.23,
+      "sph_lat": -85.32584,
+      "sph_lon": 27.155041,
+      "sph_map_x": 64724.28,
+      "sph_map_y": 126183.28,
+      "sphere_vs_tiepoint_residual_m": 1292.88,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -3201.65,
+      "dem_vs_tiepoint_residual_m": 2195.31
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "corner": "LR",
+      "delivered_u": 600.0,
+      "delivered_v": 5054.0,
+      "tie_lat": -85.330022,
+      "tie_lon": 28.474338,
+      "tie_map_x": 67551.81,
+      "tie_map_y": 124547.96,
+      "sph_lat": -85.289944,
+      "sph_lon": 28.302206,
+      "sph_map_x": 67754.5,
+      "sph_map_y": 125822.16,
+      "sphere_vs_tiepoint_residual_m": 1290.22,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -3646.51,
+      "dem_vs_tiepoint_residual_m": 2323.73
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "corner": "UL",
+      "delivered_u": 0.0,
+      "delivered_v": 0.0,
+      "tie_lat": -83.787265,
+      "tie_lon": 30.818093,
+      "tie_map_x": 96610.01,
+      "tie_map_y": 161948.5,
+      "sph_lat": -83.717507,
+      "sph_lon": 30.662076,
+      "sph_map_x": 97250.63,
+      "sph_map_y": 164035.96,
+      "sphere_vs_tiepoint_residual_m": 2183.55,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "corner": "UR",
+      "delivered_u": 552.0,
+      "delivered_v": 0.0,
+      "tie_lat": -83.763994,
+      "tie_lon": 31.715108,
+      "tie_map_x": 99505.57,
+      "tie_map_y": 161018.26,
+      "sph_lat": -83.694736,
+      "sph_lon": 31.544005,
+      "sph_map_x": 100126.27,
+      "sph_map_y": 163109.89,
+      "sphere_vs_tiepoint_residual_m": 2181.78,
+      "dem_status": "OUTSIDE_DEM",
+      "dem_elevation_m": "N/A",
+      "dem_vs_tiepoint_residual_m": "N/A"
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "corner": "LL",
+      "delivered_u": 0.0,
+      "delivered_v": 4649.0,
+      "tie_lat": -84.596614,
+      "tie_lon": 33.158067,
+      "tie_map_x": 89683.67,
+      "tie_map_y": 137270.18,
+      "sph_lat": -84.527701,
+      "sph_lon": 32.947499,
+      "sph_map_x": 90317.67,
+      "sph_map_y": 139356.4,
+      "sphere_vs_tiepoint_residual_m": 2180.43,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -3039.55,
+      "dem_vs_tiepoint_residual_m": 3502.86
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "corner": "LR",
+      "delivered_u": 552.0,
+      "delivered_v": 4649.0,
+      "tie_lat": -84.569341,
+      "tie_lon": 34.176418,
+      "tie_map_x": 92574.77,
+      "tie_map_y": 136340.31,
+      "sph_lat": -84.501044,
+      "sph_lon": 33.947666,
+      "sph_map_x": 93188.85,
+      "sph_map_y": 138430.73,
+      "sphere_vs_tiepoint_residual_m": 2178.75,
+      "dem_status": "INTERSECTED",
+      "dem_elevation_m": -3114.14,
+      "dem_vs_tiepoint_residual_m": 3523.17
+    }
+  ],
+  "sensitivity_matrix": [
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "+0.001 deg",
+      "Ground_Displacement_m": 1.83,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "+0.001 deg",
+      "Ground_Displacement_m": 1.88,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "+0.005 deg",
+      "Ground_Displacement_m": 9.14,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "+0.005 deg",
+      "Ground_Displacement_m": 9.4,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "+0.010 deg",
+      "Ground_Displacement_m": 18.28,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "+0.010 deg",
+      "Ground_Displacement_m": 18.8,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "+0.050 deg",
+      "Ground_Displacement_m": 91.41,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "+0.050 deg",
+      "Ground_Displacement_m": 93.97,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "-0.001 deg",
+      "Ground_Displacement_m": 1.83,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "-0.001 deg",
+      "Ground_Displacement_m": 1.88,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "-0.005 deg",
+      "Ground_Displacement_m": 9.14,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "-0.005 deg",
+      "Ground_Displacement_m": 9.4,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "-0.010 deg",
+      "Ground_Displacement_m": 18.28,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "-0.010 deg",
+      "Ground_Displacement_m": 18.8,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Pitch (cross-track rotation)",
+      "Perturbation_Value": "-0.050 deg",
+      "Ground_Displacement_m": 91.4,
+      "Interpretation": "Sensitivity only (pitch rotation deflecting ray across-track)"
+    },
+    {
+      "Effect": "Attitude",
+      "Parameter_Domain": "Yaw (along-track rotation)",
+      "Perturbation_Value": "-0.050 deg",
+      "Ground_Displacement_m": 94.01,
+      "Interpretation": "Sensitivity only (yaw rotation deflecting ray along-track)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+1.0 m",
+      "Ground_Displacement_m": 1.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+1.0 m",
+      "Ground_Displacement_m": 1.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+1.0 m",
+      "Ground_Displacement_m": 0.26,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+10.0 m",
+      "Ground_Displacement_m": 10.03,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+10.0 m",
+      "Ground_Displacement_m": 10.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+10.0 m",
+      "Ground_Displacement_m": 2.6,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+50.0 m",
+      "Ground_Displacement_m": 50.17,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+50.0 m",
+      "Ground_Displacement_m": 50.02,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+50.0 m",
+      "Ground_Displacement_m": 12.98,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+100.0 m",
+      "Ground_Displacement_m": 100.34,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+100.0 m",
+      "Ground_Displacement_m": 100.04,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+100.0 m",
+      "Ground_Displacement_m": 25.96,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+500.0 m",
+      "Ground_Displacement_m": 501.69,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+500.0 m",
+      "Ground_Displacement_m": 500.21,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+500.0 m",
+      "Ground_Displacement_m": 129.81,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "+1000.0 m",
+      "Ground_Displacement_m": 1003.34,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "+1000.0 m",
+      "Ground_Displacement_m": 1000.41,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "+1000.0 m",
+      "Ground_Displacement_m": 259.63,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-1.0 m",
+      "Ground_Displacement_m": 1.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-1.0 m",
+      "Ground_Displacement_m": 1.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-1.0 m",
+      "Ground_Displacement_m": 0.26,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-10.0 m",
+      "Ground_Displacement_m": 10.03,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-10.0 m",
+      "Ground_Displacement_m": 10.0,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-10.0 m",
+      "Ground_Displacement_m": 2.6,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-50.0 m",
+      "Ground_Displacement_m": 50.17,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-50.0 m",
+      "Ground_Displacement_m": 50.02,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-50.0 m",
+      "Ground_Displacement_m": 12.98,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-100.0 m",
+      "Ground_Displacement_m": 100.34,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-100.0 m",
+      "Ground_Displacement_m": 100.04,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-100.0 m",
+      "Ground_Displacement_m": 25.96,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-500.0 m",
+      "Ground_Displacement_m": 501.73,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-500.0 m",
+      "Ground_Displacement_m": 500.23,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-500.0 m",
+      "Ground_Displacement_m": 129.81,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft along-track position",
+      "Perturbation_Value": "-1000.0 m",
+      "Ground_Displacement_m": 1003.49,
+      "Interpretation": "Sensitivity only (1:1 horizontal along-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft cross-track position",
+      "Perturbation_Value": "-1000.0 m",
+      "Ground_Displacement_m": 1000.46,
+      "Interpretation": "Sensitivity only (1:1 horizontal cross-track translation)"
+    },
+    {
+      "Effect": "Position",
+      "Parameter_Domain": "Spacecraft radial altitude",
+      "Perturbation_Value": "-1000.0 m",
+      "Ground_Displacement_m": 259.62,
+      "Interpretation": "Sensitivity only (scales as Delta H * tan(emission_angle))"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "+0.1 lines (+0.34 ms)",
+      "Ground_Displacement_m": 0.52,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "+0.5 lines (+1.68 ms)",
+      "Ground_Displacement_m": 2.6,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "+1.0 lines (+3.36 ms)",
+      "Ground_Displacement_m": 5.19,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "+5.0 lines (+16.81 ms)",
+      "Ground_Displacement_m": 25.97,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "+10.0 lines (+33.63 ms)",
+      "Ground_Displacement_m": 51.93,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "-0.1 lines (-0.34 ms)",
+      "Ground_Displacement_m": 0.52,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "-0.5 lines (-1.68 ms)",
+      "Ground_Displacement_m": 2.6,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "-1.0 lines (-3.36 ms)",
+      "Ground_Displacement_m": 5.19,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "-5.0 lines (-16.81 ms)",
+      "Ground_Displacement_m": 25.97,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Timing",
+      "Parameter_Domain": "Scanline acquisition time offset",
+      "Perturbation_Value": "-10.0 lines (-33.63 ms)",
+      "Ground_Displacement_m": 51.93,
+      "Interpretation": "Sensitivity only (along-track flight distance during time offset)"
+    },
+    {
+      "Effect": "Pixel-center",
+      "Parameter_Domain": "Pixel sampling coordinate convention",
+      "Perturbation_Value": "-0.5 px (corner convention)",
+      "Ground_Displacement_m": 2.52,
+      "Interpretation": "Sensitivity only (sub-pixel focal plane cross-track shift)"
+    },
+    {
+      "Effect": "Pixel-center",
+      "Parameter_Domain": "Pixel sampling coordinate convention",
+      "Perturbation_Value": "+0.5 px (shifted center)",
+      "Ground_Displacement_m": 2.52,
+      "Interpretation": "Sensitivity only (sub-pixel focal plane cross-track shift)"
+    },
+    {
+      "Effect": "Camera mapping",
+      "Parameter_Domain": "Principal point optical center index",
+      "Perturbation_Value": "5999.5 (0-indexed array center)",
+      "Ground_Displacement_m": 0.13,
+      "Interpretation": "Sensitivity only (0.5 native pixel focal plane offset)"
+    },
+    {
+      "Effect": "Camera mapping",
+      "Parameter_Domain": "Principal point optical center index",
+      "Perturbation_Value": "6000.5 (1-indexed array center)",
+      "Ground_Displacement_m": 0.13,
+      "Interpretation": "Sensitivity only (0.5 native pixel focal plane offset)"
+    },
+    {
+      "Effect": "Native/TIFF scale",
+      "Parameter_Domain": "Cross-track scale quantization",
+      "Perturbation_Value": "floor(s_x)=19 vs 19.231",
+      "Ground_Displacement_m": 18.88,
+      "Interpretation": "Sensitivity only (differential swath scale distortion across samples)"
+    },
+    {
+      "Effect": "DEM resolution",
+      "Parameter_Domain": "LOLA GDR resolution (Pair 01 center)",
+      "Perturbation_Value": "5m vs 20m DEM (Horizontal)",
+      "Ground_Displacement_m": 0.07,
+      "Interpretation": "Sensitivity only (sub-meter horizontal intersection difference in smooth polar terrain)"
+    },
+    {
+      "Effect": "DEM resolution",
+      "Parameter_Domain": "LOLA GDR resolution (Pair 01 center)",
+      "Perturbation_Value": "5m vs 20m DEM (3D Vector)",
+      "Ground_Displacement_m": 0.27,
+      "Interpretation": "Sensitivity only (combined horizontal and vertical intersection difference)"
+    }
+  ],
+  "pair04_crop_analysis": [
+    {
+      "sample_name": "TOP_MID",
+      "delivered_u": 276,
+      "delivered_v": 465,
+      "sphere_lat": -83.78763,
+      "sphere_lon": 31.31291,
+      "dem_local_line": 1258.44,
+      "dem_local_sample": 436.47,
+      "dem_crop_shape": "1321 x 532",
+      "SPHERE_INTERSECTION_WITHIN_CROP": "YES",
+      "distance_to_crop_edge_lines": 62.6,
+      "distance_to_crop_edge_m": 1251.2,
+      "physical_mechanism": "Ray emission slant of 23.8 deg over deep crater topography (-3.4 km) extends line-of-sight path by ~3.7 km, translating the ground intersection ~72 lines (1.45 km) southwards, crossing the southern DEM crop boundary."
+    },
+    {
+      "sample_name": "TOP_LEFT",
+      "delivered_u": 55,
+      "delivered_v": 465,
+      "sphere_lat": -83.79677,
+      "sphere_lon": 30.95454,
+      "dem_local_line": 1277.01,
+      "dem_local_sample": 378.84,
+      "dem_crop_shape": "1321 x 532",
+      "SPHERE_INTERSECTION_WITHIN_CROP": "YES",
+      "distance_to_crop_edge_lines": 44.0,
+      "distance_to_crop_edge_m": 879.9,
+      "physical_mechanism": "Ray emission slant of 23.8 deg over deep crater topography (-3.4 km) extends line-of-sight path by ~3.7 km, translating the ground intersection ~72 lines (1.45 km) southwards, crossing the southern DEM crop boundary."
+    },
+    {
+      "sample_name": "TOP_RIGHT",
+      "delivered_u": 496,
+      "delivered_v": 465,
+      "sphere_lat": -83.7783,
+      "sphere_lon": 31.66765,
+      "dem_local_line": 1240.02,
+      "dem_local_sample": 493.69,
+      "dem_crop_shape": "1321 x 532",
+      "SPHERE_INTERSECTION_WITHIN_CROP": "YES",
+      "distance_to_crop_edge_lines": 81.0,
+      "distance_to_crop_edge_m": 1619.7,
+      "physical_mechanism": "Ray emission slant of 23.8 deg over deep crater topography (-3.4 km) extends line-of-sight path by ~3.7 km, translating the ground intersection ~72 lines (1.45 km) southwards, crossing the southern DEM crop boundary."
+    }
+  ]
+}

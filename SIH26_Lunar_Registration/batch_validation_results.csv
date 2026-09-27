@@ -1,0 +1,5 @@
+Pair ID,Source resolution,Reference resolution,LoFTR matching resolution,Candidate matches,Initial RANSAC inliers,Selected correspondences,Final inliers,Final inlier ratio,Fit RMSE,Check RMSE for seed 1,Check RMSE for seed 2,Check RMSE for seed 3,Check RMSE for seed 4,Check RMSE for seed 5,Mean Check RMSE,Median Check RMSE,Best Check RMSE,Worst Check RMSE,Spatial occupancy,Spatial CV,Runtime,Success / Failure,Failure Reason
+pair_01,146x513,194x528,146x513 / 194x528,166,49,38,36,0.9474,1.2942,2.0364,1.6897,1.805,1.861,1.5466,1.7877,1.805,1.5466,2.0364,0.8889,0.5329,3.43,Success,None
+pair_02,600x1000,600x1000,600x1000 / 600x1000,8591,8591,54,54,1.0,0.003,0.0031,0.0038,0.0035,0.0036,0.0029,0.0034,0.0035,0.0029,0.0038,1.0,0.0,27.67,Success,None
+pair_03,600x900,600x900,600x900 / 600x900,7739,7739,54,54,1.0,0.0027,0.0029,0.0037,0.0027,0.0031,0.0031,0.0031,0.0031,0.0027,0.0037,1.0,0.0,25.48,Success,None
+pair_04,600x900,600x900,600x900 / 600x900,7739,7739,54,54,1.0,0.0032,0.0037,0.004,0.0039,0.0038,0.0041,0.0039,0.0039,0.0037,0.0041,1.0,0.0,25.8,Success,None

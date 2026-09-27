@@ -1,0 +1,1150 @@
+{
+  "metadata": {
+    "phase": "23B.2",
+    "script": "run_phase23b2_crs_reader_semantics.py",
+    "generated": "2026-09-24T07:05:04Z",
+    "classification": "A -- READER-SEMANTICS-CONFIRMED"
+  },
+  "geokey_specifications": {
+    "GeoKey_3092": {
+      "name": "ProjScaleAtNatOriginGeoKey",
+      "alias": "ProjScaleAtOriginGeoKey",
+      "code": 3092,
+      "type": "DOUBLE",
+      "standard": "OGC GeoTIFF 1.1 (Clause 8.7.5) & libgeotiff geokeys.h",
+      "meaning": "Scale factor at the natural origin of the projection (k_0).",
+      "role_in_polar_stereographic": "Defines the scale factor at the pole (k_0). In standard polar stereographic, k_0 = 1.0 (tangent plane at the pole). A value of 1.0 is the exact, standard, canonical unit scale factor.",
+      "delivered_value": 1.0,
+      "is_orientation_parameter": false,
+      "is_standard_value": true
+    },
+    "GeoKey_3095": {
+      "name": "ProjStraightVertPoleLongGeoKey",
+      "code": 3095,
+      "type": "DOUBLE",
+      "standard": "OGC GeoTIFF 1.1 (Clause 8.7.5) & libgeotiff geokeys.h",
+      "meaning": "Longitude of the straight vertical line from the pole (central meridian, lambda_0).",
+      "role_in_polar_stereographic": "Defines the meridian mapped to the +Y grid axis. For south pole, lambda_0 = 0.0 deg aligns the prime meridian vertically.",
+      "delivered_value": 0.0,
+      "is_orientation_parameter": true,
+      "is_standard_value": true
+    },
+    "GeoKey_3081": {
+      "name": "ProjNatOriginLatGeoKey",
+      "code": 3081,
+      "type": "DOUBLE",
+      "meaning": "Latitude of natural origin (phi_0 = -90.0 deg for south pole).",
+      "delivered_value": -90.0,
+      "is_standard_value": true
+    },
+    "GeoKey_3082": {
+      "name": "ProjFalseEastingGeoKey",
+      "code": 3082,
+      "type": "DOUBLE",
+      "meaning": "False easting added to projected X coordinates (0.0 m).",
+      "delivered_value": 0.0,
+      "is_standard_value": true
+    },
+    "GeoKey_3083": {
+      "name": "ProjFalseNorthingGeoKey",
+      "code": 3083,
+      "type": "DOUBLE",
+      "meaning": "False northing added to projected Y coordinates (0.0 m).",
+      "delivered_value": 0.0,
+      "is_standard_value": true
+    },
+    "GeoKey_2057": {
+      "name": "GeogSemiMajorAxisGeoKey",
+      "code": 2057,
+      "type": "DOUBLE",
+      "meaning": "Semi-major axis of lunar reference ellipsoid (1,737,400.0 m).",
+      "delivered_value": 1737400.0,
+      "is_standard_value": true
+    },
+    "GeoKey_2058": {
+      "name": "GeogSemiMinorAxisGeoKey",
+      "code": 2058,
+      "type": "DOUBLE",
+      "meaning": "Semi-minor axis of lunar reference ellipsoid (1,737,400.0 m).",
+      "delivered_value": 1737400.0,
+      "is_standard_value": true
+    },
+    "GeoKey_2061": {
+      "name": "GeogInvFlatteningGeoKey",
+      "code": 2061,
+      "type": "DOUBLE",
+      "meaning": "Inverse flattening (0.0 = perfect sphere).",
+      "delivered_value": 0.0,
+      "is_standard_value": true
+    },
+    "root_cause_of_prior_misinterpretation": "In Phase 23B, an early manual decoding script mapped Key ID 3092 to 'ProjStraightVertPoleLongGeoKey' instead of its true specification definition 'ProjScaleAtNatOriginGeoKey'. In reality, Key 3092 is the unit scale factor (1.0), and Key 3095 is the straight vertical pole longitude (0.0 deg). The delivered reference GeoTIFFs contain NO non-standard 1.0 deg pole longitude."
+  },
+  "readers": {
+    "OHRC_PAIR_01": {
+      "pair_id": "OHRC_PAIR_01",
+      "label": "Pair 01 (South Pole Crater, 89.5 deg S)",
+      "path": "C:\\Users\\Dell\\Downloads\\SIH data\\data_for_sih_2026\\ohrc\\OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_reference_at_5m.tif",
+      "raw_geokeys": {
+        "Key_1024_GTModelType": 1,
+        "Key_1025_GTRasterType": 1,
+        "Key_2057_SemiMajor": [
+          1737400.0
+        ],
+        "Key_2058_SemiMinor": [
+          1737400.0
+        ],
+        "Key_2061_InvFlattening": [
+          0.0
+        ],
+        "Key_3075_ProjCoordTrans": 15,
+        "Key_3081_ProjNatOriginLat": [
+          -90.0
+        ],
+        "Key_3082_ProjFalseEasting": [
+          0.0
+        ],
+        "Key_3083_ProjFalseNorthing": [
+          0.0
+        ],
+        "Key_3092_ProjScaleAtNatOrigin": [
+          1.0
+        ],
+        "Key_3095_ProjStraightVertPoleLong": [
+          0.0
+        ],
+        "ModelPixelScale": [
+          5.0,
+          5.0,
+          0.0
+        ],
+        "ModelTiepoint": [
+          0.0,
+          0.0,
+          0.0,
+          -19187.0,
+          -3603.0,
+          0.0
+        ]
+      },
+      "rasterio": {
+        "version": "1.5.1",
+        "crs_wkt": "PROJCS[\"PolarStereographic Moon\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon\",SPHEROID[\"Moon\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "central_meridian": 0,
+        "latitude_of_origin": -90,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0,
+        "radius": 1737400,
+        "transform": [
+          5.0,
+          0.0,
+          -19187.0,
+          0.0,
+          -5.0,
+          -3603.0
+        ],
+        "bounds": [
+          -19187.0,
+          -24763.0,
+          10393.0,
+          -3603.0
+        ],
+        "raster_type": "Area"
+      },
+      "pyproj": {
+        "version": "3.8.0",
+        "proj_version": "9.8.1",
+        "name": "PolarStereographic Moon",
+        "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs +type=crs",
+        "central_meridian": 0.0,
+        "latitude_of_origin": -90.0,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0
+      },
+      "cross_reader_agreement": {
+        "central_meridian_is_zero": true,
+        "scale_factor_is_one": true,
+        "all_readers_agree": true
+      }
+    },
+    "OHRC_PAIR_02": {
+      "pair_id": "OHRC_PAIR_02",
+      "label": "Pair 02 (Connecting Ridge / Shackleton-de Gerlache, 85 deg S)",
+      "path": "C:\\Users\\Dell\\Downloads\\SIH data\\data_for_sih_2026\\ohrc\\OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_reference_at_5m.tif",
+      "raw_geokeys": {
+        "Key_1024_GTModelType": 1,
+        "Key_1025_GTRasterType": 1,
+        "Key_2057_SemiMajor": [
+          1737400.0
+        ],
+        "Key_2058_SemiMinor": [
+          1737400.0
+        ],
+        "Key_2061_InvFlattening": [
+          0.0
+        ],
+        "Key_3075_ProjCoordTrans": 15,
+        "Key_3081_ProjNatOriginLat": [
+          -90.0
+        ],
+        "Key_3082_ProjFalseEasting": [
+          0.0
+        ],
+        "Key_3083_ProjFalseNorthing": [
+          0.0
+        ],
+        "Key_3092_ProjScaleAtNatOrigin": [
+          1.0
+        ],
+        "Key_3095_ProjStraightVertPoleLong": [
+          0.0
+        ],
+        "ModelPixelScale": [
+          5.0,
+          5.0,
+          0.0
+        ],
+        "ModelTiepoint": [
+          0.0,
+          0.0,
+          0.0,
+          67338.0,
+          150047.0,
+          0.0
+        ]
+      },
+      "rasterio": {
+        "version": "1.5.1",
+        "crs_wkt": "PROJCS[\"PolarStereographic Moon\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon\",SPHEROID[\"Moon\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "central_meridian": 0,
+        "latitude_of_origin": -90,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0,
+        "radius": 1737400,
+        "transform": [
+          5.0,
+          0.0,
+          67338.0,
+          0.0,
+          -5.0,
+          150047.0
+        ],
+        "bounds": [
+          67338.0,
+          118652.0,
+          80303.0,
+          150047.0
+        ],
+        "raster_type": "Area"
+      },
+      "pyproj": {
+        "version": "3.8.0",
+        "proj_version": "9.8.1",
+        "name": "PolarStereographic Moon",
+        "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs +type=crs",
+        "central_meridian": 0.0,
+        "latitude_of_origin": -90.0,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0
+      },
+      "cross_reader_agreement": {
+        "central_meridian_is_zero": true,
+        "scale_factor_is_one": true,
+        "all_readers_agree": true
+      }
+    },
+    "OHRC_PAIR_03": {
+      "pair_id": "OHRC_PAIR_03",
+      "label": "Pair 03 (Connecting Ridge / Shackleton-de Gerlache, 85 deg S)",
+      "path": "C:\\Users\\Dell\\Downloads\\SIH data\\data_for_sih_2026\\ohrc\\OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_reference_at_5m.tif",
+      "raw_geokeys": {
+        "Key_1024_GTModelType": 1,
+        "Key_1025_GTRasterType": 1,
+        "Key_2057_SemiMajor": [
+          1737400.0
+        ],
+        "Key_2058_SemiMinor": [
+          1737400.0
+        ],
+        "Key_2061_InvFlattening": [
+          0.0
+        ],
+        "Key_3075_ProjCoordTrans": 15,
+        "Key_3081_ProjNatOriginLat": [
+          -90.0
+        ],
+        "Key_3082_ProjFalseEasting": [
+          0.0
+        ],
+        "Key_3083_ProjFalseNorthing": [
+          0.0
+        ],
+        "Key_3092_ProjScaleAtNatOrigin": [
+          1.0
+        ],
+        "Key_3095_ProjStraightVertPoleLong": [
+          0.0
+        ],
+        "ModelPixelScale": [
+          5.0,
+          5.0,
+          0.0
+        ],
+        "ModelTiepoint": [
+          0.0,
+          0.0,
+          0.0,
+          61478.0,
+          153132.0,
+          0.0
+        ]
+      },
+      "rasterio": {
+        "version": "1.5.1",
+        "crs_wkt": "PROJCS[\"PolarStereographic Moon\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon\",SPHEROID[\"Moon\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "central_meridian": 0,
+        "latitude_of_origin": -90,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0,
+        "radius": 1737400,
+        "transform": [
+          5.0,
+          0.0,
+          61478.0,
+          0.0,
+          -5.0,
+          153132.0
+        ],
+        "bounds": [
+          61478.0,
+          121552.0,
+          73558.0,
+          153132.0
+        ],
+        "raster_type": "Area"
+      },
+      "pyproj": {
+        "version": "3.8.0",
+        "proj_version": "9.8.1",
+        "name": "PolarStereographic Moon",
+        "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs +type=crs",
+        "central_meridian": 0.0,
+        "latitude_of_origin": -90.0,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0
+      },
+      "cross_reader_agreement": {
+        "central_meridian_is_zero": true,
+        "scale_factor_is_one": true,
+        "all_readers_agree": true
+      }
+    },
+    "OHRC_PAIR_04": {
+      "pair_id": "OHRC_PAIR_04",
+      "label": "Pair 04 (Amundsen Rim, 84 deg S)",
+      "path": "C:\\Users\\Dell\\Downloads\\SIH data\\data_for_sih_2026\\ohrc\\OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_reference_at_5m.tif",
+      "raw_geokeys": {
+        "Key_1024_GTModelType": 1,
+        "Key_1025_GTRasterType": 1,
+        "Key_2057_SemiMajor": [
+          1737400.0
+        ],
+        "Key_2058_SemiMinor": [
+          1737400.0
+        ],
+        "Key_2061_InvFlattening": [
+          0.0
+        ],
+        "Key_3075_ProjCoordTrans": 15,
+        "Key_3081_ProjNatOriginLat": [
+          -90.0
+        ],
+        "Key_3082_ProjFalseEasting": [
+          0.0
+        ],
+        "Key_3083_ProjFalseNorthing": [
+          0.0
+        ],
+        "Key_3092_ProjScaleAtNatOrigin": [
+          1.0
+        ],
+        "Key_3095_ProjStraightVertPoleLong": [
+          0.0
+        ],
+        "ModelPixelScale": [
+          5.0,
+          5.0,
+          0.0
+        ],
+        "ModelTiepoint": [
+          0.0,
+          0.0,
+          0.0,
+          86683.0,
+          164952.0,
+          0.0
+        ]
+      },
+      "rasterio": {
+        "version": "1.5.1",
+        "crs_wkt": "PROJCS[\"PolarStereographic Moon\",GEOGCS[\"GCS_Moon\",DATUM[\"D_Moon\",SPHEROID[\"Moon\",1737400,0]],PRIMEM[\"Reference_Meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "central_meridian": 0,
+        "latitude_of_origin": -90,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0,
+        "radius": 1737400,
+        "transform": [
+          5.0,
+          0.0,
+          86683.0,
+          0.0,
+          -5.0,
+          164952.0
+        ],
+        "bounds": [
+          86683.0,
+          133342.0,
+          102503.0,
+          164952.0
+        ],
+        "raster_type": "Area"
+      },
+      "pyproj": {
+        "version": "3.8.0",
+        "proj_version": "9.8.1",
+        "name": "PolarStereographic Moon",
+        "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs +type=crs",
+        "central_meridian": 0.0,
+        "latitude_of_origin": -90.0,
+        "scale_factor": 1.0,
+        "false_easting": 0,
+        "false_northing": 0
+      },
+      "cross_reader_agreement": {
+        "central_meridian_is_zero": true,
+        "scale_factor_is_one": true,
+        "all_readers_agree": true
+      }
+    }
+  },
+  "coordinate_validations": {
+    "OHRC_PAIR_01": {
+      "points": [
+        {
+          "point_label": "UL_corner",
+          "pixel_col": 0,
+          "pixel_row": 0,
+          "E_rasterio": -19184.5,
+          "N_rasterio": -3605.5,
+          "lat_geo": -89.3562664,
+          "lon_geo": -100.6439065,
+          "E_proj": -19184.5,
+          "N_proj": -3605.5,
+          "E_our_lam0": -19184.5,
+          "N_our_lam0": -3605.5,
+          "diff_rio_vs_our0_m": 3e-09,
+          "diff_rio_vs_proj_m": 3e-09,
+          "E_our_lam1": -19118.653,
+          "N_our_lam1": -3939.767,
+          "displacement_0_vs_1_m": 340.69,
+          "azimuth_0_vs_1_deg": 168.86
+        },
+        {
+          "point_label": "UR_corner",
+          "pixel_col": 5915,
+          "pixel_row": 0,
+          "E_rasterio": 10390.5,
+          "N_rasterio": -3605.5,
+          "lat_geo": -89.6373012,
+          "lon_geo": 109.136757,
+          "E_proj": 10390.5,
+          "N_proj": -3605.5,
+          "E_our_lam0": 10390.5,
+          "N_our_lam0": -3605.5,
+          "diff_rio_vs_our0_m": 5e-09,
+          "diff_rio_vs_proj_m": 5e-09,
+          "E_our_lam1": 10451.842,
+          "N_our_lam1": -3423.612,
+          "displacement_0_vs_1_m": 191.954,
+          "azimuth_0_vs_1_deg": 18.64
+        },
+        {
+          "point_label": "LL_corner",
+          "pixel_col": 0,
+          "pixel_row": 4231,
+          "E_rasterio": -19184.5,
+          "N_rasterio": -24760.5,
+          "lat_geo": -88.9670632,
+          "lon_geo": -142.2313822,
+          "E_proj": -19184.5,
+          "N_proj": -24760.5,
+          "E_our_lam0": -19184.5,
+          "N_our_lam0": -24760.5,
+          "diff_rio_vs_our0_m": 3e-09,
+          "diff_rio_vs_proj_m": 3e-09,
+          "E_our_lam1": -18749.448,
+          "N_our_lam1": -25091.545,
+          "displacement_0_vs_1_m": 546.682,
+          "azimuth_0_vs_1_deg": 127.27
+        },
+        {
+          "point_label": "LR_corner",
+          "pixel_col": 5915,
+          "pixel_row": 4231,
+          "E_rasterio": 10390.5,
+          "N_rasterio": -24760.5,
+          "lat_geo": -89.1144862,
+          "lon_geo": 157.2351226,
+          "E_proj": 10390.5,
+          "N_proj": -24760.5,
+          "E_our_lam0": 10390.5,
+          "N_our_lam0": -24760.5,
+          "diff_rio_vs_our0_m": 6e-09,
+          "diff_rio_vs_proj_m": 6e-09,
+          "E_our_lam1": 10821.048,
+          "N_our_lam1": -24575.39,
+          "displacement_0_vs_1_m": 468.655,
+          "azimuth_0_vs_1_deg": 66.74
+        },
+        {
+          "point_label": "Center",
+          "pixel_col": 2958,
+          "pixel_row": 2116,
+          "E_rasterio": -4394.5,
+          "N_rasterio": -14185.5,
+          "lat_geo": -89.5102619,
+          "lon_geo": -162.7876377,
+          "E_proj": -4394.5,
+          "N_proj": -14185.5,
+          "E_our_lam0": -4394.5,
+          "N_our_lam0": -14185.5,
+          "diff_rio_vs_our0_m": 8e-09,
+          "diff_rio_vs_proj_m": 8e-09,
+          "E_our_lam1": -4146.26,
+          "N_our_lam1": -14260.034,
+          "displacement_0_vs_1_m": 259.188,
+          "azimuth_0_vs_1_deg": 106.71
+        },
+        {
+          "point_label": "Top_mid",
+          "pixel_col": 2958,
+          "pixel_row": 0,
+          "E_rasterio": -4394.5,
+          "N_rasterio": -3605.5,
+          "lat_geo": -89.812544,
+          "lon_geo": -129.3674191,
+          "E_proj": -4394.5,
+          "N_proj": -3605.5,
+          "E_our_lam0": -4394.5,
+          "N_our_lam0": -3605.5,
+          "diff_rio_vs_our0_m": 1.5e-08,
+          "diff_rio_vs_proj_m": 1.5e-08,
+          "E_our_lam1": -4330.906,
+          "N_our_lam1": -3681.645,
+          "displacement_0_vs_1_m": 99.208,
+          "azimuth_0_vs_1_deg": 140.13
+        },
+        {
+          "point_label": "Bottom_mid",
+          "pixel_col": 2958,
+          "pixel_row": 4231,
+          "E_rasterio": -4394.5,
+          "N_rasterio": -24760.5,
+          "lat_geo": -89.1707049,
+          "lon_geo": -169.9359271,
+          "E_proj": -4394.5,
+          "N_proj": -24760.5,
+          "E_our_lam0": -4394.5,
+          "N_our_lam0": -24760.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": -3961.7,
+          "N_our_lam1": -24833.423,
+          "displacement_0_vs_1_m": 438.9,
+          "azimuth_0_vs_1_deg": 99.56
+        },
+        {
+          "point_label": "Left_mid",
+          "pixel_col": 0,
+          "pixel_row": 2116,
+          "E_rasterio": -19184.5,
+          "N_rasterio": -14185.5,
+          "lat_geo": -89.2131781,
+          "lon_geo": -126.4801495,
+          "E_proj": -19184.5,
+          "N_proj": -14185.5,
+          "E_our_lam0": -19184.5,
+          "N_our_lam0": -14185.5,
+          "diff_rio_vs_our0_m": 4e-09,
+          "diff_rio_vs_proj_m": 4e-09,
+          "E_our_lam1": -18934.007,
+          "N_our_lam1": -14518.155,
+          "displacement_0_vs_1_m": 416.421,
+          "azimuth_0_vs_1_deg": 143.02
+        },
+        {
+          "point_label": "Right_mid",
+          "pixel_col": 5915,
+          "pixel_row": 2116,
+          "E_rasterio": 10390.5,
+          "N_rasterio": -14185.5,
+          "lat_geo": -89.4201276,
+          "lon_geo": 143.7782192,
+          "E_proj": 10390.5,
+          "N_proj": -14185.5,
+          "E_our_lam0": 10390.5,
+          "N_our_lam0": -14185.5,
+          "diff_rio_vs_our0_m": 4e-09,
+          "diff_rio_vs_proj_m": 4e-09,
+          "E_our_lam1": 10636.489,
+          "N_our_lam1": -14002.0,
+          "displacement_0_vs_1_m": 306.892,
+          "azimuth_0_vs_1_deg": 53.28
+        }
+      ],
+      "max_diff_m": 1.5e-08,
+      "rms_diff_m": 6e-09,
+      "perfect_agreement": true
+    },
+    "OHRC_PAIR_02": {
+      "points": [
+        {
+          "point_label": "UL_corner",
+          "pixel_col": 0,
+          "pixel_row": 0,
+          "E_rasterio": 67340.5,
+          "N_rasterio": 150044.5,
+          "lat_geo": -84.5804007,
+          "lon_geo": 24.1707109,
+          "E_proj": 67340.5,
+          "N_proj": 150044.5,
+          "E_our_lam0": 67340.5,
+          "N_our_lam0": 150044.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 64711.606,
+          "N_our_lam1": 151196.901,
+          "displacement_0_vs_1_m": 2870.385,
+          "azimuth_0_vs_1_deg": 293.67
+        },
+        {
+          "point_label": "UR_corner",
+          "pixel_col": 2592,
+          "pixel_row": 0,
+          "E_rasterio": 80300.5,
+          "N_rasterio": 150044.5,
+          "lat_geo": -84.392276,
+          "lon_geo": 28.1547052,
+          "E_proj": 80300.5,
+          "N_proj": 150044.5,
+          "E_our_lam0": 80300.5,
+          "N_our_lam0": 150044.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 77669.632,
+          "N_our_lam1": 151423.084,
+          "displacement_0_vs_1_m": 2970.178,
+          "azimuth_0_vs_1_deg": 297.65
+        },
+        {
+          "point_label": "LL_corner",
+          "pixel_col": 0,
+          "pixel_row": 6278,
+          "E_rasterio": 67340.5,
+          "N_rasterio": 118654.5,
+          "lat_geo": -85.5030778,
+          "lon_geo": 29.5763975,
+          "E_proj": 67340.5,
+          "N_proj": 118654.5,
+          "E_our_lam0": 67340.5,
+          "N_our_lam0": 118654.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 65259.437,
+          "N_our_lam1": 119811.682,
+          "displacement_0_vs_1_m": 2381.154,
+          "azimuth_0_vs_1_deg": 299.08
+        },
+        {
+          "point_label": "LR_corner",
+          "pixel_col": 2592,
+          "pixel_row": 6278,
+          "E_rasterio": 80300.5,
+          "N_rasterio": 118654.5,
+          "lat_geo": -85.2778447,
+          "lon_geo": 34.0885304,
+          "E_proj": 80300.5,
+          "N_proj": 118654.5,
+          "E_our_lam0": 80300.5,
+          "N_our_lam0": 118654.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 78217.463,
+          "N_our_lam1": 120037.865,
+          "displacement_0_vs_1_m": 2500.548,
+          "azimuth_0_vs_1_deg": 303.59
+        },
+        {
+          "point_label": "Center",
+          "pixel_col": 1296,
+          "pixel_row": 3139,
+          "E_rasterio": 73820.5,
+          "N_rasterio": 134349.5,
+          "lat_geo": -84.9479418,
+          "lon_geo": 28.7873041,
+          "E_proj": 73820.5,
+          "N_proj": 134349.5,
+          "E_our_lam0": 73820.5,
+          "N_our_lam0": 134349.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 71464.535,
+          "N_our_lam1": 135617.383,
+          "displacement_0_vs_1_m": 2675.463,
+          "azimuth_0_vs_1_deg": 298.29
+        },
+        {
+          "point_label": "Top_mid",
+          "pixel_col": 1296,
+          "pixel_row": 0,
+          "E_rasterio": 73820.5,
+          "N_rasterio": 150044.5,
+          "lat_geo": -84.4896605,
+          "lon_geo": 26.1967575,
+          "E_proj": 73820.5,
+          "N_proj": 150044.5,
+          "E_our_lam0": 73820.5,
+          "N_our_lam0": 150044.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 71190.619,
+          "N_our_lam1": 151309.993,
+          "displacement_0_vs_1_m": 2918.518,
+          "azimuth_0_vs_1_deg": 295.7
+        },
+        {
+          "point_label": "Bottom_mid",
+          "pixel_col": 1296,
+          "pixel_row": 6278,
+          "E_rasterio": 73820.5,
+          "N_rasterio": 118654.5,
+          "lat_geo": -85.3940238,
+          "lon_geo": 31.8876703,
+          "E_proj": 73820.5,
+          "N_proj": 118654.5,
+          "E_our_lam0": 73820.5,
+          "N_our_lam0": 118654.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 71738.45,
+          "N_our_lam1": 119924.774,
+          "displacement_0_vs_1_m": 2438.96,
+          "azimuth_0_vs_1_deg": 301.39
+        },
+        {
+          "point_label": "Left_mid",
+          "pixel_col": 0,
+          "pixel_row": 3139,
+          "E_rasterio": 67340.5,
+          "N_rasterio": 134349.5,
+          "lat_geo": -85.0471201,
+          "lon_geo": 26.6215729,
+          "E_proj": 67340.5,
+          "N_proj": 134349.5,
+          "E_our_lam0": 67340.5,
+          "N_our_lam0": 134349.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 64985.522,
+          "N_our_lam1": 135504.292,
+          "displacement_0_vs_1_m": 2622.874,
+          "azimuth_0_vs_1_deg": 296.12
+        },
+        {
+          "point_label": "Right_mid",
+          "pixel_col": 2592,
+          "pixel_row": 3139,
+          "E_rasterio": 80300.5,
+          "N_rasterio": 134349.5,
+          "lat_geo": -84.841846,
+          "lon_geo": 30.8666993,
+          "E_proj": 80300.5,
+          "N_proj": 134349.5,
+          "E_our_lam0": 80300.5,
+          "N_our_lam0": 134349.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 77943.548,
+          "N_our_lam1": 135730.475,
+          "displacement_0_vs_1_m": 2731.724,
+          "azimuth_0_vs_1_deg": 300.37
+        }
+      ],
+      "max_diff_m": 1e-09,
+      "rms_diff_m": 1e-09,
+      "perfect_agreement": true
+    },
+    "OHRC_PAIR_03": {
+      "points": [
+        {
+          "point_label": "UL_corner",
+          "pixel_col": 0,
+          "pixel_row": 0,
+          "E_rasterio": 61480.5,
+          "N_rasterio": 153129.5,
+          "lat_geo": -84.5623844,
+          "lon_geo": 21.8751401,
+          "E_proj": 61480.5,
+          "N_proj": 153129.5,
+          "E_our_lam0": 61480.5,
+          "N_our_lam0": 153129.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 58798.658,
+          "N_our_lam1": 154179.16,
+          "displacement_0_vs_1_m": 2879.942,
+          "azimuth_0_vs_1_deg": 291.38
+        },
+        {
+          "point_label": "UR_corner",
+          "pixel_col": 2415,
+          "pixel_row": 0,
+          "E_rasterio": 73555.5,
+          "N_rasterio": 153129.5,
+          "lat_geo": -84.4021891,
+          "lon_geo": 25.6572244,
+          "E_proj": 73555.5,
+          "N_proj": 153129.5,
+          "E_our_lam0": 73555.5,
+          "N_our_lam0": 153129.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 70871.819,
+          "N_our_lam1": 154389.898,
+          "displacement_0_vs_1_m": 2964.92,
+          "azimuth_0_vs_1_deg": 295.16
+        },
+        {
+          "point_label": "LL_corner",
+          "pixel_col": 0,
+          "pixel_row": 6315,
+          "E_rasterio": 61480.5,
+          "N_rasterio": 121554.5,
+          "lat_geo": -85.5101167,
+          "lon_geo": 26.8296235,
+          "E_proj": 61480.5,
+          "N_proj": 121554.5,
+          "E_our_lam0": 61480.5,
+          "N_our_lam0": 121554.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 59349.718,
+          "N_our_lam1": 122608.969,
+          "displacement_0_vs_1_m": 2377.423,
+          "azimuth_0_vs_1_deg": 296.33
+        },
+        {
+          "point_label": "LR_corner",
+          "pixel_col": 2415,
+          "pixel_row": 6315,
+          "E_rasterio": 73555.5,
+          "N_rasterio": 121554.5,
+          "lat_geo": -85.3172053,
+          "lon_geo": 31.1791233,
+          "E_proj": 73555.5,
+          "N_proj": 121554.5,
+          "E_our_lam0": 73555.5,
+          "N_our_lam0": 121554.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 71422.879,
+          "N_our_lam1": 122819.707,
+          "displacement_0_vs_1_m": 2479.682,
+          "azimuth_0_vs_1_deg": 300.68
+        },
+        {
+          "point_label": "Center",
+          "pixel_col": 1208,
+          "pixel_row": 3158,
+          "E_rasterio": 67520.5,
+          "N_rasterio": 137339.5,
+          "lat_geo": -84.956333,
+          "lon_geo": 26.1802103,
+          "E_proj": 67520.5,
+          "N_proj": 137339.5,
+          "E_our_lam0": 67520.5,
+          "N_our_lam0": 137339.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 65113.312,
+          "N_our_lam1": 138496.978,
+          "displacement_0_vs_1_m": 2671.013,
+          "azimuth_0_vs_1_deg": 295.68
+        },
+        {
+          "point_label": "Top_mid",
+          "pixel_col": 1208,
+          "pixel_row": 0,
+          "E_rasterio": 67520.5,
+          "N_rasterio": 153129.5,
+          "lat_geo": -84.4852506,
+          "lon_geo": 23.7944691,
+          "E_proj": 67520.5,
+          "N_proj": 153129.5,
+          "E_our_lam0": 67520.5,
+          "N_our_lam0": 153129.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 64837.738,
+          "N_our_lam1": 154284.573,
+          "displacement_0_vs_1_m": 2920.857,
+          "azimuth_0_vs_1_deg": 293.29
+        },
+        {
+          "point_label": "Bottom_mid",
+          "pixel_col": 1208,
+          "pixel_row": 6315,
+          "E_rasterio": 67520.5,
+          "N_rasterio": 121554.5,
+          "lat_geo": -85.4169162,
+          "lon_geo": 29.0510821,
+          "E_proj": 67520.5,
+          "N_proj": 121554.5,
+          "E_our_lam0": 67520.5,
+          "N_our_lam0": 121554.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 65388.798,
+          "N_our_lam1": 122714.382,
+          "displacement_0_vs_1_m": 2426.825,
+          "azimuth_0_vs_1_deg": 298.55
+        },
+        {
+          "point_label": "Left_mid",
+          "pixel_col": 0,
+          "pixel_row": 3158,
+          "E_rasterio": 61480.5,
+          "N_rasterio": 137339.5,
+          "lat_geo": -85.0408315,
+          "lon_geo": 24.1158403,
+          "E_proj": 61480.5,
+          "N_proj": 137339.5,
+          "E_our_lam0": 61480.5,
+          "N_our_lam0": 137339.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 59074.231,
+          "N_our_lam1": 138391.565,
+          "displacement_0_vs_1_m": 2626.208,
+          "azimuth_0_vs_1_deg": 293.62
+        },
+        {
+          "point_label": "Right_mid",
+          "pixel_col": 2415,
+          "pixel_row": 3158,
+          "E_rasterio": 73555.5,
+          "N_rasterio": 137339.5,
+          "lat_geo": -84.8655994,
+          "lon_geo": 28.1723556,
+          "E_proj": 73555.5,
+          "N_proj": 137339.5,
+          "E_our_lam0": 73555.5,
+          "N_our_lam0": 137339.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 71147.392,
+          "N_our_lam1": 138602.303,
+          "displacement_0_vs_1_m": 2719.127,
+          "azimuth_0_vs_1_deg": 297.67
+        }
+      ],
+      "max_diff_m": 1e-09,
+      "rms_diff_m": 0.0,
+      "perfect_agreement": true
+    },
+    "OHRC_PAIR_04": {
+      "points": [
+        {
+          "point_label": "UL_corner",
+          "pixel_col": 0,
+          "pixel_row": 0,
+          "E_rasterio": 86685.5,
+          "N_rasterio": 164949.5,
+          "lat_geo": -83.8607707,
+          "lon_geo": 27.7231612,
+          "E_proj": 86685.5,
+          "N_proj": 164949.5,
+          "E_our_lam0": 86685.5,
+          "N_our_lam0": 164949.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 83793.532,
+          "N_our_lam1": 166437.248,
+          "displacement_0_vs_1_m": 3252.211,
+          "azimuth_0_vs_1_deg": 297.22
+        },
+        {
+          "point_label": "UR_corner",
+          "pixel_col": 3163,
+          "pixel_row": 0,
+          "E_rasterio": 102500.5,
+          "N_rasterio": 164949.5,
+          "lat_geo": -83.6022611,
+          "lon_geo": 31.8570386,
+          "E_proj": 102500.5,
+          "N_proj": 164949.5,
+          "E_our_lam0": 102500.5,
+          "N_our_lam0": 164949.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 99606.123,
+          "N_our_lam1": 166713.258,
+          "displacement_0_vs_1_m": 3389.434,
+          "azimuth_0_vs_1_deg": 301.36
+        },
+        {
+          "point_label": "LL_corner",
+          "pixel_col": 0,
+          "pixel_row": 6321,
+          "E_rasterio": 86685.5,
+          "N_rasterio": 133344.5,
+          "lat_geo": -84.7587089,
+          "lon_geo": 33.0273638,
+          "E_proj": 86685.5,
+          "N_proj": 133344.5,
+          "E_our_lam0": 86685.5,
+          "N_our_lam0": 133344.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 84345.115,
+          "N_our_lam1": 134837.062,
+          "displacement_0_vs_1_m": 2775.814,
+          "azimuth_0_vs_1_deg": 302.53
+        },
+        {
+          "point_label": "LR_corner",
+          "pixel_col": 3163,
+          "pixel_row": 6321,
+          "E_rasterio": 102500.5,
+          "N_rasterio": 133344.5,
+          "lat_geo": -84.4578499,
+          "lon_geo": 37.5490987,
+          "E_proj": 102500.5,
+          "N_proj": 133344.5,
+          "E_our_lam0": 102500.5,
+          "N_our_lam0": 133344.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 100157.706,
+          "N_our_lam1": 135113.071,
+          "displacement_0_vs_1_m": 2935.392,
+          "azimuth_0_vs_1_deg": 307.05
+        },
+        {
+          "point_label": "Center",
+          "pixel_col": 1582,
+          "pixel_row": 3161,
+          "E_rasterio": 94595.5,
+          "N_rasterio": 149144.5,
+          "lat_geo": -84.180662,
+          "lon_geo": 32.3850779,
+          "E_proj": 94595.5,
+          "N_proj": 149144.5,
+          "E_our_lam0": 94595.5,
+          "N_our_lam0": 149144.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 91978.162,
+          "N_our_lam1": 150772.704,
+          "displacement_0_vs_1_m": 3082.451,
+          "azimuth_0_vs_1_deg": 301.89
+        },
+        {
+          "point_label": "Top_mid",
+          "pixel_col": 1582,
+          "pixel_row": 0,
+          "E_rasterio": 94595.5,
+          "N_rasterio": 164949.5,
+          "lat_geo": -83.7355356,
+          "lon_geo": 29.8334769,
+          "E_proj": 94595.5,
+          "N_proj": 164949.5,
+          "E_our_lam0": 94595.5,
+          "N_our_lam0": 164949.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 91702.327,
+          "N_our_lam1": 166575.297,
+          "displacement_0_vs_1_m": 3318.684,
+          "azimuth_0_vs_1_deg": 299.33
+        },
+        {
+          "point_label": "Bottom_mid",
+          "pixel_col": 1582,
+          "pixel_row": 6321,
+          "E_rasterio": 94595.5,
+          "N_rasterio": 133344.5,
+          "lat_geo": -84.6124101,
+          "lon_geo": 35.3521501,
+          "E_proj": 94595.5,
+          "N_proj": 133344.5,
+          "E_our_lam0": 94595.5,
+          "N_our_lam0": 133344.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 92253.91,
+          "N_our_lam1": 134975.11,
+          "displacement_0_vs_1_m": 2853.407,
+          "azimuth_0_vs_1_deg": 304.85
+        },
+        {
+          "point_label": "Left_mid",
+          "pixel_col": 0,
+          "pixel_row": 3161,
+          "E_rasterio": 86685.5,
+          "N_rasterio": 149144.5,
+          "lat_geo": -84.3157704,
+          "lon_geo": 30.1659343,
+          "E_proj": 86685.5,
+          "N_proj": 149144.5,
+          "E_our_lam0": 86685.5,
+          "N_our_lam0": 149144.5,
+          "diff_rio_vs_our0_m": 1e-09,
+          "diff_rio_vs_proj_m": 1e-09,
+          "E_our_lam1": 84069.367,
+          "N_our_lam1": 150634.655,
+          "displacement_0_vs_1_m": 3010.766,
+          "azimuth_0_vs_1_deg": 299.67
+        },
+        {
+          "point_label": "Right_mid",
+          "pixel_col": 3163,
+          "pixel_row": 3161,
+          "E_rasterio": 102500.5,
+          "N_rasterio": 149144.5,
+          "lat_geo": -84.0373524,
+          "lon_geo": 34.4990411,
+          "E_proj": 102500.5,
+          "N_proj": 149144.5,
+          "E_our_lam0": 102500.5,
+          "N_our_lam0": 149144.5,
+          "diff_rio_vs_our0_m": 0.0,
+          "diff_rio_vs_proj_m": 0.0,
+          "E_our_lam1": 99881.958,
+          "N_our_lam1": 150910.665,
+          "displacement_0_vs_1_m": 3158.496,
+          "azimuth_0_vs_1_deg": 304.0
+        }
+      ],
+      "max_diff_m": 1e-09,
+      "rms_diff_m": 1e-09,
+      "perfect_agreement": true
+    }
+  }
+}

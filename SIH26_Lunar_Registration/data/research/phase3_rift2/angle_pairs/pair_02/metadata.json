@@ -1,0 +1,10 @@
+{
+  "pair_id": "pair_02",
+  "source_sensor": "unknown",
+  "reference_sensor": "unknown",
+  "test_type": "viewpoint_change",
+  "source_angle": null,
+  "reference_angle": null,
+  "angle_difference_deg": null,
+  "notes": "Tycho crater region pair with viewpoint/perspective differences. Physical sensor angles unknown."
+}

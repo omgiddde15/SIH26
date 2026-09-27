@@ -1,0 +1,9 @@
+track,pair,phase7_candidates,phase7_initial_inliers,phase7_initial_ratio,phase7_fit_rmse,phase7_heldout_rmse,phase7_heldout_valid,phase9_candidates,phase9_initial_inliers,phase9_initial_ratio,phase9_fit_rmse,phase9_heldout_rmse,phase9_heldout_valid
+D_end_to_end,IIRS <-> OHRC | Native,229,10,0.0437,0.2702,1.2399,True,224,7,0.0312,0.8757,nan,False
+D_end_to_end,IIRS <-> OHRC | Synthetic Rotation +10 deg,255,7,0.0275,1.1556,nan,False,240,6,0.025,1.0464,nan,False
+D_end_to_end,IIRS <-> OHRC | Synthetic Rotation +20 deg,242,6,0.0248,0.8969,nan,False,244,6,0.0246,0.5167,nan,False
+D_end_to_end,IIRS <-> OHRC | Synthetic Rotation +30 deg,229,6,0.0262,0.6487,nan,False,247,7,0.0283,1.0464,nan,False
+D_end_to_end,IIRS <-> OHRC | Synthetic Rotation -20 deg,214,6,0.028,0.5092,nan,False,228,6,0.0263,1.4269,nan,False
+D_end_to_end,pair_01 | Real Control,256,53,0.207,0.6195,0.7482,True,554,452,0.8159,0.2091,0.2203,True
+D_end_to_end,pair_02 | Real Control,204,5,0.0245,0.0,nan,False,187,7,0.0374,0.9438,nan,False
+D_end_to_end,pair_03 | Real Control,337,145,0.4303,0.5831,0.6952,True,312,113,0.3622,0.4583,0.5581,True

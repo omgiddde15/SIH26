@@ -54,11 +54,11 @@ def compute_matching_scale(image_shape, max_dim=1600, max_budget=1800000):
     h, w = image_shape[:2]
     if h <= 0 or w <= 0:
         raise ValueError(f"Invalid image dimensions: {image_shape}")
-
+    
     scale_dim = float(max_dim) / float(max(h, w))
     scale_budget = (float(max_budget) / float(h * w)) ** 0.5
     scale = min(1.0, scale_dim, scale_budget)
-
+    
     w_match = max(1, int(round(w * scale)))
     h_match = max(1, int(round(h * scale)))
     return scale, w_match, h_match
@@ -94,7 +94,7 @@ def split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_chec
     """
     Spatially balanced partition of correspondences into estimation_points (~75%)
     and independent_check_points (~25%) preserving coverage across the 3x3 spatial grid.
-
+    
     Guarantees:
       1. Every occupied cell with >= 2 points contributes at least 1 check point.
       2. Check points count >= min_check_points (if total points >= min_check_points + 4).
@@ -103,14 +103,14 @@ def split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_chec
     rng = np.random.RandomState(seed)
     h, w = image_shape[:2]
     n_total = len(points_src)
-
+    
     cell_bins = {(r, c): [] for r in range(3) for c in range(3)}
     for idx in range(n_total):
         pt = points_src[idx]
         col = min(max(0, int(pt[0] / (w / 3))), 2)
         row = min(max(0, int(pt[1] / (h / 3))), 2)
         cell_bins[(row, col)].append(idx)
-
+        
     occupied_cells = [cell for cell, idxs in cell_bins.items() if len(idxs) > 0]
     if not occupied_cells or n_total < 8:
         shuffled = np.arange(n_total)
@@ -122,17 +122,17 @@ def split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_chec
     # Target number of check points (~25% of total points, at least min_check_points)
     total_check_needed = max(min_check_points, int(round(n_total * split_ratio)))
     total_check_needed = min(total_check_needed, n_total - 4)
-
+    
     # Initial check counts per cell (at least 1 if cell has >= 2 points)
     cell_lens = [len(cell_bins[c]) for c in occupied_cells]
     cell_chk_counts = [max(1 if l >= 2 else 0, int(round(l * split_ratio))) for l in cell_lens]
     for i in range(len(cell_chk_counts)):
         cell_chk_counts[i] = min(cell_chk_counts[i], cell_lens[i] - 1)
-
+        
     diff = sum(cell_chk_counts) - total_check_needed
     cell_order = list(range(len(occupied_cells)))
     rng.shuffle(cell_order)
-
+    
     while diff > 0:
         reduced = False
         for c in cell_order:
@@ -142,7 +142,7 @@ def split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_chec
                 reduced = True
         if not reduced:
             break
-
+            
     while diff < 0:
         increased = False
         for c in cell_order:
@@ -155,14 +155,14 @@ def split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_chec
 
     est_indices = []
     check_indices = []
-
+    
     for i, cell in enumerate(occupied_cells):
         idx_arr = np.array(cell_bins[cell])
         rng.shuffle(idx_arr)
         k_chk = cell_chk_counts[i]
         check_indices.extend(idx_arr[:k_chk].tolist())
         est_indices.extend(idx_arr[k_chk:].tolist())
-
+        
     return np.array(sorted(est_indices)), np.array(sorted(check_indices))
 
 
@@ -179,18 +179,18 @@ def run_independent_checkpoint_validation(points_src, points_ref, image_shape, s
     """
     if len(points_src) < 8:
         return None
-
+        
     runs = []
     for seed in seeds:
         est_idx, chk_idx = split_spatially_balanced(points_src, image_shape, split_ratio=0.25, min_check_points=4, seed=seed)
         if len(est_idx) < 4 or len(chk_idx) < 4:
             continue
-
+            
         src_est = points_src[est_idx]
         ref_est = points_ref[est_idx]
         src_chk = points_src[chk_idx]
         ref_chk = points_ref[chk_idx]
-
+        
         # Estimate homography ONLY from estimation points
         H_est, mask_est = cv2.findHomography(
             src_est,
@@ -202,23 +202,23 @@ def run_independent_checkpoint_validation(points_src, points_ref, image_shape, s
         )
         if H_est is None:
             continue
-
+            
         # Fit metrics on estimation points
         proj_est = cv2.perspectiveTransform(src_est.reshape(-1, 1, 2), H_est).reshape(-1, 2)
         fit_errs = np.linalg.norm(proj_est - ref_est, axis=1)
         fit_rmse = float(np.sqrt(np.mean(fit_errs**2)))
-
+        
         # Independent validation on strictly withheld check points
         pred_chk = cv2.perspectiveTransform(src_chk.reshape(-1, 1, 2), H_est).reshape(-1, 2)
         chk_errs = np.linalg.norm(pred_chk - ref_chk, axis=1)
         dx = pred_chk[:, 0] - ref_chk[:, 0]
         dy = pred_chk[:, 1] - ref_chk[:, 1]
-
+        
         chk_rmse = float(np.sqrt(np.mean(chk_errs**2)))
         chk_mean = float(np.mean(chk_errs))
         chk_median = float(np.median(chk_errs))
         chk_max = float(np.max(chk_errs))
-
+        
         runs.append({
             "seed": int(seed),
             "n_estimation": int(len(est_idx)),
@@ -240,15 +240,15 @@ def run_independent_checkpoint_validation(points_src, points_ref, image_shape, s
             "dx": dx.tolist(),
             "dy": dy.tolist(),
         })
-
+        
     if not runs:
         return None
-
+        
     all_rmses = [r["check_rmse"] for r in runs]
     all_means = [r["check_mean"] for r in runs]
     all_medians = [r["check_median"] for r in runs]
     all_maxes = [r["check_max"] for r in runs]
-
+    
     summary = {
         "runs": runs,
         "primary_run": runs[0], # Seed 1 as primary
@@ -266,7 +266,7 @@ def run_independent_checkpoint_validation(points_src, points_ref, image_shape, s
 def register_images(source_image, reference_image, max_per_cell=6, ransac_threshold=3.0, max_loftr_dim=1600, max_pixel_budget=1800000):
     """
     LOCKED CORE REGISTRATION PIPELINE WITH MEMORY-SAFE LARGE IMAGE PREPROCESSING:
-    Detect Dims -> Aspect-Ratio Safe Scale -> CLAHE -> Memory-Safe LoFTR Matching -> Coordinate Back-Mapping ->
+    Detect Dims -> Aspect-Ratio Safe Scale -> CLAHE -> Memory-Safe LoFTR Matching -> Coordinate Back-Mapping -> 
     Initial RANSAC -> Quality + 3x3 Spatial Selection -> Final Homography -> Full-Resolution Warping -> Telemetry Metrics.
     """
     start_time = time.perf_counter()
@@ -423,7 +423,7 @@ def register_images(source_image, reference_image, max_per_cell=6, ransac_thresh
     # Spatial distribution grids
     selected_grid = calculate_spatial_grid(mkpts0[selected_ids], (s_h, s_w))
     final_grid = calculate_spatial_grid(src_f, (s_h, s_w))
-
+    
     # Occupancy and Spatial CV calculation
     occupied_cells = int(np.count_nonzero(selected_grid))
     total_cells = 9
@@ -479,7 +479,179 @@ def register_images(source_image, reference_image, max_per_cell=6, ransac_thresh
         "max_pixel_budget": max_pixel_budget,
         # Independent Validation Module Telemetry
         "independent_validation": independent_validation,
+        # Pipeline Mode & Matcher Telemetry
+        "pipeline_mode": "Locked LoFTR Baseline",
+        "primary_matcher": "LoFTR",
+        "final_matcher_used": "LoFTR",
+        "routing_rule": "Baseline Locked",
+        "confidences": confidence.tolist() if isinstance(confidence, np.ndarray) else confidence,
+        "success": True,
     }
+
+
+def validate_registration_images(source_image, reference_image):
+    """
+    Validates input images prior to registration.
+    Returns:
+        (is_valid: bool, error_message: str | None, error_type: str | None)
+    """
+    if source_image is None:
+        return False, "Source image is missing (None). Please upload or load a valid moving image.", "MissingSourceImage"
+    if reference_image is None:
+        return False, "Reference image is missing (None). Please upload or load a valid fixed reference image.", "MissingReferenceImage"
+
+    if not isinstance(source_image, np.ndarray):
+        return False, f"Source image must be a numpy ndarray, received {type(source_image).__name__}.", "InvalidSourceType"
+    if not isinstance(reference_image, np.ndarray):
+        return False, f"Reference image must be a numpy ndarray, received {type(reference_image).__name__}.", "InvalidReferenceType"
+
+    if source_image.size == 0:
+        return False, "Source image array is empty (0 bytes).", "EmptySourceImage"
+    if reference_image.size == 0:
+        return False, "Reference image array is empty (0 bytes).", "EmptyReferenceImage"
+
+    if len(source_image.shape) not in (2, 3):
+        return False, f"Source image must be 2D (grayscale) or 3D (color), got shape {source_image.shape}.", "InvalidSourceShape"
+    if len(reference_image.shape) not in (2, 3):
+        return False, f"Reference image must be 2D (grayscale) or 3D (color), got shape {reference_image.shape}.", "InvalidReferenceShape"
+
+    s_h, s_w = source_image.shape[:2]
+    r_h, r_w = reference_image.shape[:2]
+
+    if s_h < 32 or s_w < 32:
+        return False, f"Source image dimensions ({s_w}×{s_h} px) too small for registration. Minimum required dimension is 32×32 px.", "SourceTooSmall"
+    if r_h < 32 or r_w < 32:
+        return False, f"Reference image dimensions ({r_w}×{r_h} px) too small for registration. Minimum required dimension is 32×32 px.", "ReferenceTooSmall"
+
+    return True, None, None
+
+
+def safe_register_images(source_image, reference_image, **kwargs):
+    """
+    UI-safe execution wrapper around register_images().
+    Catches expected computer vision failure modes and returns a structured
+    result dictionary instead of raising unhandled exceptions or raw tracebacks.
+
+    Guarantees:
+      - Never raises unhandled exceptions to UI layers.
+      - On success: returns full registration dictionary with 'success': True.
+      - On failure: returns structured dictionary with 'success': False, error category,
+        user-friendly error message, raw technical details, and failure stage.
+    """
+    start_time = time.perf_counter()
+
+    # Step 1: Input Validation
+    is_valid, err_msg, err_type = validate_registration_images(source_image, reference_image)
+    if not is_valid:
+        return {
+            "success": False,
+            "status": "failed",
+            "error_type": err_type,
+            "error_message": err_msg,
+            "details": err_msg,
+            "stage": "input_validation",
+            "runtime": float(time.perf_counter() - start_time),
+        }
+
+    # Step 2: Safe Pipeline Execution
+    try:
+        res = register_images(source_image, reference_image, **kwargs)
+        res["success"] = True
+        res["status"] = "success"
+        res["error_type"] = None
+        res["error_message"] = None
+        res["stage"] = "completed"
+        return res
+    except RuntimeError as re:
+        err_str = str(re)
+        elapsed = float(time.perf_counter() - start_time)
+
+        if "insufficient candidate matches" in err_str:
+            return {
+                "success": False,
+                "status": "failed",
+                "error_type": "InsufficientMatchesError",
+                "error_message": "LoFTR detected insufficient feature matches between the lunar images. The surface overlap may be too low, or terrain lacks distinctive textural landmarks.",
+                "details": err_str,
+                "stage": "feature_matching",
+                "runtime": elapsed,
+            }
+        elif "Initial RANSAC" in err_str or "geometric consensus" in err_str:
+            return {
+                "success": False,
+                "status": "failed",
+                "error_type": "GeometricConsensusError",
+                "error_message": "Geometric consensus could not be established by RANSAC. Correspondences may contain severe perspective distortion or inadequate valid inliers.",
+                "details": err_str,
+                "stage": "initial_ransac",
+                "runtime": elapsed,
+            }
+        elif "Spatial selection produced insufficient correspondences" in err_str:
+            return {
+                "success": False,
+                "status": "failed",
+                "error_type": "SpatialDistributionError",
+                "error_message": "Correspondences failed spatial distribution requirements across the 3×3 grid. Inliers may be clustered in a single localized crater/region.",
+                "details": err_str,
+                "stage": "spatial_binning",
+                "runtime": elapsed,
+            }
+        elif "Final RANSAC" in err_str:
+            return {
+                "success": False,
+                "status": "failed",
+                "error_type": "FinalHomographyError",
+                "error_message": "Final homography estimation failed after spatial filtering. Insufficient verified geometric inliers remain to compute planar projective transformation.",
+                "details": err_str,
+                "stage": "final_homography",
+                "runtime": elapsed,
+            }
+        else:
+            return {
+                "success": False,
+                "status": "failed",
+                "error_type": "RegistrationRuntimeError",
+                "error_message": f"Registration sequence halted during execution: {err_str}",
+                "details": err_str,
+                "stage": "pipeline_execution",
+                "runtime": elapsed,
+            }
+    except ValueError as ve:
+        elapsed = float(time.perf_counter() - start_time)
+        return {
+            "success": False,
+            "status": "failed",
+            "error_type": "ParameterOrDimensionError",
+            "error_message": f"Image dimension or parameter validation issue: {str(ve)}",
+            "details": str(ve),
+            "stage": "preprocessing",
+            "runtime": elapsed,
+        }
+    except torch.cuda.OutOfMemoryError as oom:
+        elapsed = float(time.perf_counter() - start_time)
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        return {
+            "success": False,
+            "status": "failed",
+            "error_type": "GPUMemoryError",
+            "error_message": "GPU out-of-memory error during matching. Select 'Fast Matching' or 'Memory-Safe' mode to reduce tensor resolution budget.",
+            "details": str(oom),
+            "stage": "feature_matching",
+            "runtime": elapsed,
+        }
+    except Exception as e:
+        elapsed = float(time.perf_counter() - start_time)
+        return {
+            "success": False,
+            "status": "failed",
+            "error_type": "UnexpectedPipelineError",
+            "error_message": f"An unexpected pipeline error occurred during registration: {str(e)}",
+            "details": str(e),
+            "stage": "execution",
+            "runtime": elapsed,
+        }
 
 
 __all__ = [
@@ -491,4 +663,6 @@ __all__ = [
     "split_spatially_balanced",
     "run_independent_checkpoint_validation",
     "register_images",
+    "validate_registration_images",
+    "safe_register_images",
 ]

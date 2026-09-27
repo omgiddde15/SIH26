@@ -1,0 +1,6 @@
+pair_id,category,success,final_matcher_used,candidate_count,initial_inliers,initial_inlier_ratio,spatial_occupancy,selected_points,fit_rmse,held_out_rmse,held_out_valid,runtime_sec,failure_stage,failure_reason
+pair_01,Optical Nominal / Scale Variation,True,LoFTR,46,46,1.0,0.8889,38,1.437,1.7188,True,3.66,,
+pair_02,Viewpoint / Perspective Variation,True,SIFT,4026,4026,1.0,1.0,54,0.004,0.0045,True,1.62,,
+pair_03,Illumination / Solar Angle Variation,True,SIFT,3340,3340,1.0,1.0,54,0.0068,0.0072,True,1.05,,
+pair_04,Optical Geometric Distortion,True,SIFT,3940,3940,1.0,1.0,54,0.0032,0.0034,True,1.29,,
+benchmark_crop_iirs_ohrc,Uncalibrated Cross-Sensor Crop Pair,False,,199,12,0.0603,0.0,0,,,False,8.71,quality_gate,All available matchers failed the quality gate.

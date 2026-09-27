@@ -1,0 +1,43 @@
+{
+  "question": "Does local image footprint affect native IIRS-OHRC cross-sensor descriptor compatibility?",
+  "anchor_source": "existing LoFTR matcher",
+  "anchor_is_ground_truth": false,
+  "footprint_matrix": [
+    {
+      "label": "compact",
+      "patch_size": 5,
+      "radius": 3.0
+    },
+    {
+      "label": "baseline",
+      "patch_size": 7,
+      "radius": 4.0
+    },
+    {
+      "label": "medium",
+      "patch_size": 9,
+      "radius": 5.0
+    },
+    {
+      "label": "broad",
+      "patch_size": 11,
+      "radius": 7.0
+    }
+  ],
+  "phase9_orientation_settings": {
+    "tensor_window": 7,
+    "tensor_sigma": 1.5,
+    "coherence_threshold": 0.15,
+    "trace_threshold": 0.0001,
+    "orientation_sign": 1.0
+  },
+  "ransac_threshold": 3.0,
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "automatic_selection": false
+}

@@ -1,0 +1,2 @@
+anchor_pairs,phase7_mean_l2,phase7_median_l2,phase7_p90_l2,phase7_max_l2,phase9_mean_l2,phase9_median_l2,phase9_p90_l2,phase9_max_l2,phase9_valid_orientation_count,phase9_low_confidence_orientation_count,phase9_flat_orientation_count,phase9_orientation_valid_fraction
+12,0.4020520746707916,0.43417975306510925,0.49031829833984375,0.5416451096534729,0.48616448044776917,0.47921547293663025,0.6228148937225342,0.7275586128234863,22,2,0,0.9166666666666666

@@ -1,0 +1,365 @@
+{
+  "metadata": {
+    "phase": "23B.3",
+    "script": "run_phase23b3_reference_provenance_audit.py",
+    "generated": "2026-09-24T07:36:30Z"
+  },
+  "fingerprints": {
+    "OHRC_PAIR_01": {
+      "file_sha256": "4bebce73338e09e921db07dbcf632e3d46a720c4aba8cc8df462e37e693c306d",
+      "file_sha256_16": "4bebce73338e09e9",
+      "payload_sha256": "338f57b94eae1af6e57fd039b6880208349f01cf27188c427f6eb86e2682a6a2",
+      "payload_sha256_16": "338f57b94eae1af6",
+      "dimensions": [
+        5916,
+        4232
+      ],
+      "dtype": "uint8",
+      "window_fingerprints": {
+        "full": "338f57b94eae1af6e57fd039b6880208349f01cf27188c427f6eb86e2682a6a2",
+        "center_512x512": "3ea6337d09ed6ae4b542b5eaa6342786ff3ce929c90441ada4160724fae952fc",
+        "top_left_256x256": "2097b5da515ee303c58e71f723eb6da8277b89f56b50d9f89199a27986b41fa8",
+        "top_right_256x256": "0aee54384b810ee3ddc345d8b9edd27969e448bae315be38929c50f051b10e19",
+        "bottom_center_256x256": "739f40acd9de36c58846b25d45eb4a7532bbc63329ac35b58f6f5199963c770b"
+      },
+      "window_statistics": {
+        "full": {
+          "shape": [
+            4232,
+            5916
+          ],
+          "pixel_count": 25036512,
+          "valid_pixel_count": 25032204,
+          "min": 1,
+          "max": 255,
+          "mean": 67.15723166046426,
+          "std": 58.15774509657534,
+          "sha256_16": "338f57b94eae1af6"
+        },
+        "center_512x512": {
+          "shape": [
+            512,
+            512
+          ],
+          "pixel_count": 262144,
+          "valid_pixel_count": 262004,
+          "min": 1,
+          "max": 255,
+          "mean": 59.84728095754263,
+          "std": 39.666938296912505,
+          "sha256_16": "3ea6337d09ed6ae4"
+        },
+        "top_left_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65533,
+          "min": 1,
+          "max": 255,
+          "mean": 90.0889017746784,
+          "std": 28.66983716812715,
+          "sha256_16": "2097b5da515ee303"
+        },
+        "top_right_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65536,
+          "min": 10,
+          "max": 11,
+          "mean": 10.99700927734375,
+          "std": 0.05460566119225545,
+          "sha256_16": "0aee54384b810ee3"
+        },
+        "bottom_center_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65495,
+          "min": 1,
+          "max": 214,
+          "mean": 54.60722192533781,
+          "std": 29.356049007222364,
+          "sha256_16": "739f40acd9de36c5"
+        }
+      },
+      "external_source_available": false,
+      "exact_match_test_performed": false,
+      "exact_match_result": "NOT_POSSIBLE -- no authoritative source file available locally",
+      "identification_from_fingerprint": "NOT_POSSIBLE"
+    },
+    "OHRC_PAIR_02": {
+      "file_sha256": "9f69e68be8474cf2e38fd09907f75642f5f747b43db472ed3270c656d5756aa5",
+      "file_sha256_16": "9f69e68be8474cf2",
+      "payload_sha256": "7d539b79ae3f09f31411a3e0cdbe998d0a8c0e0130bb297dc0827a5e3909dcd8",
+      "payload_sha256_16": "7d539b79ae3f09f3",
+      "dimensions": [
+        2593,
+        6279
+      ],
+      "dtype": "uint8",
+      "window_fingerprints": {
+        "full": "7d539b79ae3f09f31411a3e0cdbe998d0a8c0e0130bb297dc0827a5e3909dcd8",
+        "center_512x512": "3d039fdfa669f51e5a99998aefad1f79bd82367ceb20d5acecd95bb7985beb43",
+        "top_left_256x256": "d5db9de209cfd9db7967d4418e3e03cbcbd5f88c9085583e1ddfd25e1ad73bff",
+        "top_right_256x256": "507f9fb571a45680871bbc624be80865ee3c5904466e04add8a39fb7ea82f67e",
+        "bottom_center_256x256": "9268d808d0034a275a56f94328e56099c12b31a1222c70d79a06eb75197f2f57"
+      },
+      "window_statistics": {
+        "full": {
+          "shape": [
+            6279,
+            2593
+          ],
+          "pixel_count": 16281447,
+          "valid_pixel_count": 16270843,
+          "min": 1,
+          "max": 255,
+          "mean": 60.8442581002103,
+          "std": 42.50383645019455,
+          "sha256_16": "7d539b79ae3f09f3"
+        },
+        "center_512x512": {
+          "shape": [
+            512,
+            512
+          ],
+          "pixel_count": 262144,
+          "valid_pixel_count": 261823,
+          "min": 1,
+          "max": 255,
+          "mean": 37.992815757210025,
+          "std": 28.40253900418764,
+          "sha256_16": "3d039fdfa669f51e"
+        },
+        "top_left_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65512,
+          "min": 1,
+          "max": 255,
+          "mean": 75.95307729881549,
+          "std": 35.377318628415516,
+          "sha256_16": "d5db9de209cfd9db"
+        },
+        "top_right_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65425,
+          "min": 1,
+          "max": 187,
+          "mean": 38.35755445166221,
+          "std": 23.27746568120629,
+          "sha256_16": "507f9fb571a45680"
+        },
+        "bottom_center_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65519,
+          "min": 1,
+          "max": 255,
+          "mean": 104.2936400128207,
+          "std": 33.93012708962398,
+          "sha256_16": "9268d808d0034a27"
+        }
+      },
+      "external_source_available": false,
+      "exact_match_test_performed": false,
+      "exact_match_result": "NOT_POSSIBLE -- no authoritative source file available locally",
+      "identification_from_fingerprint": "NOT_POSSIBLE"
+    },
+    "OHRC_PAIR_03": {
+      "file_sha256": "30417e85f872aacac6f9b11f5f868a2c82f3293d335c70c8f4010425f4c3dbb4",
+      "file_sha256_16": "30417e85f872aaca",
+      "payload_sha256": "9a710c7a514526af6b19914ac388b65708adc9f6ce1e03b9414f806cdae5dd7c",
+      "payload_sha256_16": "9a710c7a514526af",
+      "dimensions": [
+        2416,
+        6316
+      ],
+      "dtype": "uint8",
+      "window_fingerprints": {
+        "full": "9a710c7a514526af6b19914ac388b65708adc9f6ce1e03b9414f806cdae5dd7c",
+        "center_512x512": "a8c6b6f78fea7f3d27b5f847d8cf673adc7c2e5653972caa3da1afa99d37bfbd",
+        "top_left_256x256": "2b100da1c269e3cdca3bf4a6fdbc1f9c657b597843990484d8dc075bdb146187",
+        "top_right_256x256": "6de78a7d640e3c0d47bf6efca80ac0f9c777b03d3a785bb1f32ca80cd48f991c",
+        "bottom_center_256x256": "b53588f4f2186b748b94051fea261a50fd71927074c1a2918aa7fe7c6d7fac52"
+      },
+      "window_statistics": {
+        "full": {
+          "shape": [
+            6316,
+            2416
+          ],
+          "pixel_count": 15259456,
+          "valid_pixel_count": 15251336,
+          "min": 1,
+          "max": 255,
+          "mean": 54.990939678989434,
+          "std": 37.51624058586147,
+          "sha256_16": "9a710c7a514526af"
+        },
+        "center_512x512": {
+          "shape": [
+            512,
+            512
+          ],
+          "pixel_count": 262144,
+          "valid_pixel_count": 261975,
+          "min": 1,
+          "max": 183,
+          "mean": 39.578505582593756,
+          "std": 18.997291449367147,
+          "sha256_16": "a8c6b6f78fea7f3d"
+        },
+        "top_left_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65532,
+          "min": 1,
+          "max": 255,
+          "mean": 116.51072758347067,
+          "std": 25.967295886027436,
+          "sha256_16": "2b100da1c269e3cd"
+        },
+        "top_right_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65517,
+          "min": 1,
+          "max": 135,
+          "mean": 32.17613749103286,
+          "std": 15.084406388935557,
+          "sha256_16": "6de78a7d640e3c0d"
+        },
+        "bottom_center_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65524,
+          "min": 1,
+          "max": 230,
+          "mean": 46.85194737805995,
+          "std": 35.50495380975135,
+          "sha256_16": "b53588f4f2186b74"
+        }
+      },
+      "external_source_available": false,
+      "exact_match_test_performed": false,
+      "exact_match_result": "NOT_POSSIBLE -- no authoritative source file available locally",
+      "identification_from_fingerprint": "NOT_POSSIBLE"
+    },
+    "OHRC_PAIR_04": {
+      "file_sha256": "0bc494da1e927fb5b656041c6bd878f88487227b69aee4fb93f35aa1c6e900d9",
+      "file_sha256_16": "0bc494da1e927fb5",
+      "payload_sha256": "fb8c33012480b0fcc9a18d73d0569d20e723917b43417021a8e8071c2e74800a",
+      "payload_sha256_16": "fb8c33012480b0fc",
+      "dimensions": [
+        3164,
+        6322
+      ],
+      "dtype": "uint8",
+      "window_fingerprints": {
+        "full": "fb8c33012480b0fcc9a18d73d0569d20e723917b43417021a8e8071c2e74800a",
+        "center_512x512": "b7e03ec2c0474b1f555a141490f4e13f0fbaa8de6e01dcc6c86cda78dca6f272",
+        "top_left_256x256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+        "top_right_256x256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+        "bottom_center_256x256": "db37279d9590760fb01e5d91260678a95fb6f762522202b2a7015441fbcd6f69"
+      },
+      "window_statistics": {
+        "full": {
+          "shape": [
+            6322,
+            3164
+          ],
+          "pixel_count": 20002808,
+          "valid_pixel_count": 14025655,
+          "min": 1,
+          "max": 255,
+          "mean": 68.28441053198586,
+          "std": 48.97840005354669,
+          "sha256_16": "fb8c33012480b0fc"
+        },
+        "center_512x512": {
+          "shape": [
+            512,
+            512
+          ],
+          "pixel_count": 262144,
+          "valid_pixel_count": 261971,
+          "min": 1,
+          "max": 255,
+          "mean": 47.94868134259136,
+          "std": 24.333927571222212,
+          "sha256_16": "b7e03ec2c0474b1f"
+        },
+        "top_left_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 0,
+          "min": null,
+          "max": null,
+          "mean": null,
+          "std": null,
+          "sha256_16": "de2f256064a0af79"
+        },
+        "top_right_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 0,
+          "min": null,
+          "max": null,
+          "mean": null,
+          "std": null,
+          "sha256_16": "de2f256064a0af79"
+        },
+        "bottom_center_256x256": {
+          "shape": [
+            256,
+            256
+          ],
+          "pixel_count": 65536,
+          "valid_pixel_count": 65521,
+          "min": 1,
+          "max": 255,
+          "mean": 97.07074067856107,
+          "std": 40.92619070386519,
+          "sha256_16": "db37279d9590760f"
+        }
+      },
+      "external_source_available": false,
+      "exact_match_test_performed": false,
+      "exact_match_result": "NOT_POSSIBLE -- no authoritative source file available locally",
+      "identification_from_fingerprint": "NOT_POSSIBLE"
+    }
+  }
+}

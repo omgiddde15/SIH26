@@ -1,0 +1,624 @@
+[
+  {
+    "dataset_id": "OHRC_PAIR_01",
+    "instrument": "OHRC (Optical High Resolution Camera)",
+    "category": "Primary Focus",
+    "track_a_provenance_scale": {
+      "source_dims": "624x4872 px",
+      "ref_dims": "5916x4232 px",
+      "nominal_raster_scale_concept_a_m_px": 5.0,
+      "xml_en_projected_span_concept_b_m_px": [5.1564, 5.2004],
+      "snyder_projected_span_concept_b_m_px": [5.1463, 5.1902],
+      "ref_dx_m": 5.0,
+      "ref_dy_m": 5.0,
+      "mean_latitude_deg": -89.36,
+      "local_projection_scale_factor_k": 1.000031,
+      "projection_scale_dilation_pct": 0.0031,
+      "source_isotropic": true,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 1.0293,
+      "flight_azimuth_deg": -29.16,
+      "scale_status": "PARTIALLY RECONCILED (Concept A nominal raster scale vs Concept B projected span)",
+      "scale_reconciliation_note": "Nominal deliverable 5.000 m/px (Concept A) is an idealized nadir ratio (12000*0.26/624). Projected corner span (Concept B) is 5.15-5.20 m/px. Map projection dilation k=1.000031 (+0.0031%) is negligible. Gross scale mismatch cannot be called falsified until operational impact is tested."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        -16186.0,
+        7394.5
+      ],
+      "source_projected_y_range": [
+        -21768.5,
+        -6607.1
+      ],
+      "ref_projected_x_range": [
+        -19187.0,
+        10393.0
+      ],
+      "ref_projected_y_range": [
+        -24763.0,
+        -3603.0
+      ],
+      "source_in_ref_coverage_pct": 100.0,
+      "ref_in_source_coverage_pct": 57.12,
+      "footprint_bounding_iou_pct": 57.12,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 7.808,
+      "ref_native_ar": 1.398,
+      "matching_path_scale_source": 0.3284,
+      "matching_path_scale_ref": 0.2681,
+      "relative_matching_scale_ratio": 1.2248,
+      "source_resampling_anisotropy_alpha": 0.00036,
+      "ref_resampling_anisotropy_alpha": 0.000403,
+      "matching_resizing_strictly_isotropic": true,
+      "image_shape_aspect_ratio_difference": 5.585
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 29.39,
+      "source_std_dn": 44.19,
+      "source_entropy_bits": 5.127,
+      "source_shadow_pct": 62.01,
+      "source_sat_pct": 0.03,
+      "source_median_gradient": 3.16,
+      "ref_mean_dn": 67.15,
+      "ref_std_dn": 58.16,
+      "ref_entropy_bits": 7.104,
+      "ref_shadow_pct": 6.05,
+      "ref_sat_pct": 0.67,
+      "ref_median_gradient": 37.95,
+      "shadow_disparity_delta_pct": 55.96,
+      "gradient_contrast_ratio": 12.0,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": 2.113221,
+      "source_xml_solar_incidence_deg": 87.886779,
+      "source_xml_solar_azimuth_deg": 299.639023,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 115.0,
+      "source_shadow_proxy_conf": 0.07,
+      "ref_image_shadow_proxy_deg": 265.0,
+      "ref_shadow_proxy_conf": 0.045,
+      "apparent_shadow_proxy_disparity_deg": 150.0,
+      "shadow_inversion_indicated_by_proxy": true,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 348,
+      "initial_inliers": 6,
+      "initial_inlier_ratio": 0.0172,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "NOT EVALUATED",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.81,
+      "max_multiscale_psr": 3.08,
+      "mean_peak_correlation": 0.672,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  },
+  {
+    "dataset_id": "OHRC_PAIR_02",
+    "instrument": "OHRC (Optical High Resolution Camera)",
+    "category": "Primary Focus",
+    "track_a_provenance_scale": {
+      "source_dims": "648x5059 px",
+      "ref_dims": "2593x6279 px",
+      "nominal_raster_scale_concept_a_m_px": 5.0,
+      "xml_en_projected_span_concept_b_m_px": [5.1289, 4.9828],
+      "snyder_projected_span_concept_b_m_px": [5.119, 4.9733],
+      "ref_dx_m": 5.0,
+      "ref_dy_m": 5.0,
+      "mean_latitude_deg": -84.95,
+      "local_projection_scale_factor_k": 1.001948,
+      "projection_scale_dilation_pct": 0.1948,
+      "source_isotropic": false,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 1.023,
+      "flight_azimuth_deg": -98.43,
+      "scale_status": "PARTIALLY RECONCILED (Concept A nominal raster scale vs Concept B projected span)",
+      "scale_reconciliation_note": "Nominal deliverable 5.000 m/px (Concept A) is an idealized nadir ratio (12000*0.27/648). Projected corner span (Concept B) is 5.12-4.98 m/px. Map projection dilation k=1.001948 (+0.195%) is negligible. Gross scale mismatch cannot be called falsified until operational impact is tested."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        70340.6,
+        77306.5
+      ],
+      "source_projected_y_range": [
+        121652.0,
+        147044.9
+      ],
+      "ref_projected_x_range": [
+        67338.0,
+        80303.0
+      ],
+      "ref_projected_y_range": [
+        118652.0,
+        150047.0
+      ],
+      "source_in_ref_coverage_pct": 100.0,
+      "ref_in_source_coverage_pct": 43.46,
+      "footprint_bounding_iou_pct": 43.46,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 7.807,
+      "ref_native_ar": 2.422,
+      "matching_path_scale_source": 0.3163,
+      "matching_path_scale_ref": 0.2548,
+      "relative_matching_scale_ratio": 1.2412,
+      "source_resampling_anisotropy_alpha": 0.000284,
+      "ref_resampling_anisotropy_alpha": 0.00039,
+      "matching_resizing_strictly_isotropic": true,
+      "image_shape_aspect_ratio_difference": 3.224
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 32.83,
+      "source_std_dn": 34.68,
+      "source_entropy_bits": 6.175,
+      "source_shadow_pct": 40.63,
+      "source_sat_pct": 0.0,
+      "source_median_gradient": 29.83,
+      "ref_mean_dn": 60.8,
+      "ref_std_dn": 42.52,
+      "ref_entropy_bits": 7.169,
+      "ref_shadow_pct": 12.92,
+      "ref_sat_pct": 0.06,
+      "ref_median_gradient": 45.28,
+      "shadow_disparity_delta_pct": 27.7,
+      "gradient_contrast_ratio": 1.52,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": 5.103276,
+      "source_xml_solar_incidence_deg": 84.896724,
+      "source_xml_solar_azimuth_deg": 19.910131,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 135.0,
+      "source_shadow_proxy_conf": 0.089,
+      "ref_image_shadow_proxy_deg": 95.0,
+      "ref_shadow_proxy_conf": 0.048,
+      "apparent_shadow_proxy_disparity_deg": 40.0,
+      "shadow_inversion_indicated_by_proxy": false,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 221,
+      "initial_inliers": 5,
+      "initial_inlier_ratio": 0.0226,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "NOT EVALUATED",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.38,
+      "max_multiscale_psr": 2.67,
+      "mean_peak_correlation": 0.465,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  },
+  {
+    "dataset_id": "OHRC_PAIR_03",
+    "instrument": "OHRC (Optical High Resolution Camera)",
+    "category": "Primary Focus",
+    "track_a_provenance_scale": {
+      "source_dims": "600x5054 px",
+      "ref_dims": "2416x6316 px",
+      "nominal_raster_scale_concept_a_m_px": 5.0,
+      "xml_en_projected_span_concept_b_m_px": [5.1619, 5.0345],
+      "snyder_projected_span_concept_b_m_px": [5.1519, 5.0249],
+      "ref_dx_m": 5.0,
+      "ref_dy_m": 5.0,
+      "mean_latitude_deg": -84.95,
+      "local_projection_scale_factor_k": 1.001941,
+      "projection_scale_dilation_pct": 0.1941,
+      "source_isotropic": false,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 1.0294,
+      "flight_azimuth_deg": -96.81,
+      "scale_status": "PARTIALLY RECONCILED (Concept A nominal raster scale vs Concept B projected span)",
+      "scale_reconciliation_note": "Nominal deliverable 5.000 m/px (Concept A) is an idealized nadir ratio (12000*0.25/600). Projected corner span (Concept B) is 5.15-5.03 m/px. Map projection dilation k=1.001941 (+0.194%) is negligible. Gross scale mismatch cannot be called falsified until operational impact is tested."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        64482.4,
+        70561.9
+      ],
+      "source_projected_y_range": [
+        124548.0,
+        150128.7
+      ],
+      "ref_projected_x_range": [
+        61478.0,
+        73558.0
+      ],
+      "ref_projected_y_range": [
+        121552.0,
+        153132.0
+      ],
+      "source_in_ref_coverage_pct": 100.0,
+      "ref_in_source_coverage_pct": 40.77,
+      "footprint_bounding_iou_pct": 40.77,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 8.423,
+      "ref_native_ar": 2.614,
+      "matching_path_scale_source": 0.3166,
+      "matching_path_scale_ref": 0.2533,
+      "relative_matching_scale_ratio": 1.2497,
+      "source_resampling_anisotropy_alpha": 0.000271,
+      "ref_resampling_anisotropy_alpha": 5.4e-05,
+      "matching_resizing_strictly_isotropic": true,
+      "image_shape_aspect_ratio_difference": 3.222
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 13.76,
+      "source_std_dn": 22.24,
+      "source_entropy_bits": 4.303,
+      "source_shadow_pct": 69.7,
+      "source_sat_pct": 0.0,
+      "source_median_gradient": 4.0,
+      "ref_mean_dn": 54.96,
+      "ref_std_dn": 37.53,
+      "ref_entropy_bits": 6.991,
+      "ref_shadow_pct": 13.56,
+      "ref_sat_pct": 0.02,
+      "ref_median_gradient": 41.59,
+      "shadow_disparity_delta_pct": 56.14,
+      "gradient_contrast_ratio": 10.4,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": 3.088558,
+      "source_xml_solar_incidence_deg": 86.911442,
+      "source_xml_solar_azimuth_deg": 49.072662,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 165.0,
+      "source_shadow_proxy_conf": 0.083,
+      "ref_image_shadow_proxy_deg": 55.0,
+      "ref_shadow_proxy_conf": 0.042,
+      "apparent_shadow_proxy_disparity_deg": 110.0,
+      "shadow_inversion_indicated_by_proxy": true,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 161,
+      "initial_inliers": 5,
+      "initial_inlier_ratio": 0.0311,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "NOT EVALUATED",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.59,
+      "max_multiscale_psr": 2.88,
+      "mean_peak_correlation": 0.426,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  },
+  {
+    "dataset_id": "OHRC_PAIR_04",
+    "instrument": "OHRC (Optical High Resolution Camera)",
+    "category": "Primary Focus",
+    "track_a_provenance_scale": {
+      "source_dims": "552x4649 px",
+      "ref_dims": "3164x6322 px",
+      "nominal_raster_scale_concept_a_m_px": 5.0,
+      "xml_en_projected_span_concept_b_m_px": [5.5124, 5.5241],
+      "snyder_projected_span_concept_b_m_px": [5.5017, 5.5136],
+      "ref_dx_m": 5.0,
+      "ref_dy_m": 5.0,
+      "mean_latitude_deg": -84.18,
+      "local_projection_scale_factor_k": 1.002585,
+      "projection_scale_dilation_pct": 0.2585,
+      "source_isotropic": true,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 1.1019,
+      "flight_azimuth_deg": -105.68,
+      "scale_status": "PARTIALLY RECONCILED (Concept A nominal raster scale vs Concept B projected span)",
+      "scale_reconciliation_note": "Nominal deliverable 5.000 m/px (Concept A) is an idealized nadir ratio (12000*0.23/552). Projected corner span (Concept B) is 5.51-5.52 m/px. Map projection dilation k=1.002585 (+0.258%) is negligible. Gross scale mismatch cannot be called falsified until operational impact is tested."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        89683.7,
+        99505.6
+      ],
+      "source_projected_y_range": [
+        136340.3,
+        161948.5
+      ],
+      "ref_projected_x_range": [
+        86683.0,
+        102503.0
+      ],
+      "ref_projected_y_range": [
+        133342.0,
+        164952.0
+      ],
+      "source_in_ref_coverage_pct": 100.0,
+      "ref_in_source_coverage_pct": 50.3,
+      "footprint_bounding_iou_pct": 50.3,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 8.422,
+      "ref_native_ar": 1.998,
+      "matching_path_scale_source": 0.3442,
+      "matching_path_scale_ref": 0.2531,
+      "relative_matching_scale_ratio": 1.3599,
+      "source_resampling_anisotropy_alpha": 0.000125,
+      "ref_resampling_anisotropy_alpha": 0.000301,
+      "matching_resizing_strictly_isotropic": true,
+      "image_shape_aspect_ratio_difference": 4.215
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 14.65,
+      "source_std_dn": 22.18,
+      "source_entropy_bits": 4.265,
+      "source_shadow_pct": 69.21,
+      "source_sat_pct": 0.0,
+      "source_median_gradient": 2.83,
+      "ref_mean_dn": 47.88,
+      "ref_std_dn": 51.57,
+      "ref_entropy_bits": 6.014,
+      "ref_shadow_pct": 39.06,
+      "ref_sat_pct": 0.21,
+      "ref_median_gradient": 28.28,
+      "shadow_disparity_delta_pct": 30.15,
+      "gradient_contrast_ratio": 10.0,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": -0.305664,
+      "source_xml_solar_incidence_deg": 90.305664,
+      "source_xml_solar_azimuth_deg": 256.287883,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 185.0,
+      "source_shadow_proxy_conf": 0.057,
+      "ref_image_shadow_proxy_deg": 125.0,
+      "ref_shadow_proxy_conf": 0.072,
+      "apparent_shadow_proxy_disparity_deg": 60.0,
+      "shadow_inversion_indicated_by_proxy": false,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 98,
+      "initial_inliers": 5,
+      "initial_inlier_ratio": 0.051,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "NOT EVALUATED",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.73,
+      "max_multiscale_psr": 3.35,
+      "mean_peak_correlation": 0.565,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  },
+  {
+    "dataset_id": "IIRS_PAIR_A",
+    "instrument": "IIRS (Imaging Infrared Spectrometer)",
+    "category": "Secondary Diagnostic",
+    "track_a_provenance_scale": {
+      "source_dims": "250x7783 px",
+      "ref_dims": "960x7681 px",
+      "source_dx_m": 93.74,
+      "source_dy_m": 93.74,
+      "ref_dx_m": 94.75,
+      "ref_dy_m": 94.75,
+      "source_isotropic": true,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 0.9893,
+      "flight_azimuth_deg": -104.88,
+      "scale_status": "VERIFIED METADATA (Source 93.74 m/px vs Ref 94.75 m/px)",
+      "scale_reconciliation_note": "Source native GSD is 93.74 m/px; reference GeoTIFF records 94.75 m/px. Scale ratio is 0.9893 (~1:1)."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        13.2,
+        14.1
+      ],
+      "source_projected_y_range": [
+        21.1,
+        42.8
+      ],
+      "ref_projected_x_range": [
+        12.0,
+        15.0
+      ],
+      "ref_projected_y_range": [
+        21.0,
+        45.0
+      ],
+      "source_in_ref_coverage_pct": 100.0,
+      "ref_in_source_coverage_pct": 31.0,
+      "footprint_bounding_iou_pct": 31.0,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 31.132,
+      "ref_native_ar": 8.001,
+      "matching_path_scale_source": 0.2056,
+      "matching_path_scale_ref": 0.2083,
+      "relative_matching_scale_ratio": 0.9869,
+      "source_resampling_anisotropy_alpha": 0.007668,
+      "ref_resampling_anisotropy_alpha": 0.00013,
+      "matching_resizing_strictly_isotropic": false,
+      "image_shape_aspect_ratio_difference": 3.891
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 96.52,
+      "source_std_dn": 41.85,
+      "source_entropy_bits": 7.19,
+      "source_shadow_pct": 1.25,
+      "source_sat_pct": 1.21,
+      "source_median_gradient": 39.12,
+      "ref_mean_dn": 62.46,
+      "ref_std_dn": 57.87,
+      "ref_entropy_bits": 7.156,
+      "ref_shadow_pct": 5.63,
+      "ref_sat_pct": 1.2,
+      "ref_median_gradient": 29.02,
+      "shadow_disparity_delta_pct": 4.38,
+      "gradient_contrast_ratio": 0.74,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": 25.94216,
+      "source_xml_solar_incidence_deg": 64.05784,
+      "source_xml_solar_azimuth_deg": 107.839819,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 175.0,
+      "source_shadow_proxy_conf": 0.087,
+      "ref_image_shadow_proxy_deg": 275.0,
+      "ref_shadow_proxy_conf": 0.044,
+      "apparent_shadow_proxy_disparity_deg": 100.0,
+      "shadow_inversion_indicated_by_proxy": true,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 45,
+      "initial_inliers": 5,
+      "initial_inlier_ratio": 0.1111,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "22.2%",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.98,
+      "max_multiscale_psr": 3.5,
+      "mean_peak_correlation": 0.301,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  },
+  {
+    "dataset_id": "IIRS_PAIR_B",
+    "instrument": "IIRS (Imaging Infrared Spectrometer)",
+    "category": "Secondary Diagnostic",
+    "track_a_provenance_scale": {
+      "source_dims": "104x4851 px",
+      "ref_dims": "3175x3874 px",
+      "source_dx_m": 83.14,
+      "source_dy_m": 83.14,
+      "ref_dx_m": 200.0,
+      "ref_dy_m": 200.0,
+      "source_isotropic": true,
+      "ref_isotropic": true,
+      "effective_scale_ratio": 0.4157,
+      "flight_azimuth_deg": 0.0,
+      "scale_status": "VERIFIED METADATA (Source 83.14 m/px vs Ref 200.0 m/px; Ref XML Not Available)",
+      "scale_reconciliation_note": "Source native GSD is 83.14 m/px; reference GeoTIFF records 200.0 m/px. Scale ratio is 0.4157 (~2.4:1). Reference LRO-WAC XML not available."
+    },
+    "track_b_geographic_overlap": {
+      "source_projected_x_range": [
+        0.0,
+        0.0
+      ],
+      "source_projected_y_range": [
+        0.0,
+        0.0
+      ],
+      "ref_projected_x_range": [
+        0.0,
+        0.0
+      ],
+      "ref_projected_y_range": [
+        0.0,
+        0.0
+      ],
+      "source_in_ref_coverage_pct": 0.0,
+      "ref_in_source_coverage_pct": 0.0,
+      "footprint_bounding_iou_pct": 0.0,
+      "bounding_box_methodology": "Axis-aligned projected bounding box intersection (not exact polygon or correspondence ground truth)",
+      "gross_non_overlap_supported_by_bbox": false
+    },
+    "track_e_aspect_ratio_resampling": {
+      "source_native_ar": 46.644,
+      "ref_native_ar": 1.22,
+      "matching_path_scale_source": 0.3298,
+      "matching_path_scale_ref": 0.3825,
+      "relative_matching_scale_ratio": 0.8622,
+      "source_resampling_anisotropy_alpha": 0.00881,
+      "ref_resampling_anisotropy_alpha": 0.000331,
+      "matching_resizing_strictly_isotropic": false,
+      "image_shape_aspect_ratio_difference": 38.228
+    },
+    "track_c_radiometric_appearance": {
+      "source_mean_dn": 91.69,
+      "source_std_dn": 65.52,
+      "source_entropy_bits": 7.47,
+      "source_shadow_pct": 16.66,
+      "source_sat_pct": 1.33,
+      "source_median_gradient": 80.0,
+      "ref_mean_dn": 108.74,
+      "ref_std_dn": 47.66,
+      "ref_entropy_bits": 7.358,
+      "ref_shadow_pct": 5.02,
+      "ref_sat_pct": 1.21,
+      "ref_median_gradient": 81.94,
+      "shadow_disparity_delta_pct": 11.64,
+      "gradient_contrast_ratio": 1.02,
+      "characterization": "High low-intensity/shadow fraction with reduced measured entropy"
+    },
+    "track_f_illumination": {
+      "source_xml_solar_elevation_deg": 21.055386,
+      "source_xml_solar_incidence_deg": 68.944614,
+      "source_xml_solar_azimuth_deg": 45.445786,
+      "ref_xml_status": "NOT AVAILABLE",
+      "metadata_derived_angular_disparity": "UNAVAILABLE (Ref XML Absent)",
+      "source_image_shadow_proxy_deg": 95.0,
+      "source_shadow_proxy_conf": 0.095,
+      "ref_image_shadow_proxy_deg": 25.0,
+      "ref_shadow_proxy_conf": 0.046,
+      "apparent_shadow_proxy_disparity_deg": 70.0,
+      "shadow_inversion_indicated_by_proxy": false,
+      "interpretation": "The image-derived gradient-direction proxy shows large angular differences and is consistent with substantial image-domain appearance/edge-orientation differences; the proxy is not a validated solar-shadow measurement."
+    },
+    "track_d_spatial_distribution": {
+      "candidate_count": 0,
+      "initial_inliers": 0,
+      "initial_inlier_ratio": 0.0,
+      "spatial_selection": "BYPASSED",
+      "spatial_occupancy": "NOT EVALUATED",
+      "failure_stage": "quality_gate (Pre-Selection)",
+      "dispersion_status": "Candidate density collapsed below inlier consensus threshold before spatial selection"
+    },
+    "track_g_terrain_overlap": {
+      "mean_multiscale_psr": 2.72,
+      "max_multiscale_psr": 2.88,
+      "mean_peak_correlation": 0.445,
+      "psr_diagnostic_status": "Noise-Dominated / Diffuse (PSR < 5.0)",
+      "prominent_correlation_peak_found": false,
+      "interpretation": "The tested multiscale translation-only NCC diagnostic did not produce a strong isolated correlation peak. Does not test rotation-compensated, illumination-normalized, nonlinear, or geometrically warped correspondence."
+    }
+  }
+]

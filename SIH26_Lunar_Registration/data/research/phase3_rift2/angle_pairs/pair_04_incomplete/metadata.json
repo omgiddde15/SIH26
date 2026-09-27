@@ -1,0 +1,10 @@
+{
+  "pair_id": "pair_04_incomplete",
+  "source_sensor": "CH2_OHRC",
+  "reference_sensor": "unknown",
+  "test_type": "viewpoint_change",
+  "source_angle": null,
+  "reference_angle": null,
+  "angle_difference_deg": null,
+  "notes": "Incomplete research pair (missing reference.png) to verify discovery validation."
+}

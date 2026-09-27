@@ -1,0 +1,61 @@
+{
+  "phase": 13,
+  "research_question": "Does the compact local footprint identified in Phase 12 preserve or improve the angle-robustness behavior of the Phase 9 rotation-normalized SSC approach?",
+  "configurations": [
+    {
+      "method": "Phase 7 SSC",
+      "footprint": "baseline_7x7_r4",
+      "patch_size": 7,
+      "radius": 4.0
+    },
+    {
+      "method": "Phase 7 SSC",
+      "footprint": "compact_5x5_r3",
+      "patch_size": 5,
+      "radius": 3.0
+    },
+    {
+      "method": "Phase-9-derived Rot-Norm SSC",
+      "footprint": "baseline_7x7_r4",
+      "patch_size": 7,
+      "radius": 4.0
+    },
+    {
+      "method": "Phase-9-derived Rot-Norm SSC",
+      "footprint": "compact_5x5_r3",
+      "patch_size": 5,
+      "radius": 3.0
+    }
+  ],
+  "synthetic_rotations_deg": [
+    10.0,
+    20.0,
+    30.0,
+    -20.0
+  ],
+  "real_controls": [
+    "pair_01",
+    "pair_02",
+    "pair_03"
+  ],
+  "interpretations": {
+    "pair_01": "rotation-change",
+    "pair_02": "viewpoint-change",
+    "pair_03": "sun-angle-change"
+  },
+  "downstream_parameters": {
+    "ransac_threshold": 3.0,
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "max_per_cell": 6,
+    "spatial_grid": "3x3",
+    "min_inliers_for_validation": 8
+  },
+  "production_modified": false,
+  "automatic_winner_selection": false
+}

@@ -1,0 +1,1074 @@
+{
+  "metadata": {
+    "project": "LunarReg",
+    "phase": "23A.7",
+    "description": "Frame / Geodetic Reconciliation Review Dataset",
+    "governing_discipline": "Research-Only \u2014 Production Code Frozen for this audit; historical baseline provenance not independently verified.",
+    "provenance_status": "PRODUCTION_BASELINE_PROVENANCE = NOT_INDEPENDENTLY_VERIFIED",
+    "provenance_statement": "The current Git snapshot verifies that the tracked production files have not changed since the snapshot commit, but it does not independently establish historical equivalence to the pre-Phase-23A.6 state.",
+    "canonical_production_freeze_set": [
+      "app/app.py",
+      "app/adaptive_adapter.py",
+      "app/registration_core.py",
+      "research/adaptive_matcher/adaptive_engine.py"
+    ],
+    "nonexistent_file_audit": {
+      "file": "app/adaptive_engine.py",
+      "status": "NON-EXISTENT / NOT PART OF CANONICAL PROJECT"
+    },
+    "git_snapshot_diff": "CLEAN",
+    "untracked_check": "git status --short --untracked-files=all: no canonical production files untracked",
+    "scientific_classification": {
+      "primary_frame_classification": "C \u2014 The tested DE421 lunar-frame difference is too small to explain the observed discrepancy.",
+      "quantitative_descriptor": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement across the tested corner/center samples.",
+      "scenario_ab_translation_effect": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs.",
+      "preserved_geometric_classification": "B \u2014 Rigid translation plus a measurable non-rigid component."
+    },
+    "ground_track_alignment_overall": "GROUND_TRACK_ALIGNMENT_NOT_VERIFIED",
+    "reference_geodetic_realization": "REFERENCE_GEODETIC_REALIZATION = UNKNOWN",
+    "reference_geotiff_linkage": "Reference GeoTIFF <-> MOON_ME_DE421 = UNKNOWN",
+    "geodetic_link_overall": "GEODETIC_LINK_NOT_VERIFIED",
+    "phase23b_readiness_gate": {
+      "criterion_1_lunar_frame_verified": true,
+      "criterion_2_ch2_ohrc_frame_verified": true,
+      "criterion_3_ref_raster_geodetic_realization_bounded": true,
+      "criterion_4_ground_track_orientation_verified": true,
+      "criterion_5_unresolved_conventions_bounded": true,
+      "criterion_6_uncertainty_explicitly_documented": true,
+      "gate_status": "PHASE_23B_STATUS = BLOCKED_PENDING_GEODETIC_REVIEW",
+      "authorization_status": "Phase 23B remains strictly blocked pending user authorization and frame handling strategy selection."
+    },
+    "concluding_status": "PHASE 23A.7 COMPLETE \u2014 FRAME/GEODETIC REVIEW REMAINS UNRESOLVED"
+  },
+  "authoritative_kernels": [
+    {
+      "filename": "moon_080317.tf",
+      "source_url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/satellites/moon_080317.tf",
+      "download_date": "2026-09-24",
+      "size_bytes": 21437,
+      "sha256": "78732477b96f9863e7b0d65bcee3c22b8707ca5ed0db56d1173319cb2e8c7993",
+      "kernel_type": "FK (Frames Kernel)",
+      "time_coverage": "Permanent definition",
+      "description": "NAIF official lunar frame definitions (MOON_PA, MOON_ME, MOON_PA_DE421, MOON_ME_DE421)"
+    },
+    {
+      "filename": "moon_pa_de421_1900-2050.bpc",
+      "source_url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de421_1900-2050.bpc",
+      "download_date": "2026-09-24",
+      "size_bytes": 1770496,
+      "sha256": "656f90616403d75a75f0cd6c8830fc5b44f8cb4facb5ccb8915e752b397520cf",
+      "kernel_type": "Binary PCK",
+      "time_coverage": "1900-01-01 to 2050-01-01",
+      "description": "High-accuracy lunar principal axis orientation aligned with JPL DE421 ephemeris"
+    },
+    {
+      "filename": "de421.bsp",
+      "source_url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/de421.bsp",
+      "download_date": "2026-09-24",
+      "size_bytes": 16790528,
+      "sha256": "08b20db2ae22488650641c5a9033e5bfda4b1c4b440cfeaf20f621cfa18ecdb3",
+      "kernel_type": "SPK (Planetary Ephemeris)",
+      "time_coverage": "1900-01-01 to 2050-01-01",
+      "description": "JPL Planetary Ephemeris DE421 defining solar system and lunar barycentric motion"
+    },
+    {
+      "filename": "naif0012.tls",
+      "source_url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
+      "download_date": "2026-09-23",
+      "size_bytes": 5257,
+      "sha256": "25a242fc719114ae40f7f3ee4d4ab280ec5d81b8969ab86d38e8ec2c6a9a6ab9",
+      "kernel_type": "LSK (Leapseconds Kernel)",
+      "time_coverage": "1972-01-01 to 2026+ indefinite",
+      "description": "Authoritative NAIF leapsecond definitions"
+    },
+    {
+      "filename": "pck00010.tpc",
+      "source_url": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
+      "download_date": "2026-09-23",
+      "size_bytes": 126143,
+      "sha256": "9a0a03ff265eb4578b86d9a8c627d354b2a4cc06e5da56641885b597405391ec",
+      "kernel_type": "PCK (Planetary Constants)",
+      "time_coverage": "Analytical models",
+      "description": "IAU/IAG working group analytical orientation series (IAU_MOON)"
+    },
+    {
+      "filename": "ch2_v01.tf",
+      "source_url": "ISRO ISSDC Chandrayaan-2 SPICE PDS4 Archive",
+      "download_date": "2026-09-23",
+      "size_bytes": 13382,
+      "sha256": "bc0b98eb6fbf5d5272a2aa701e913076118b6fcb5b15be3eb23a1a47738f6154",
+      "kernel_type": "FK (Frames Kernel)",
+      "time_coverage": "Mission lifetime",
+      "description": "Chandrayaan-2 spacecraft bus and instrument frame definitions"
+    },
+    {
+      "filename": "ch2_sclk_v1.tsc",
+      "source_url": "ISRO ISSDC Chandrayaan-2 SPICE PDS4 Archive",
+      "download_date": "2026-09-23",
+      "size_bytes": 718426,
+      "sha256": "1645e75128080f55eb05139a039750cfb6aa56ceaa3f5d5bfa780d60db2805ef",
+      "kernel_type": "SCLK (Spacecraft Clock)",
+      "time_coverage": "2019-07-22 to 2026+",
+      "description": "Chandrayaan-2 clock correlation table"
+    },
+    {
+      "filename": "ch2_ohr_v01.ti",
+      "source_url": "ISRO ISSDC Chandrayaan-2 SPICE PDS4 Archive",
+      "download_date": "2026-09-23",
+      "size_bytes": 8409,
+      "sha256": "022d4f553f18e93237190a03362a26c483a992e59174092b740523db4220b33c",
+      "kernel_type": "IK (Instrument Kernel)",
+      "time_coverage": "Mission lifetime",
+      "description": "OHRC optical parameters, focal length 2080 mm, detector specs"
+    }
+  ],
+  "spice_frame_audit": [
+    {
+      "frame_name": "CH2_OHRC",
+      "naif_id": -152270,
+      "family": "Instrument",
+      "relative_frame": "CH2_ORBITER",
+      "source_kernel": "ch2_v01.tf",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "CH2_ORBITER",
+      "naif_id": -152001,
+      "family": "Spacecraft Bus",
+      "relative_frame": "J2000",
+      "source_kernel": "ch2_v01.tf",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "IAU_MOON",
+      "naif_id": 10020,
+      "family": "PCK Analytical",
+      "relative_frame": "J2000",
+      "source_kernel": "pck00010.tpc",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "MOON_PA",
+      "naif_id": 31000,
+      "family": "TKFRAME Alias",
+      "relative_frame": "MOON_PA_DE421",
+      "source_kernel": "moon_080317.tf",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "MOON_PA_DE421",
+      "naif_id": 31006,
+      "family": "Binary PCK",
+      "relative_frame": "J2000",
+      "source_kernel": "moon_pa_de421_1900-2050.bpc",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "MOON_ME",
+      "naif_id": 31001,
+      "family": "TKFRAME Alias",
+      "relative_frame": "MOON_ME_DE421",
+      "source_kernel": "moon_080317.tf",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    },
+    {
+      "frame_name": "MOON_ME_DE421",
+      "naif_id": 31007,
+      "family": "TKFRAME (3-2-1 Euler)",
+      "relative_frame": "MOON_PA_DE421",
+      "source_kernel": "moon_080317.tf",
+      "resolution_status": "FRAME_VERIFIED",
+      "error_msg": null
+    }
+  ],
+  "pairs": [
+    {
+      "pair": "OHRC_PAIR_01",
+      "target": "South Pole Crater (89.5\u00b0S)",
+      "date": "2024-11-24",
+      "time_mode": "forward",
+      "epoch_utc": "2024-12-07T12:21:40.515065",
+      "epoch_et": 786846169.698312,
+      "frame_rotation": {
+        "source_frame": "IAU_MOON",
+        "target_frame": "MOON_ME_DE421",
+        "rotation_matrix": [
+          [
+            0.9999999988847427,
+            4.6884711334641005e-05,
+            -5.686666435161802e-06
+          ],
+          [
+            -4.6884611551979705e-05,
+            0.9999999987469915,
+            1.7545663688500746e-05
+          ],
+          [
+            5.68748905138694e-06,
+            -1.7545397051732525e-05,
+            0.9999999998299057
+          ]
+        ],
+        "rotation_angle_rad": 5.038213939511027e-05,
+        "rotation_angle_arcsec": 10.392062220646622,
+        "rotation_axis": [
+          -0.34824901419812065,
+          -0.11287884583623485,
+          -0.9305809960840146
+        ],
+        "euler_rotations_arcsec": {
+          "rot_x": 3.619052921429525,
+          "rot_y": 1.1729591504468373,
+          "rot_z": 9.670665903090107
+        },
+        "reversibility_max_error": 3.3306690738754696e-16
+      },
+      "ground_track": {
+        "epoch_et": 786846169.698312,
+        "sc_radius_km": 1838.167288009883,
+        "sc_altitude_km": 100.7672880098829,
+        "sub_sc_lat_deg": -88.82631104000434,
+        "sub_sc_lon_deg": 160.38100755633133,
+        "ground_speed_ms": 1543.9499114711186,
+        "ground_track_azimuth_iau_deg": 60.82531826257127,
+        "ground_track_azimuth_me_deg": 60.828011477393204,
+        "ground_track_dx_dt": 1348.080675292627,
+        "ground_track_dy_dt": 752.6352516553088
+      },
+      "ground_track_vs_residual": {
+        "ground_track_azimuth_deg": 60.82531826257127,
+        "residual_translation_azimuth_deg": 127.16,
+        "angular_difference_deg": 66.33468173742872,
+        "alignment_status": "GROUND_TRACK_ALIGNMENT_NOT_VERIFIED"
+      },
+      "surface_displacement": {
+        "min_m": 32.21939624281265,
+        "max_m": 33.1814407683206,
+        "mean_m": 32.69847391270891,
+        "rms_m": 32.70076008223769,
+        "mean_vector_dx_m": -31.20971044872431,
+        "mean_vector_dy_m": -9.754552901955549,
+        "mean_vector_mag_m": 32.698582975570375,
+        "mean_vector_azimuth_deg": 252.64343589470099
+      },
+      "scenario_a_iau": {
+        "translation_vector": {
+          "mean_dx_m": 1720.2,
+          "mean_dy_m": -1303.61,
+          "magnitude_m": 2158.36,
+          "azimuth_deg": 127.16,
+          "post_translation_rms_m": 34.8,
+          "post_translation_max_m": 35.52,
+          "angular_spread_deg": 1.88
+        },
+        "translation_magnitude_m": 2158.36,
+        "translation_azimuth_deg": 127.16,
+        "post_translation_rms_m": 34.8,
+        "post_translation_max_m": 35.52
+      },
+      "scenario_b_me": {
+        "mean_dx_m": 1688.9952895512756,
+        "mean_dy_m": -1313.3670529019555,
+        "translation_magnitude_m": 2139.541563927835,
+        "translation_azimuth_deg": 127.86872773084451,
+        "post_translation_rms_m": 34.7885785298894,
+        "post_translation_max_m": 34.9195206035289
+      },
+      "frame_correction_effect": {
+        "scenario_ab_translation_effect": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs.",
+        "fraction_of_residual_explained_pct": 1.5149735435965441,
+        "net_translation_magnitude_change_m": -18.81843607216524,
+        "interpretation": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs."
+      },
+      "points": [
+        {
+          "point_name": "UL",
+          "X_meta": -14687.1,
+          "Y_meta": -6607.06,
+          "X_phys_iau": -12985.91,
+          "Y_phys_iau": -7940.67,
+          "X_phys_me": -13016.766553907637,
+          "Y_phys_me": -7949.941600465748,
+          "dx_iau": 1701.1900000000005,
+          "dy_iau": -1333.6099999999997,
+          "res_mag_iau": 2161.611215783264,
+          "dx_me": 1670.3334460923634,
+          "dy_me": -1342.8816004657474,
+          "res_mag_me": 2143.2089991422295,
+          "frame_disp_dx": -30.856553907637135,
+          "frame_disp_dy": -9.271600465747724,
+          "frame_disp_mag": 32.21939624281265,
+          "frame_disp_azimuth_deg": 253.27582912501606
+        },
+        {
+          "point_name": "UR",
+          "X_meta": -16185.96,
+          "Y_meta": -9447.12,
+          "X_phys_iau": -14453.08,
+          "Y_phys_iau": -10719.12,
+          "X_phys_me": -14484.066874659153,
+          "Y_phys_me": -10728.323080950653,
+          "dx_iau": 1732.8799999999992,
+          "dy_iau": -1272.0,
+          "res_mag_iau": 2149.617894975755,
+          "dx_me": 1701.8931253408464,
+          "dy_me": -1281.2030809506523,
+          "res_mag_me": 2130.2397857330234,
+          "frame_disp_dx": -30.986874659152818,
+          "frame_disp_dy": -9.203080950652293,
+          "frame_disp_mag": 32.324651585536174,
+          "frame_disp_azimuth_deg": 253.45861586882467
+        },
+        {
+          "point_name": "LL",
+          "X_meta": 7394.49,
+          "Y_meta": -18927.59,
+          "X_phys_iau": 9102.16,
+          "Y_phys_iau": -20262.89,
+          "X_phys_me": 9070.727265276662,
+          "Y_phys_me": -20273.196082410548,
+          "dx_iau": 1707.67,
+          "dy_iau": -1335.2999999999993,
+          "res_mag_iau": 2167.755271911476,
+          "dx_me": 1676.2372652766626,
+          "dy_me": -1345.606082410548,
+          "res_mag_me": 2149.5178758322636,
+          "frame_disp_dx": -31.43273472333749,
+          "frame_disp_dy": -10.306082410548697,
+          "frame_disp_mag": 33.07917996022162,
+          "frame_disp_azimuth_deg": 251.84685343542233
+        },
+        {
+          "point_name": "LR",
+          "X_meta": 5895.79,
+          "Y_meta": -21768.45,
+          "X_phys_iau": 7634.87,
+          "Y_phys_iau": -23041.99,
+          "X_phys_me": 7603.30732149523,
+          "Y_phys_me": -23052.227447780875,
+          "dx_iau": 1739.08,
+          "dy_iau": -1273.5400000000009,
+          "res_mag_iau": 2155.5285611654517,
+          "dx_me": 1707.5173214952301,
+          "dy_me": -1283.7774477808744,
+          "res_mag_me": 2136.2818022529286,
+          "frame_disp_dx": -31.562678504769792,
+          "frame_disp_dy": -10.237447780873481,
+          "frame_disp_mag": 33.1814407683206,
+          "frame_disp_azimuth_deg": 252.02937640918032
+        },
+        {
+          "point_name": "CENTER",
+          "X_meta": -4395.697,
+          "Y_meta": -14187.556,
+          "X_phys_iau": -2846.604,
+          "Y_phys_iau": -15300.398,
+          "X_phys_me": -2877.804687924268,
+          "Y_phys_me": -15310.144941579429,
+          "dx_iau": 1549.0930000000003,
+          "dy_iau": -1112.8419999999987,
+          "res_mag_iau": 1907.3820906187093,
+          "dx_me": 1517.8923120757322,
+          "dy_me": -1122.5889415794281,
+          "res_mag_me": 1887.9096913822527,
+          "frame_disp_dx": -31.200687924268095,
+          "frame_disp_dy": -9.746941579429404,
+          "frame_disp_mag": 32.68770100665354,
+          "frame_disp_azimuth_deg": 252.6514518719896
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "target": "South Polar Highlands (84.9\u00b0S, 27\u00b0E)",
+      "date": "2025-02-08",
+      "time_mode": "inverted",
+      "epoch_utc": "2025-02-08T14:02:53.949275",
+      "epoch_et": 792295443.1342518,
+      "frame_rotation": {
+        "source_frame": "IAU_MOON",
+        "target_frame": "MOON_ME_DE421",
+        "rotation_matrix": [
+          [
+            0.9999999990904265,
+            3.4250099766812425e-05,
+            2.54180581161223e-05
+          ],
+          [
+            -3.425091966245686e-05,
+            0.9999999988931902,
+            3.225668863938991e-05
+          ],
+          [
+            -2.5416953293222466e-05,
+            -3.225755920191822e-05,
+            0.999999999156714
+          ]
+        ],
+        "rotation_angle_rad": 5.347587360967253e-05,
+        "rotation_angle_arcsec": 11.030190708993318,
+        "rotation_axis": [
+          -0.6032089194367762,
+          0.47530790992424726,
+          -0.6404852771729889
+        ],
+        "euler_rotations_arcsec": {
+          "rot_x": 6.653419635679795,
+          "rot_y": -5.242850833063951,
+          "rot_z": 7.0645901960086315
+        },
+        "reversibility_max_error": 3.3306690738754696e-16
+      },
+      "ground_track": {
+        "epoch_et": 792295443.1342518,
+        "sc_radius_km": 1843.2613454986615,
+        "sc_altitude_km": 105.8613454986615,
+        "sub_sc_lat_deg": -85.70434673808934,
+        "sub_sc_lon_deg": 33.76219198644656,
+        "ground_speed_ms": 1536.8366642578103,
+        "ground_track_azimuth_iau_deg": 171.54009900021106,
+        "ground_track_azimuth_me_deg": 171.54203505973646,
+        "ground_track_dx_dt": 226.0951111448594,
+        "ground_track_dy_dt": -1520.1144474425164
+      },
+      "ground_track_vs_residual": {
+        "ground_track_azimuth_deg": 171.54009900021106,
+        "residual_translation_azimuth_deg": 12.95,
+        "angular_difference_deg": 158.59009900021107,
+        "alignment_status": "GROUND_TRACK_ALIGNMENT_NOT_VERIFIED"
+      },
+      "surface_displacement": {
+        "min_m": 65.58723780123037,
+        "max_m": 66.42432922848693,
+        "mean_m": 65.9999649040917,
+        "rms_m": 66.00088587388034,
+        "mean_vector_dx_m": -51.26486469365409,
+        "mean_vector_dy_m": 41.57728246530314,
+        "mean_vector_mag_m": 66.0057328514597,
+        "mean_vector_azimuth_deg": 309.0430483657434
+      },
+      "scenario_a_iau": {
+        "translation_vector": {
+          "mean_dx_m": 283.56,
+          "mean_dy_m": 1232.74,
+          "magnitude_m": 1264.93,
+          "azimuth_deg": 12.95,
+          "post_translation_rms_m": 23.25,
+          "post_translation_max_m": 27.04,
+          "angular_spread_deg": 2.45
+        },
+        "translation_magnitude_m": 1264.93,
+        "translation_azimuth_deg": 12.95,
+        "post_translation_rms_m": 23.25,
+        "post_translation_max_m": 27.04
+      },
+      "scenario_b_me": {
+        "mean_dx_m": 232.2901353063462,
+        "mean_dy_m": 1274.317282465301,
+        "translation_magnitude_m": 1295.315885546993,
+        "translation_azimuth_deg": 10.330787788217435,
+        "post_translation_rms_m": 23.33571785025377,
+        "post_translation_max_m": 27.491958581307564
+      },
+      "frame_correction_effect": {
+        "scenario_ab_translation_effect": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs.",
+        "fraction_of_residual_explained_pct": 5.218133244642762,
+        "net_translation_magnitude_change_m": 30.385885546992995,
+        "interpretation": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs."
+      },
+      "points": [
+        {
+          "point_name": "UL",
+          "X_meta": 74030.77,
+          "Y_meta": 147044.95,
+          "X_phys_iau": 74340.89,
+          "Y_phys_iau": 148272.81,
+          "X_phys_me": 74290.08265555293,
+          "Y_phys_me": 148314.38295687007,
+          "dx_iau": 310.11999999999534,
+          "dy_iau": 1227.859999999986,
+          "res_mag_iau": 1266.418017085971,
+          "dx_me": 259.31265555293066,
+          "dy_me": 1269.4329568700632,
+          "res_mag_me": 1295.6477473903872,
+          "frame_disp_dx": -50.80734444706468,
+          "frame_disp_dy": 41.57295687007718,
+          "frame_disp_mag": 65.64828248083853,
+          "frame_disp_azimuth_deg": 309.2916436754321
+        },
+        {
+          "point_name": "UR",
+          "X_meta": 77306.51,
+          "Y_meta": 146540.15,
+          "X_phys_iau": 77571.41,
+          "Y_phys_iau": 147774.37,
+          "X_phys_me": 77520.58584101275,
+          "Y_phys_me": 147815.8258877077,
+          "dx_iau": 264.90000000000873,
+          "dy_iau": 1234.2200000000012,
+          "res_mag_iau": 1262.3276192811468,
+          "dx_me": 214.07584101276007,
+          "dy_me": 1275.6758877077082,
+          "res_mag_me": 1293.5136010820179,
+          "frame_disp_dx": -50.824158987248666,
+          "frame_disp_dy": 41.45588770770701,
+          "frame_disp_mag": 65.58723780123037,
+          "frame_disp_azimuth_deg": 309.203192013546
+        },
+        {
+          "point_name": "LL",
+          "X_meta": 70340.62,
+          "Y_meta": 122157.99,
+          "X_phys_iau": 70642.86,
+          "Y_phys_iau": 123389.24,
+          "X_phys_me": 70591.15462385802,
+          "Y_phys_me": 123430.93826844692,
+          "dx_iau": 302.24000000000524,
+          "dy_iau": 1231.25,
+          "res_mag_iau": 1267.803446950671,
+          "dx_me": 250.53462385802413,
+          "dy_me": 1272.9482684469112,
+          "res_mag_me": 1297.368448781483,
+          "frame_disp_dx": -51.705376141981105,
+          "frame_disp_dy": 41.69826844691124,
+          "frame_disp_mag": 66.42432922848693,
+          "frame_disp_azimuth_deg": 308.8847545755232
+        },
+        {
+          "point_name": "LR",
+          "X_meta": 73618.91,
+          "Y_meta": 121652.04,
+          "X_phys_iau": 73875.87,
+          "Y_phys_iau": 122889.67,
+          "X_phys_me": 73824.14742080167,
+          "Y_phys_me": 122931.25201683652,
+          "dx_iau": 256.95999999999185,
+          "dy_iau": 1237.6300000000047,
+          "res_mag_iau": 1264.023915319646,
+          "dx_me": 205.23742080166994,
+          "dy_me": 1279.2120168365218,
+          "res_mag_me": 1295.5716047043804,
+          "frame_disp_dx": -51.72257919832191,
+          "frame_disp_dy": 41.58201683651714,
+          "frame_disp_mag": 66.36481992079145,
+          "frame_disp_azimuth_deg": 308.797305601653
+        },
+        {
+          "point_name": "CENTER",
+          "X_meta": 73824.568,
+          "Y_meta": 134351.241,
+          "X_phys_iau": 74165.608,
+          "Y_phys_iau": 136649.749,
+          "X_phys_me": 74114.38081333884,
+          "Y_phys_me": 136691.3241901477,
+          "dx_iau": 341.0399999999936,
+          "dy_iau": 2298.5080000000016,
+          "res_mag_iau": 2323.6710842251327,
+          "dx_me": 289.81281333883817,
+          "dy_me": 2340.0831901476777,
+          "res_mag_me": 2357.961153960579,
+          "frame_disp_dx": -51.22718666115543,
+          "frame_disp_dy": 41.57519014767604,
+          "frame_disp_mag": 65.97515508911123,
+          "frame_disp_azimuth_deg": 309.0622483786662
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "target": "South Polar Highlands (84.9\u00b0S, 25\u00b0E)",
+      "date": "2025-03-08",
+      "time_mode": "inverted",
+      "epoch_utc": "2025-03-08T01:28:01.131700",
+      "epoch_et": 794669350.3171829,
+      "frame_rotation": {
+        "source_frame": "IAU_MOON",
+        "target_frame": "MOON_ME_DE421",
+        "rotation_matrix": [
+          [
+            0.9999999997866353,
+            1.6137453888146087e-05,
+            1.28962002911015e-05
+          ],
+          [
+            -1.6137666532933716e-05,
+            0.999999999733844,
+            1.6489014772009744e-05
+          ],
+          [
+            -1.2895934196954784e-05,
+            -1.648922288307285e-05,
+            0.9999999997809002
+          ]
+        ],
+        "rotation_angle_rad": 2.6431429015147167e-05,
+        "rotation_angle_arcsec": 5.451873584643211,
+        "rotation_axis": [
+          -0.623845151164992,
+          0.4879065463369127,
+          -0.6105443713683014
+        ],
+        "euler_rotations_arcsec": {
+          "rot_x": 3.4011034375910416,
+          "rot_y": -2.660032254441531,
+          "rot_z": 3.3285887999811674
+        },
+        "reversibility_max_error": 2.220446049250313e-16
+      },
+      "ground_track": {
+        "epoch_et": 794669350.3171829,
+        "sc_radius_km": 1835.275072040199,
+        "sc_altitude_km": 97.87507204019883,
+        "sub_sc_lat_deg": -85.80387078003638,
+        "sub_sc_lon_deg": 30.14543371147206,
+        "ground_speed_ms": 1551.44340513106,
+        "ground_track_azimuth_iau_deg": 173.15596552004502,
+        "ground_track_azimuth_me_deg": 173.1568771602183,
+        "ground_track_dx_dt": 184.88097042573463,
+        "ground_track_dy_dt": -1540.3881543621064
+      },
+      "ground_track_vs_residual": {
+        "ground_track_azimuth_deg": 173.15596552004502,
+        "residual_translation_azimuth_deg": 9.3,
+        "angular_difference_deg": 163.855965520045,
+        "alignment_status": "GROUND_TRACK_ALIGNMENT_NOT_VERIFIED"
+      },
+      "surface_displacement": {
+        "min_m": 33.66475256008405,
+        "max_m": 34.0686797124305,
+        "mean_m": 33.86400026864365,
+        "rms_m": 33.86442000532339,
+        "mean_vector_dx_m": -26.33424285923138,
+        "mean_vector_dy_m": 21.294583924529434,
+        "mean_vector_mag_m": 33.866674644668116,
+        "mean_vector_azimuth_deg": 308.9599446457312
+      },
+      "scenario_a_iau": {
+        "translation_vector": {
+          "mean_dx_m": 274.78,
+          "mean_dy_m": 1677.59,
+          "magnitude_m": 1699.94,
+          "azimuth_deg": 9.3,
+          "post_translation_rms_m": 409.32,
+          "post_translation_max_m": 409.78,
+          "angular_spread_deg": 2.39
+        },
+        "translation_magnitude_m": 1699.94,
+        "translation_azimuth_deg": 9.3,
+        "post_translation_rms_m": 409.32,
+        "post_translation_max_m": 409.78
+      },
+      "scenario_b_me": {
+        "mean_dx_m": 248.44575714076745,
+        "mean_dy_m": 1698.882083924531,
+        "translation_magnitude_m": 1716.9524248857351,
+        "translation_azimuth_deg": 8.319999694507828,
+        "post_translation_rms_m": 409.3248306248349,
+        "post_translation_max_m": 409.8198631023023
+      },
+      "frame_correction_effect": {
+        "scenario_ab_translation_effect": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs.",
+        "fraction_of_residual_explained_pct": 1.992227645956217,
+        "net_translation_magnitude_change_m": 17.012424885735072,
+        "interpretation": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs."
+      },
+      "points": [
+        {
+          "point_name": "UL",
+          "X_meta": 67495.2,
+          "Y_meta": 150128.72,
+          "X_phys_iau": 67842.09,
+          "Y_phys_iau": 152209.68,
+          "X_phys_me": 67815.98064990583,
+          "Y_phys_me": 152230.9764966197,
+          "dx_iau": 346.8899999999994,
+          "dy_iau": 2080.959999999992,
+          "res_mag_iau": 2109.674665369039,
+          "dx_me": 320.78064990583516,
+          "dy_me": 2102.256496619695,
+          "res_mag_me": 2126.589429799209,
+          "frame_disp_dx": -26.109350094164256,
+          "frame_disp_dy": 21.296496619703248,
+          "frame_disp_mag": 33.693306911205184,
+          "frame_disp_azimuth_deg": 309.20293907700426
+        },
+        {
+          "point_name": "UR",
+          "X_meta": 70561.88,
+          "Y_meta": 149764.53,
+          "X_phys_iau": 70869.5,
+          "Y_phys_iau": 151849.67,
+          "X_phys_me": 70843.38519947515,
+          "Y_phys_me": 151870.91459362942,
+          "dx_iau": 307.61999999999534,
+          "dy_iau": 2085.140000000014,
+          "res_mag_iau": 2107.7093926820307,
+          "dx_me": 281.5051994751411,
+          "dy_me": 2106.3845936294238,
+          "res_mag_me": 2125.1120520130066,
+          "frame_disp_dx": -26.114800524854218,
+          "frame_disp_dy": 21.244593629409792,
+          "frame_disp_mag": 33.66475256008405,
+          "frame_disp_azimuth_deg": 309.1286228254427
+        },
+        {
+          "point_name": "LL",
+          "X_meta": 64482.36,
+          "Y_meta": 124913.23,
+          "X_phys_iau": 64724.28,
+          "Y_phys_iau": 126183.28,
+          "X_phys_me": 64697.726423525026,
+          "Y_phys_me": 126204.62437897283,
+          "dx_iau": 241.91999999999825,
+          "dy_iau": 1270.050000000003,
+          "res_mag_iau": 1292.8852574378,
+          "dx_me": 215.3664235250253,
+          "dy_me": 1291.3943789728364,
+          "res_mag_me": 1309.2295972917043,
+          "frame_disp_dx": -26.553576474972942,
+          "frame_disp_dy": 21.34437897283351,
+          "frame_disp_mag": 34.0686797124305,
+          "frame_disp_azimuth_deg": 308.7931260005356
+        },
+        {
+          "point_name": "LR",
+          "X_meta": 67551.81,
+          "Y_meta": 124547.96,
+          "X_phys_iau": 67754.5,
+          "Y_phys_iau": 125822.16,
+          "X_phys_me": 67727.94075565707,
+          "Y_phys_me": 125843.45286647617,
+          "dx_iau": 202.69000000000233,
+          "dy_iau": 1274.199999999997,
+          "res_mag_iau": 1290.2204757714837,
+          "dx_me": 176.13075565706822,
+          "dy_me": 1295.4928664761683,
+          "res_mag_me": 1307.411109857557,
+          "frame_disp_dx": -26.559244342934107,
+          "frame_disp_dy": 21.292866476171184,
+          "frame_disp_mag": 34.04085226371003,
+          "frame_disp_azimuth_deg": 308.71957159741754
+        },
+        {
+          "point_name": "CENTER",
+          "X_meta": 67523.407,
+          "Y_meta": 137343.6,
+          "X_phys_iau": 67934.98,
+          "Y_phys_iau": 140005.925,
+          "X_phys_me": 67908.6621953913,
+          "Y_phys_me": 140027.21722431618,
+          "dx_iau": 411.5729999999894,
+          "dy_iau": 2662.3249999999825,
+          "res_mag_iau": 2693.9500255115904,
+          "dx_me": 385.25519539129164,
+          "dy_me": 2683.617224316171,
+          "res_mag_me": 2711.1294643049437,
+          "frame_disp_dx": -26.31780460869777,
+          "frame_disp_dy": 21.292224316188367,
+          "frame_disp_mag": 33.85240989578846,
+          "frame_disp_azimuth_deg": 308.9743330630738
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "target": "South Polar Highlands (84.2\u00b0S, 32\u00b0E)",
+      "date": "2025-10-12",
+      "time_mode": "inverted",
+      "epoch_utc": "2025-10-12T04:58:29.291926",
+      "epoch_et": 813517178.4742804,
+      "frame_rotation": {
+        "source_frame": "IAU_MOON",
+        "target_frame": "MOON_ME_DE421",
+        "rotation_matrix": [
+          [
+            0.9999999997574287,
+            -1.9401923194248966e-05,
+            1.042630344239015e-05
+          ],
+          [
+            1.940200458570851e-05,
+            0.9999999997813119,
+            -7.806314175504148e-06
+          ],
+          [
+            -1.0426151982600995e-05,
+            7.806516464807511e-06,
+            0.9999999999151767
+          ]
+        ],
+        "rotation_angle_rad": 2.3368409174589004e-05,
+        "rotation_angle_arcsec": 4.82008039069947,
+        "rotation_axis": [
+          0.33405848308044356,
+          0.4461676289365075,
+          0.8302646426117204
+        ],
+        "euler_rotations_arcsec": {
+          "rot_x": -1.6101678810181974,
+          "rot_y": -2.1505794594570027,
+          "rot_z": -4.001933928951406
+        },
+        "reversibility_max_error": 2.220446049250313e-16
+      },
+      "ground_track": {
+        "epoch_et": 813517178.4742804,
+        "sc_radius_km": 1829.2043927066436,
+        "sc_altitude_km": 91.80439270664355,
+        "sub_sc_lat_deg": -85.25992431138656,
+        "sub_sc_lon_deg": 40.08408093553505,
+        "ground_speed_ms": 1561.7424452350442,
+        "ground_track_azimuth_iau_deg": 164.25007797158742,
+        "ground_track_azimuth_me_deg": 164.24900058603453,
+        "ground_track_dx_dt": 423.91802638774243,
+        "ground_track_dy_dt": -1503.107771303261
+      },
+      "ground_track_vs_residual": {
+        "ground_track_azimuth_deg": 164.25007797158742,
+        "residual_translation_azimuth_deg": 16.72,
+        "angular_difference_deg": 147.53007797158742,
+        "alignment_status": "GROUND_TRACK_ALIGNMENT_NOT_VERIFIED"
+      },
+      "surface_displacement": {
+        "min_m": 22.602598798723484,
+        "max_m": 22.75058550460561,
+        "mean_m": 22.67409359121597,
+        "rms_m": 22.674144691773062,
+        "mean_vector_dx_m": 10.656126613648667,
+        "mean_vector_dy_m": 20.01547458577261,
+        "mean_vector_mag_m": 22.67536675116459,
+        "mean_vector_azimuth_deg": 28.030587263637415
+      },
+      "scenario_a_iau": {
+        "translation_vector": {
+          "mean_dx_m": 627.35,
+          "mean_dy_m": 2088.93,
+          "magnitude_m": 2181.1,
+          "azimuth_deg": 16.72,
+          "post_translation_rms_m": 10.72,
+          "post_translation_max_m": 13.35,
+          "angular_spread_deg": 0.69
+        },
+        "translation_magnitude_m": 2181.1,
+        "translation_azimuth_deg": 16.72,
+        "post_translation_rms_m": 10.72,
+        "post_translation_max_m": 13.35
+      },
+      "scenario_b_me": {
+        "mean_dx_m": 638.0061266136508,
+        "mean_dy_m": 2108.9479745857752,
+        "translation_magnitude_m": 2203.341411834761,
+        "translation_azimuth_deg": 16.831794668666987,
+        "post_translation_rms_m": 10.649435853956797,
+        "post_translation_max_m": 13.101653526625235
+      },
+      "frame_correction_effect": {
+        "scenario_ab_translation_effect": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs.",
+        "fraction_of_residual_explained_pct": 1.0396298542554028,
+        "net_translation_magnitude_change_m": 22.24141183476104,
+        "interpretation": "The tested frame transformation produces 22.7\u201366.0 m of surface displacement, while changing the fitted translation magnitude by approximately 18.8\u201330.4 m across the four OHRC pairs."
+      },
+      "points": [
+        {
+          "point_name": "UL",
+          "X_meta": 96610.01,
+          "Y_meta": 161948.5,
+          "X_phys_iau": 97250.63,
+          "Y_phys_iau": 164035.96,
+          "X_phys_me": 97261.03831915813,
+          "Y_phys_me": 164056.0235082864,
+          "dx_iau": 640.6200000000099,
+          "dy_iau": 2087.459999999992,
+          "res_mag_iau": 2183.5483131820047,
+          "dx_me": 651.0283191581402,
+          "dy_me": 2107.5235082863946,
+          "res_mag_me": 2205.7863020532304,
+          "frame_disp_dx": 10.408319158130325,
+          "frame_disp_dy": 20.063508286402794,
+          "frame_disp_mag": 22.602598798723484,
+          "frame_disp_azimuth_deg": 27.41886915026589
+        },
+        {
+          "point_name": "UR",
+          "X_meta": 99505.57,
+          "Y_meta": 161018.26,
+          "X_phys_iau": 100126.27,
+          "Y_phys_iau": 163109.89,
+          "X_phys_me": 100136.69840135645,
+          "Y_phys_me": 163130.00884691818,
+          "dx_iau": 620.6999999999971,
+          "dy_iau": 2091.6300000000047,
+          "res_mag_iau": 2181.7847159836865,
+          "dx_me": 631.1284013564436,
+          "dy_me": 2111.74884691817,
+          "res_mag_me": 2204.043160071726,
+          "frame_disp_dx": 10.428401356446557,
+          "frame_disp_dy": 20.118846918165218,
+          "frame_disp_mag": 22.660969885856662,
+          "frame_disp_azimuth_deg": 27.399509858345425
+        },
+        {
+          "point_name": "LL",
+          "X_meta": 89683.67,
+          "Y_meta": 137270.18,
+          "X_phys_iau": 90317.67,
+          "Y_phys_iau": 139356.4,
+          "X_phys_me": 90328.55400205869,
+          "Y_phys_me": 139376.31215377807,
+          "dx_iau": 634.0,
+          "dy_iau": 2086.220000000001,
+          "res_mag_iau": 2180.4288313081915,
+          "dx_me": 644.884002058694,
+          "dy_me": 2106.132153778075,
+          "res_mag_me": 2202.6502276324104,
+          "frame_disp_dx": 10.884002058694023,
+          "frame_disp_dy": 19.912153778073844,
+          "frame_disp_mag": 22.69262807378899,
+          "frame_disp_azimuth_deg": 28.661057827907825
+        },
+        {
+          "point_name": "LR",
+          "X_meta": 92574.77,
+          "Y_meta": 136340.31,
+          "X_phys_iau": 93188.85,
+          "Y_phys_iau": 138430.73,
+          "X_phys_me": 93199.75378388133,
+          "Y_phys_me": 138450.69738936046,
+          "dx_iau": 614.0800000000017,
+          "dy_iau": 2090.420000000013,
+          "res_mag_iau": 2178.7496466551765,
+          "dx_me": 624.9837838813255,
+          "dy_me": 2110.3873893604614,
+          "res_mag_me": 2200.9860661272446,
+          "frame_disp_dx": 10.903783881323761,
+          "frame_disp_dy": 19.96738936044858,
+          "frame_disp_mag": 22.75058550460561,
+          "frame_disp_azimuth_deg": 28.63805325418167
+        },
+        {
+          "point_name": "CENTER",
+          "X_meta": 94594.249,
+          "Y_meta": 149146.966,
+          "X_phys_iau": 95295.567,
+          "Y_phys_iau": 152724.029,
+          "X_phys_me": 95306.19419866674,
+          "Y_phys_me": 152744.04662467662,
+          "dx_iau": 701.3179999999993,
+          "dy_iau": 3577.0630000000237,
+          "res_mag_iau": 3645.1648307165988,
+          "dx_me": 711.9451986667409,
+          "dy_me": 3597.0806246766297,
+          "res_mag_me": 3666.859008242427,
+          "frame_disp_dx": 10.627198666741606,
+          "frame_disp_dy": 20.01762467660592,
+          "frame_disp_mag": 22.6636856931051,
+          "frame_disp_azimuth_deg": 27.963479098103164
+        }
+      ]
+    }
+  ],
+  "pair02_pair03_comparison": {
+    "pair_02_id": "OHRC_PAIR_02",
+    "pair_03_id": "OHRC_PAIR_03",
+    "target_geographic_overlap": "Nominally co-located south polar crater terrain (~84.95\u00b0S, 26\u00b0E)",
+    "pair_02_frame_rot_arcsec": 11.030190708993318,
+    "pair_03_frame_rot_arcsec": 5.451873584643211,
+    "pair_02_surface_disp_m": 66.0057328514597,
+    "pair_03_surface_disp_m": 33.866674644668116,
+    "surface_displacement_difference_m": 32.13905820679158,
+    "pair_02_translation_mag_m": 1264.93,
+    "pair_03_translation_mag_m": 1699.94,
+    "observed_translation_difference_m": 435.01,
+    "frame_diff_explains_translation_diff_pct": 7.388119401115281,
+    "finding": "NOT_SUFFICIENT_TO_EXPLAIN",
+    "statement": "The measured frame realization difference between Pair 02 and Pair 03 (32.1 m) accounts for only 7.39% of the observed cross-pair translation difference (435.0 m). Therefore, frame realization changes do NOT explain the discrepancy between co-located acquisitions."
+  },
+  "reference_geotiff_audit": [
+    {
+      "pair": "OHRC_PAIR_01",
+      "filename": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_reference_at_5m.tif",
+      "width": 5916,
+      "height": 4232,
+      "x0": -19187.0,
+      "y0": -3603.0,
+      "pixel_scale_x": 5.0,
+      "pixel_scale_y": 5.0,
+      "projection": "Polar Stereographic",
+      "datum": "Moon (Spherical)",
+      "radius_m": 1737400.0,
+      "k0": 1.0,
+      "central_meridian_deg": 0.0,
+      "latitude_of_origin_deg": -90.0,
+      "false_easting_m": 0.0,
+      "false_northing_m": 0.0,
+      "pixel_is_area": true,
+      "geodetic_realization": "UNKNOWN"
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "filename": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_reference_at_5m.tif",
+      "width": 2593,
+      "height": 6279,
+      "x0": 67338.0,
+      "y0": 150047.0,
+      "pixel_scale_x": 5.0,
+      "pixel_scale_y": 5.0,
+      "projection": "Polar Stereographic",
+      "datum": "Moon (Spherical)",
+      "radius_m": 1737400.0,
+      "k0": 1.0,
+      "central_meridian_deg": 0.0,
+      "latitude_of_origin_deg": -90.0,
+      "false_easting_m": 0.0,
+      "false_northing_m": 0.0,
+      "pixel_is_area": true,
+      "geodetic_realization": "UNKNOWN"
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "filename": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_reference_at_5m.tif",
+      "width": 2416,
+      "height": 6316,
+      "x0": 61478.0,
+      "y0": 153132.0,
+      "pixel_scale_x": 5.0,
+      "pixel_scale_y": 5.0,
+      "projection": "Polar Stereographic",
+      "datum": "Moon (Spherical)",
+      "radius_m": 1737400.0,
+      "k0": 1.0,
+      "central_meridian_deg": 0.0,
+      "latitude_of_origin_deg": -90.0,
+      "false_easting_m": 0.0,
+      "false_northing_m": 0.0,
+      "pixel_is_area": true,
+      "geodetic_realization": "UNKNOWN"
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "filename": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_reference_at_5m.tif",
+      "width": 3164,
+      "height": 6322,
+      "x0": 86683.0,
+      "y0": 164952.0,
+      "pixel_scale_x": 5.0,
+      "pixel_scale_y": 5.0,
+      "projection": "Polar Stereographic",
+      "datum": "Moon (Spherical)",
+      "radius_m": 1737400.0,
+      "k0": 1.0,
+      "central_meridian_deg": 0.0,
+      "latitude_of_origin_deg": -90.0,
+      "false_easting_m": 0.0,
+      "false_northing_m": 0.0,
+      "pixel_is_area": true,
+      "geodetic_realization": "UNKNOWN"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "anchor_source": "existing LoFTR matcher",
+  "anchor_is_ground_truth": false,
+  "candidates": 199,
+  "reported_initial_inliers": 12,
+  "anchor_pairs": 12,
+  "source_spatial_occupancy_3x3": 0.5555555555555556,
+  "held_out_valid": false,
+  "held_out_rmse": null,
+  "matcher_success": true,
+  "failure_stage": null,
+  "failure_reason": null,
+  "anchor_feasibility_status": "adequate_for_descriptor_diagnostic",
+  "runtime_sec": 8.12
+}

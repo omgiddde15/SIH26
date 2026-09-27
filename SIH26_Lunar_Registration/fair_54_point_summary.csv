@@ -1,0 +1,4 @@
+Method,Training Points,Check Points,Fit RMSE,Mean Check RMSE,Median Check RMSE,Best Check RMSE,Worst Check RMSE,Check Median,Check Max,Check RMSE < 1 px (%),Final Inlier Ratio,Spatial Occupancy,Spatial CV,Runtime
+Variant A — Random 40 Baseline,40,14,1.0312,1.3935,1.4073,1.2525,1.4779,1.184,2.407,0.0,0.995,0.9111,0.6826,48.44
+Variant B — Quality Only,40,14,0.0792,1.3992,1.3669,1.2911,1.5702,1.1544,2.5822,0.0,1.0,0.6667,0.9374,48.44
+Variant C — Quality + 3×3 Spatial Selection,40,14,0.2228,1.3836,1.3612,1.2922,1.56,1.0923,2.5,0.0,1.0,1.0,0.1118,48.45

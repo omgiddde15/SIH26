@@ -1,0 +1,15 @@
+dataset_id,source_file,reference_file,xml_present,geotiff_present,method_classification,status,diagnostic_notes
+project_pair01,None,None,No,No,INCOMPATIBLE,INCOMPATIBLE / EMPTY DIRECTORY,Directory contains no files.
+project_pair02,source.png,reference.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_pair03,None,None,No,No,INCOMPATIBLE,INCOMPATIBLE / EMPTY DIRECTORY,Directory contains no files.
+project_pair04,None,None,No,No,INCOMPATIBLE,INCOMPATIBLE / EMPTY DIRECTORY,Directory contains no files.
+project_pair05,ch2_ohr_ncp_20200824T0806596861.png,ch2_ohr_ncp_20200824T1003365280.png,No,No,METADATA-ONLY / PER-PIXEL MATCHES IN METADATA,INCOMPATIBLE / MISSING REQUIRED METADATA,"Imagery is PNG without XML. Sibling metadata/image_footprints.csv has bounding box degrees; metadata/pair05_actual_geo_matches.csv has 96,397 per-pixel coordinates, but no projected XML."
+project_large_ch2,source_ch2_large.png,reference_ch2_large.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_validation_pair_01,source.png,reference.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_validation_pair_02,source.png,reference.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_validation_pair_03,source.png,reference.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_validation_pair_04,source.png,reference.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_reference_source_toplevel,None,reference.jpeg,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_tycho,source (1).png,real_refrence.png,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_cross_sensor,souse.jpeg,ref.jpeg,No,No,INCOMPATIBLE,INCOMPATIBLE / MISSING REQUIRED METADATA,"Required XML metadata, projected corner coordinates, and GeoTIFF tags are missing."
+project_phase3_angle_pairs,None,None,No,No,INCOMPATIBLE,INCOMPATIBLE / EMPTY DIRECTORY,Directory contains no files.

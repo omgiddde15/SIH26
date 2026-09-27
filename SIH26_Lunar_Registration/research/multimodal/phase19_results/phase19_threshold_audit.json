@@ -1,0 +1,132 @@
+{
+  "audit_name": "Phase 19 Production Threshold Consistency Audit",
+  "audit_timestamp": "2026-09-23T11:23:00+05:30",
+  "actual_production_thresholds": {
+    "min_candidate_matches": {
+      "value": 10,
+      "type": "int",
+      "definition_type": "dataclass field default on AdaptiveConfig",
+      "file": "research/adaptive_matcher/adaptive_engine.py",
+      "class": "AdaptiveConfig",
+      "line_number": 536
+    },
+    "min_initial_inliers": {
+      "value": 8,
+      "type": "int",
+      "definition_type": "dataclass field default on AdaptiveConfig",
+      "file": "research/adaptive_matcher/adaptive_engine.py",
+      "class": "AdaptiveConfig",
+      "line_number": 537
+    },
+    "min_inlier_ratio": {
+      "value": 0.20,
+      "type": "float",
+      "definition_type": "dataclass field default on AdaptiveConfig",
+      "file": "research/adaptive_matcher/adaptive_engine.py",
+      "class": "AdaptiveConfig",
+      "line_number": 538
+    },
+    "min_spatial_occupancy": {
+      "value": 0.33,
+      "type": "float",
+      "definition_type": "dataclass field default on AdaptiveConfig",
+      "file": "research/adaptive_matcher/adaptive_engine.py",
+      "class": "AdaptiveConfig",
+      "line_number": 539
+    },
+    "ransac_threshold": {
+      "value": 3.0,
+      "type": "float",
+      "definition_type": "dataclass field default on AdaptiveConfig",
+      "file": "research/adaptive_matcher/adaptive_engine.py",
+      "class": "AdaptiveConfig",
+      "line_number": 540
+    }
+  },
+  "downstream_thresholds": {
+    "file": "research/adaptive_matcher/adaptive_engine.py",
+    "function": "execute_common_downstream",
+    "line_number": 1272,
+    "initial_ransac_min_inliers": 4,
+    "spatial_selection_min_points": 4,
+    "final_ransac_min_inliers": 4,
+    "max_per_cell": 6,
+    "grid_dimensions": [3, 3],
+    "max_selected_points": 54,
+    "ransac_confidence": 0.995,
+    "validation_seeds": [1, 2, 3, 4, 5]
+  },
+  "runtime_invocation_flow": {
+    "adapter_entrypoint": "app.adaptive_adapter.safe_run_adaptive_registration",
+    "engine_entrypoint": "research.adaptive_matcher.adaptive_engine.run_adaptive_registration",
+    "quality_gate_evaluator": "research.adaptive_matcher.adaptive_engine.evaluate_quality_gate (line 745)",
+    "parameter_passing_mode": "AdaptiveConfig instantiated with default values when config=None"
+  },
+  "comparison_matrix": {
+    "min_candidate_matches": {
+      "actual_code": 10,
+      "phase19_report_initial": "omitted",
+      "previously_validated_arch": 10,
+      "consistency": "CORRECTED (Omission rectified)"
+    },
+    "min_initial_inliers": {
+      "actual_code": 8,
+      "phase19_report_initial": 15,
+      "previously_validated_arch": 8,
+      "consistency": "CORRECTED (Report erroneously stated 15 from an obsolete draft audit note)"
+    },
+    "min_inlier_ratio": {
+      "actual_code": 0.20,
+      "phase19_report_initial": 0.20,
+      "previously_validated_arch": 0.20,
+      "consistency": "VERIFIED"
+    },
+    "min_spatial_occupancy": {
+      "actual_code": 0.33,
+      "phase19_report_initial": 0.30,
+      "previously_validated_arch": 0.33,
+      "consistency": "CORRECTED (Report rounded 0.33 down to 0.30)"
+    }
+  },
+  "benchmark_crop_rejection_audit": {
+    "pair": "souse.jpeg <-> ref.jpeg (IIRS <-> OHRC)",
+    "primary_matcher": "LoFTR",
+    "loftr_results": {
+      "n_candidates": 199,
+      "candidate_check": "199 >= 10 -> PASSED",
+      "n_inliers": 12,
+      "inlier_count_check": "12 >= 8 -> PASSED (Did NOT fail on inlier count)",
+      "spatial_occupancy": 0.5556,
+      "spatial_occupancy_check": "0.5556 >= 0.33 -> PASSED",
+      "inlier_ratio": 0.0603,
+      "inlier_ratio_check": "0.0603 < 0.20 -> FAILED (SOLE REJECTION CAUSE FOR LoFTR)"
+    },
+    "actual_quality_gate_reasons": [
+      "Inlier ratio below threshold (0.06 < 0.20)"
+    ],
+    "fallback_matchers": {
+      "SIFT": {
+        "n_candidates": 9,
+        "n_inliers": 4,
+        "inlier_ratio": 0.4444,
+        "spatial_occupancy": 0.3333,
+        "rejection_reasons": [
+          "Candidate matches below threshold (9 < 10)",
+          "Initial inliers below threshold (4 < 8)"
+        ]
+      },
+      "SuperGlue": {
+        "n_candidates": 18,
+        "n_inliers": 6,
+        "inlier_ratio": 0.3333,
+        "spatial_occupancy": 0.3333,
+        "rejection_reasons": [
+          "Initial inliers below threshold (6 < 8)"
+        ]
+      }
+    },
+    "final_runtime_verdict": "All available matchers failed the quality gate.",
+    "critical_clarification": "LoFTR produced 12 inliers, which comfortably exceeded min_initial_inliers (8). LoFTR was rejected exclusively because of its low inlier ratio (6.03% < 20.00%)."
+  },
+  "status": "CORRECTED"
+}

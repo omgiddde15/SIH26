@@ -48,7 +48,7 @@ def discover_validation_pairs(base_dir=None):
     """
     if base_dir is None:
         base_dir = os.path.join(PROJECT_ROOT, "data", "validation_pairs")
-
+    
     if not os.path.exists(base_dir):
         return []
 

@@ -1,0 +1,10 @@
+{
+  "pair_id": "pair_01",
+  "source_sensor": "CH2_OHRC",
+  "reference_sensor": "CH2_OHRC",
+  "test_type": "rotation_change",
+  "source_angle": 0.0,
+  "reference_angle": 20.0,
+  "angle_difference_deg": 20.0,
+  "notes": "Synthetic in-plane rotation of 20 degrees to evaluate RIFT2 rotation-invariance."
+}

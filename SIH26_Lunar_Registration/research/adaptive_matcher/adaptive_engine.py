@@ -24,6 +24,8 @@ derived from validation experiments and are NOT claimed as universally optimal.
 import os
 import sys
 import time
+import logging
+import gc
 import cv2
 import numpy as np
 import pandas as pd
@@ -52,6 +54,460 @@ from registration_core import (
 from models.matching import Matching
 
 _DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+logger = logging.getLogger(__name__)
+
+# This guard applies only to the adaptive CPU LoFTR route.  The estimate is a
+# conservative CPU-resident workspace estimate for the existing full-raster
+# preprocessing/tensor path; it does not alter the LoFTR input resolution or
+# any matching/geometry configuration.
+_LOFTR_CPU_BYTES_PER_SOURCE_PIXEL = 112
+_LOFTR_CPU_MAX_WORKING_BYTES = 2_600_000_000
+_LOFTR_COARSE_STRIDE = 8
+_LOFTR_TILE_LONG_EDGE = 512
+_LOFTR_TILE_OVERLAP = 0.20
+_LOFTR_TILE_MIN_STD = 8.0
+_LOFTR_TILE_MIN_PTP = 12
+_LOFTR_TILE_MIN_GRADIENT_MEAN = 5.0
+
+
+def inspect_loftr_memory_safety(
+    source_shape: Tuple[int, ...],
+    reference_shape: Tuple[int, ...],
+) -> Dict[str, Any]:
+    """Estimate CPU workspace before constructing LoFTR tensors.
+
+    The image dimensions are read directly from the active rasters.  Matching
+    dimensions are included for diagnostics, while the conservative estimate
+    accounts for the full-resolution CPU buffers that coexist during the
+    current preprocessing and inference path.
+    """
+    s_h, s_w = (int(source_shape[0]), int(source_shape[1]))
+    r_h, r_w = (int(reference_shape[0]), int(reference_shape[1]))
+
+    scale_s, s_wm, s_hm = compute_matching_scale(
+        (s_h, s_w), max_dim=1600, max_budget=1800000
+    )
+    scale_r, r_wm, r_hm = compute_matching_scale(
+        (r_h, r_w), max_dim=1600, max_budget=1800000
+    )
+
+    source_pixels = s_h * s_w
+    reference_pixels = r_h * r_w
+    raster_bytes = (source_pixels + reference_pixels) * _LOFTR_CPU_BYTES_PER_SOURCE_PIXEL
+
+    source_coarse_tokens = int(np.ceil(s_hm / _LOFTR_COARSE_STRIDE) * np.ceil(s_wm / _LOFTR_COARSE_STRIDE))
+    reference_coarse_tokens = int(np.ceil(r_hm / _LOFTR_COARSE_STRIDE) * np.ceil(r_wm / _LOFTR_COARSE_STRIDE))
+
+    coarse_matrix_bytes = int(source_coarse_tokens * reference_coarse_tokens * 4)
+    coarse_matrix_gb = round(coarse_matrix_bytes / 1_000_000_000, 3)
+
+    coarse_buffer_factor = 1.05
+    estimated_workspace_bytes = int(max(raster_bytes, coarse_matrix_bytes * coarse_buffer_factor))
+    estimated_workspace_gb = round(estimated_workspace_bytes / 1_000_000_000, 3)
+
+    memory_cap_bytes = int(_LOFTR_CPU_MAX_WORKING_BYTES)
+    memory_cap_gb = round(memory_cap_bytes / 1_000_000_000, 2)
+
+    memory_safe = _DEVICE != "cpu" or (
+        estimated_workspace_bytes <= _LOFTR_CPU_MAX_WORKING_BYTES and
+        coarse_matrix_bytes <= _LOFTR_CPU_MAX_WORKING_BYTES
+    )
+
+    if _DEVICE != "cpu":
+        memory_reason = "CPU LoFTR memory guard is not active because the matcher is using CUDA."
+    elif memory_safe:
+        memory_reason = (
+            f"Estimated CPU LoFTR workspace {estimated_workspace_gb:.2f} GB is within the "
+            f"{memory_cap_gb:.2f} GB conservative process cap."
+        )
+    else:
+        if coarse_matrix_bytes > _LOFTR_CPU_MAX_WORKING_BYTES:
+            memory_reason = (
+                f"Estimated LoFTR coarse similarity matrix {coarse_matrix_gb:.2f} GB "
+                f"(workspace {estimated_workspace_gb:.2f} GB) exceeds the "
+                f"{memory_cap_gb:.2f} GB conservative process cap; full-image inference was blocked."
+            )
+        else:
+            memory_reason = (
+                f"Estimated CPU LoFTR workspace {estimated_workspace_gb:.2f} GB exceeds the "
+                f"{memory_cap_gb:.2f} GB conservative process cap; full-image inference was blocked."
+            )
+
+    return {
+        "memory_check": {
+            "name": "LoFTR CPU pre-inference workspace guard",
+            "device": _DEVICE,
+            "active": _DEVICE == "cpu",
+        },
+        "source_shape": (s_h, s_w),
+        "reference_shape": (r_h, r_w),
+        "working_source_shape": (s_hm, s_wm),
+        "working_reference_shape": (r_hm, r_wm),
+        "source_scale": float(scale_s),
+        "reference_scale": float(scale_r),
+        "coarse_attention_tokens": {
+            "source": source_coarse_tokens,
+            "reference": reference_coarse_tokens,
+        },
+        "estimated_working_size": {
+            "bytes": int(estimated_workspace_bytes),
+            "gigabytes": round(estimated_workspace_gb, 3),
+            "bytes_per_source_pixel": _LOFTR_CPU_BYTES_PER_SOURCE_PIXEL,
+        },
+        "coarse_matrix_bytes": coarse_matrix_bytes,
+        "coarse_matrix_gb": coarse_matrix_gb,
+        "estimated_workspace_bytes": estimated_workspace_bytes,
+        "estimated_workspace_gb": estimated_workspace_gb,
+        "memory_cap_bytes": memory_cap_bytes,
+        "memory_cap_gb": memory_cap_gb,
+        "memory_safe": bool(memory_safe),
+        "memory_reason": memory_reason,
+    }
+
+
+def _tile_starts(length: int, tile_length: int, overlap: float) -> List[int]:
+    """Return overlapping tile origins while always including the far edge."""
+    if length <= tile_length:
+        return [0]
+
+    step = max(1, int(round(tile_length * (1.0 - overlap))))
+    starts = list(range(0, length - tile_length + 1, step))
+    final_start = length - tile_length
+    if starts[-1] != final_start:
+        starts.append(final_start)
+    return starts
+
+
+def _normalised_tile_bounds(
+    origin: int,
+    length: int,
+    source_extent: int,
+    target_extent: int,
+) -> Tuple[int, int]:
+    """Map a source tile interval to its corresponding target interval."""
+    start = int(round(origin * target_extent / source_extent))
+    end = int(round((origin + length) * target_extent / source_extent))
+    start = min(max(0, start), max(0, target_extent - 1))
+    end = min(target_extent, max(start + 1, end))
+    return start, end
+
+
+def _tile_has_sufficient_texture(
+    tile: np.ndarray,
+    min_std: float = _LOFTR_TILE_MIN_STD,
+    min_ptp: int = _LOFTR_TILE_MIN_PTP,
+    min_gradient_mean: float = _LOFTR_TILE_MIN_GRADIENT_MEAN,
+) -> Tuple[bool, str]:
+    """Check whether an image tile has sufficient information for LoFTR inference.
+
+    Returns (True, 'ok') if the tile has sufficient texture, variance, and dynamic
+    range. Returns (False, reason_str) if the tile is flat, uniform, or devoid of
+    gradient information.
+    """
+    if tile is None or tile.size == 0:
+        return False, "empty_tile"
+
+    # Fast variance check
+    std_val = float(np.std(tile))
+    if std_val < min_std:
+        return False, f"low_variance (std={std_val:.2f} < {min_std})"
+
+    # Fast dynamic range check
+    ptp_val = int(np.ptp(tile))
+    if ptp_val < min_ptp:
+        return False, f"uniform_content (ptp={ptp_val} < {min_ptp})"
+
+    # Gradient magnitude check (Sobel)
+    gx = cv2.Sobel(tile, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(tile, cv2.CV_32F, 0, 1, ksize=3)
+    gmean = float(np.mean(np.sqrt(gx**2 + gy**2)))
+    if gmean < min_gradient_mean:
+        return False, f"insufficient_gradient (gmean={gmean:.2f} < {min_gradient_mean})"
+
+    return True, "ok"
+
+
+def _safe_tiled_loftr_geometry(
+    source_shape: Tuple[int, int],
+    reference_shape: Tuple[int, int],
+) -> Dict[str, Any]:
+    """Choose aspect-preserving tiles that pass the existing memory policy.
+
+    The nominal long edge is deliberately conservative.  If the policy ever
+    changes such that it is unsafe, both tile dimensions are reduced together
+    until an actual tile pair is safe; no inference tensors are constructed
+    during this selection.
+    """
+    s_h, s_w = source_shape
+    r_h, r_w = reference_shape
+    longest = max(s_h, s_w, r_h, r_w)
+    initial_scale = min(1.0, float(_LOFTR_TILE_LONG_EDGE) / float(longest))
+
+    for divisor in (1, 2, 4, 8, 16):
+        scale = initial_scale / divisor
+        tile_s_h = max(1, min(s_h, int(round(s_h * scale))))
+        tile_s_w = max(1, min(s_w, int(round(s_w * scale))))
+        nominal_r_h = max(1, min(r_h, int(round(tile_s_h * r_h / s_h))))
+        nominal_r_w = max(1, min(r_w, int(round(tile_s_w * r_w / s_w))))
+        # Map a source tile into the reference raster conservatively.  The
+        # added pixel covers interval-rounding at tile boundaries, so every
+        # actual crop below is no larger than this preflight check.
+        tile_r_h = max(1, min(r_h, int(np.ceil(tile_s_h * r_h / s_h)) + 1))
+        tile_r_w = max(1, min(r_w, int(np.ceil(tile_s_w * r_w / s_w)) + 1))
+        tile_memory = inspect_loftr_memory_safety(
+            (tile_s_h, tile_s_w), (tile_r_h, tile_r_w)
+        )
+        if tile_memory["memory_safe"]:
+            return {
+                "source_tile_shape": (tile_s_h, tile_s_w),
+                "reference_tile_shape": (nominal_r_h, nominal_r_w),
+                "tile_memory": tile_memory,
+                "overlap": _LOFTR_TILE_OVERLAP,
+            }
+
+    raise RuntimeError(
+        "No safe tiled LoFTR geometry could be selected under the current "
+        "resource policy."
+    )
+
+
+def _deduplicate_correspondences(
+    points0: np.ndarray,
+    points1: np.ndarray,
+    confidences: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Remove exact coordinate-pair duplicates, retaining the first match."""
+    if len(points0) == 0:
+        return points0, points1, confidences
+
+    pair_coordinates = np.concatenate((points0, points1), axis=1)
+    _, first_indices = np.unique(pair_coordinates, axis=0, return_index=True)
+    first_indices.sort()
+    return points0[first_indices], points1[first_indices], confidences[first_indices]
+
+
+def _process_rss_bytes() -> Optional[int]:
+    """Return resident memory when psutil is available, without requiring it."""
+    try:
+        import psutil
+        return int(psutil.Process(os.getpid()).memory_info().rss)
+    except Exception:
+        return None
+
+
+def _run_tiled_loftr_matching(
+    source_working: np.ndarray,
+    reference_working: np.ndarray,
+    loftr_model,
+    source_to_original: Tuple[float, float],
+    reference_to_original: Tuple[float, float],
+    full_memory_check: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Collect one global, original-coordinate correspondence set from tiles."""
+    t0_tiled = time.perf_counter()
+    s_h, s_w = source_working.shape
+    r_h, r_w = reference_working.shape
+    geometry = _safe_tiled_loftr_geometry((s_h, s_w), (r_h, r_w))
+    tile_s_h, tile_s_w = geometry["source_tile_shape"]
+
+    y_starts = _tile_starts(s_h, tile_s_h, geometry["overlap"])
+    x_starts = _tile_starts(s_w, tile_s_w, geometry["overlap"])
+    tiles_planned = len(x_starts) * len(y_starts)
+    point_sets0: List[np.ndarray] = []
+    point_sets1: List[np.ndarray] = []
+    confidence_sets: List[np.ndarray] = []
+    successful_tiles = 0
+    failed_tiles = 0
+    tiles_processed = 0
+    tiles_skipped = 0
+    skip_reason_counts: Dict[str, int] = {}
+    max_tile_memory_bytes = 0
+    tile_telemetry: List[Dict[str, Any]] = []
+    stopped_by_resource_guard = False
+    tile_index = 0
+
+    for y0 in y_starts:
+        y1 = min(s_h, y0 + tile_s_h)
+        ry0, ry1 = _normalised_tile_bounds(y0, y1 - y0, s_h, r_h)
+        for x0 in x_starts:
+            tile_index += 1
+            x1 = min(s_w, x0 + tile_s_w)
+            rx0, rx1 = _normalised_tile_bounds(x0, x1 - x0, s_w, r_w)
+            source_tile = source_working[y0:y1, x0:x1]
+            reference_tile = reference_working[ry0:ry1, rx0:rx1]
+            tile_memory = inspect_loftr_memory_safety(
+                source_tile.shape, reference_tile.shape
+            )
+            max_tile_memory_bytes = max(
+                max_tile_memory_bytes,
+                tile_memory["estimated_working_size"]["bytes"],
+            )
+            rss_before = _process_rss_bytes()
+            runtime_memory_safe = (
+                _DEVICE != "cpu"
+                or rss_before is None
+                or rss_before + tile_memory["estimated_working_size"]["bytes"]
+                <= _LOFTR_CPU_MAX_WORKING_BYTES
+            )
+            tile_info: Dict[str, Any] = {
+                "tile_index": tile_index,
+                "source_bounds": (y0, y1, x0, x1),
+                "reference_bounds": (ry0, ry1, rx0, rx1),
+                "source_shape": tuple(source_tile.shape),
+                "reference_shape": tuple(reference_tile.shape),
+                "estimated_memory_bytes": tile_memory["estimated_working_size"]["bytes"],
+                "process_rss_before_bytes": rss_before,
+            }
+
+            # Fast deterministic texture screening: skip tiles with insufficient information
+            src_ok, src_reason = _tile_has_sufficient_texture(source_tile)
+            ref_ok, ref_reason = _tile_has_sufficient_texture(reference_tile)
+
+            if not src_ok or not ref_ok:
+                tiles_skipped += 1
+                skip_reason_counts["insufficient_texture"] = skip_reason_counts.get("insufficient_texture", 0) + 1
+                skip_details = f"source: {src_reason}" if not src_ok else f"reference: {ref_reason}"
+                tile_info.update({
+                    "status": "skipped",
+                    "matches": 0,
+                    "reason": "Skipped: insufficient texture",
+                    "skip_reason": "insufficient_texture",
+                    "details": skip_details,
+                    "process_rss_after_bytes": rss_before,
+                })
+                logger.info(
+                    "LoFTR tile %d/%d skipped: insufficient texture (%s)",
+                    tile_index, tiles_planned, skip_details,
+                )
+                source_tile = None
+                reference_tile = None
+                gc.collect()
+                tile_telemetry.append(tile_info)
+                continue
+
+            if not tile_memory["memory_safe"] or not runtime_memory_safe:
+                failed_tiles += 1
+                stopped_by_resource_guard = True
+                tile_info.update({
+                    "status": "resource_guard",
+                    "matches": 0,
+                    "process_rss_after_bytes": rss_before,
+                    "reason": tile_memory["memory_reason"] if not tile_memory["memory_safe"] else (
+                        "Current process RSS plus the next tile estimate exceeds the "
+                        "conservative CPU LoFTR process cap."
+                    ),
+                })
+                tile_telemetry.append(tile_info)
+                logger.warning(
+                    "LoFTR tile skipped by resource guard: source=%s reference=%s. %s",
+                    source_tile.shape, reference_tile.shape, tile_memory["memory_reason"],
+                )
+                source_tile = None
+                reference_tile = None
+                gc.collect()
+                break
+
+            tiles_processed += 1
+            t_src = None
+            t_ref = None
+            out = None
+            try:
+                t_src = torch.from_numpy(source_tile.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+                t_ref = torch.from_numpy(reference_tile.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+                with torch.inference_mode():
+                    out = loftr_model({"image0": t_src, "image1": t_ref})
+                # copy() is essential on CPU: without it NumPy can retain the
+                # Torch output storage after ``out`` is deleted.
+                local0 = out["keypoints0"].detach().cpu().numpy().copy()
+                local1 = out["keypoints1"].detach().cpu().numpy().copy()
+                local_conf = out["confidence"].detach().cpu().numpy().copy()
+
+                # Tile-local -> full working coordinates -> original coordinates.
+                local0[:, 0] += x0
+                local0[:, 1] += y0
+                local1[:, 0] += rx0
+                local1[:, 1] += ry0
+                local0[:, 0] *= source_to_original[0]
+                local0[:, 1] *= source_to_original[1]
+                local1[:, 0] *= reference_to_original[0]
+                local1[:, 1] *= reference_to_original[1]
+                if len(local0):
+                    point_sets0.append(local0)
+                    point_sets1.append(local1)
+                    confidence_sets.append(local_conf)
+                successful_tiles += 1
+                tile_info.update({"status": "success", "matches": int(len(local0))})
+            except Exception as exc:
+                failed_tiles += 1
+                tile_info.update({"status": "failed", "matches": 0, "reason": str(exc)})
+                logger.warning(
+                    "LoFTR tile failed at source=(%d:%d, %d:%d), reference=(%d:%d, %d:%d): %s",
+                    y0, y1, x0, x1, ry0, ry1, rx0, rx1, exc,
+                )
+            finally:
+                # Do not let the per-tile loop retain Torch tensors, matcher
+                # outputs, or cropped image views between inferences.
+                out = None
+                t_src = None
+                t_ref = None
+                source_tile = None
+                reference_tile = None
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                tile_info["process_rss_after_bytes"] = _process_rss_bytes()
+                tile_telemetry.append(tile_info)
+
+        if stopped_by_resource_guard:
+            break
+
+    if point_sets0:
+        points0, points1, confidences = _deduplicate_correspondences(
+            np.concatenate(point_sets0, axis=0),
+            np.concatenate(point_sets1, axis=0),
+            np.concatenate(confidence_sets, axis=0),
+        )
+    else:
+        points0 = np.empty((0, 2), dtype=np.float32)
+        points1 = np.empty((0, 2), dtype=np.float32)
+        confidences = np.empty((0,), dtype=np.float32)
+
+    runtime_seconds = round(time.perf_counter() - t0_tiled, 4)
+
+    return {
+        "points0": points0,
+        "points1": points1,
+        "confidences": confidences,
+        "tiled_loftr": True,
+        "tile_count": tiles_planned,
+        "tiles_planned": tiles_planned,
+        "tiles_processed": tiles_processed,
+        "tiles_successful": successful_tiles,
+        "successful_tiles": successful_tiles,
+        "tiles_skipped": tiles_skipped,
+        "skip_reason_counts": skip_reason_counts,
+        "tiles_failed": failed_tiles,
+        "failed_tiles": failed_tiles,
+        "runtime_seconds": runtime_seconds,
+        "tile_size": {
+            "source": geometry["source_tile_shape"],
+            "reference": geometry["reference_tile_shape"],
+        },
+        "tile_overlap": geometry["overlap"],
+        "candidate_matches": int(len(points0)),
+        "source_working_shape": (s_h, s_w),
+        "reference_working_shape": (r_h, r_w),
+        "estimated_memory_per_tile": {
+            "bytes": int(max_tile_memory_bytes),
+            "gigabytes": round(max_tile_memory_bytes / 1_000_000_000, 6),
+            "bytes_per_source_pixel": _LOFTR_CPU_BYTES_PER_SOURCE_PIXEL,
+        },
+        "tile_telemetry": tile_telemetry,
+        "tile_processing_complete": not stopped_by_resource_guard,
+        "stopped_by_resource_guard": stopped_by_resource_guard,
+        "full_memory_check": full_memory_check,
+    }
 
 
 @dataclass
@@ -155,12 +611,16 @@ def compute_pair_characteristics(source_img: np.ndarray, reference_img: np.ndarr
 
     scale_ratio = float(np.sqrt((src_chars["total_pixels"]) / float(ref_chars["total_pixels"])))
 
+    from research.multimodal.multimodal_preprocess import compute_pair_condition_telemetry
+    telemetry = compute_pair_condition_telemetry(source_img, reference_img)
+
     return {
         "source": src_chars,
         "reference": ref_chars,
         "scale_ratio": round(scale_ratio, 4),
         "approx_illumination_diff": "unknown",
         "viewpoint_diff": "unknown",
+        "pair_condition_telemetry": telemetry,
         "label": "Exploratory image characterization",
     }
 
@@ -448,8 +908,20 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
     LoFTR baseline matcher with aspect-ratio preserving scaling.
     """
     t0 = time.perf_counter()
-    if loftr_model is None:
-        loftr_model = load_loftr_matcher()
+
+    memory_check = inspect_loftr_memory_safety(source_img.shape, reference_img.shape)
+    if not memory_check["memory_safe"]:
+        logger.warning(
+            "LoFTR resource guard blocked full-image inference; switching to tiled "
+            "fallback: source=%s reference=%s working_source=%s "
+            "working_reference=%s estimated=%.3f GB. %s",
+            memory_check["source_shape"],
+            memory_check["reference_shape"],
+            memory_check["working_source_shape"],
+            memory_check["working_reference_shape"],
+            memory_check["estimated_working_size"]["gigabytes"],
+            memory_check["memory_reason"],
+        )
 
     s_gray, s_clahe = preprocess_image(source_img)
     r_gray, r_clahe = preprocess_image(reference_img)
@@ -467,35 +939,143 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
     sx1 = float(r_w) / float(r_wm)
     sy1 = float(r_h) / float(r_hm)
 
-    t_src = torch.from_numpy(s_m.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
-    t_ref = torch.from_numpy(r_m.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+    if loftr_model is None:
+        loftr_model = load_loftr_matcher()
 
-    with torch.inference_mode():
-        out = loftr_model({"image0": t_src, "image1": t_ref})
+    tiled_telemetry: Dict[str, Any] = {}
+    runtime_oom_intercepted = False
+    oom_fallback_reason: Optional[str] = None
 
-    kpts0 = out["keypoints0"].cpu().numpy()
-    kpts1 = out["keypoints1"].cpu().numpy()
-    confs = out["confidence"].cpu().numpy()
+    if memory_check["memory_safe"]:
+        # Preserve the established full-image LoFTR path for normal-size pairs.
+        t_src = torch.from_numpy(s_m.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+        t_ref = torch.from_numpy(r_m.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
+        try:
+            with torch.inference_mode():
+                out = loftr_model({"image0": t_src, "image1": t_ref})
+            kpts0 = out["keypoints0"].cpu().numpy()
+            kpts1 = out["keypoints1"].cpu().numpy()
+            confs = out["confidence"].cpu().numpy()
+            del t_src, t_ref, out
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except (RuntimeError, MemoryError) as exc:
+            message = str(exc).lower()
+            if (
+                "out of memory" in message
+                or "not enough memory" in message
+                or "can't allocate" in message
+                or "allocate" in message
+            ):
+                logger.warning(
+                    "LoFTR full-image inference OOM intercepted; falling back to Memory-Safe Tiled LoFTR: %s",
+                    exc,
+                )
+                try:
+                    del t_src, t_ref
+                except Exception:
+                    pass
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                import gc
+                gc.collect()
 
-    del t_src, t_ref, out
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+                runtime_oom_intercepted = True
+                oom_fallback_reason = "Full-image LoFTR memory allocation exceeded runtime capacity"
+
+                try:
+                    tiled_telemetry = _run_tiled_loftr_matching(
+                        s_m,
+                        r_m,
+                        loftr_model,
+                        (sx0, sy0),
+                        (sx1, sy1),
+                        memory_check,
+                    )
+                    tiled_telemetry["runtime_oom_intercepted"] = True
+                    tiled_telemetry["fallback_reason"] = oom_fallback_reason
+                    kpts0 = tiled_telemetry["points0"]
+                    kpts1 = tiled_telemetry["points1"]
+                    confs = tiled_telemetry["confidences"]
+                except Exception as tiled_exc:
+                    return {
+                        "method": "LoFTR",
+                        "success": False,
+                        "status": "failed",
+                        "error_type": "LoFTRMemoryResourceLimit",
+                        "failure_stage": "resource_guard",
+                        "failure_reason": "LoFTR CPU workspace limit exceeded; tiled fallback could not complete.",
+                        "details": str(tiled_exc),
+                        "runtime": time.perf_counter() - t0,
+                        "n_candidates": 0,
+                        "n_inliers": 0,
+                        "inlier_ratio": 0.0,
+                        "spatial_occupancy": 0.0,
+                        "spatial_cv": 0.0,
+                        "tiled_loftr": True,
+                        "runtime_oom_intercepted": True,
+                        "fallback_reason": oom_fallback_reason,
+                        **memory_check,
+                    }
+            else:
+                raise
+    else:
+        try:
+            tiled_telemetry = _run_tiled_loftr_matching(
+                s_m,
+                r_m,
+                loftr_model,
+                (sx0, sy0),
+                (sx1, sy1),
+                memory_check,
+            )
+            kpts0 = tiled_telemetry["points0"]
+            kpts1 = tiled_telemetry["points1"]
+            confs = tiled_telemetry["confidences"]
+        except Exception as exc:
+            return {
+                "method": "LoFTR",
+                "success": False,
+                "status": "failed",
+                "error_type": "LoFTRMemoryResourceLimit",
+                "failure_stage": "resource_guard",
+                "failure_reason": "LoFTR CPU workspace limit exceeded; tiled fallback could not complete.",
+                "details": str(exc),
+                "runtime": time.perf_counter() - t0,
+                "n_candidates": 0,
+                "n_inliers": 0,
+                "inlier_ratio": 0.0,
+                "spatial_occupancy": 0.0,
+                "spatial_cv": 0.0,
+                "tiled_loftr": True,
+                **memory_check,
+            }
 
     if len(kpts0) < 4:
+        resource_stopped = bool(tiled_telemetry.get("stopped_by_resource_guard"))
         return {
             "method": "LoFTR",
             "success": False,
-            "failure_stage": "feature_matching",
-            "failure_reason": f"insufficient matches ({len(kpts0)} < 4)",
+            "failure_stage": "resource_guard" if resource_stopped else "feature_matching",
+            "failure_reason": (
+                "Tiled LoFTR stopped by the resource guard before enough "
+                "correspondences were collected."
+                if resource_stopped else f"insufficient matches ({len(kpts0)} < 4)"
+            ),
             "runtime": time.perf_counter() - t0,
             "n_candidates": len(kpts0),
             "n_inliers": 0,
+            **memory_check,
+            **tiled_telemetry,
         }
 
-    kpts0[:, 0] *= sx0
-    kpts0[:, 1] *= sy0
-    kpts1[:, 0] *= sx1
-    kpts1[:, 1] *= sy1
+    if not tiled_telemetry:
+        # Full-image local -> original coordinate conversion.  Tiled matches
+        # were already converted immediately after their tile-local offsets.
+        kpts0[:, 0] *= sx0
+        kpts0[:, 1] *= sy0
+        kpts1[:, 0] *= sx1
+        kpts1[:, 1] *= sy1
 
     H_init, mask = cv2.findHomography(kpts0, kpts1, cv2.RANSAC, ransac_thresh, maxIters=10000, confidence=0.995)
     t_feat = time.perf_counter() - t0
@@ -509,6 +1089,8 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
             "runtime": t_feat,
             "n_candidates": len(kpts0),
             "n_inliers": 0,
+            **memory_check,
+            **tiled_telemetry,
         }
 
     inls = mask.ravel() == 1
@@ -522,6 +1104,8 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
             "runtime": t_feat,
             "n_candidates": len(kpts0),
             "n_inliers": n_inl,
+            **memory_check,
+            **tiled_telemetry,
         }
 
     inl_pts0 = kpts0[inls]
@@ -546,6 +1130,8 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
         "spatial_cv": cv_val,
         "runtime": t_feat,
         "failure_reason": None,
+        **memory_check,
+        **tiled_telemetry,
     }
 
 
@@ -793,6 +1379,7 @@ def execute_common_downstream(
     return {
         "H_final": H_final,
         "warped_image": warped,
+        "n_initial_inliers": len(inlier_ids),
         "n_selected": len(selected_ids),
         "n_final_inliers": len(final_inlier_ids),
         "final_inlier_ratio": float(len(final_inlier_ids) / len(selected_ids)),
@@ -816,6 +1403,13 @@ def run_adaptive_registration(
     loftr_model=None,
     sg_model=None,
     config: Optional[AdaptiveConfig] = None,
+    include_multimodal: bool = False,
+    include_scale_search: bool = False,
+    include_rift2: bool = False,
+    include_rift2_matching_sweep: bool = False,
+    include_rift2_structural_fusion: bool = False,
+    include_mind_research: bool = False,
+    include_ssc_research: bool = False,
 ) -> Dict[str, Any]:
     """
     Step 6: Complete End-to-End Adaptive Registration Pipeline.
@@ -823,6 +1417,97 @@ def run_adaptive_registration(
     t_start = time.perf_counter()
     if config is None:
         config = AdaptiveConfig()
+
+    def _finalize(res_dict: Dict[str, Any]) -> Dict[str, Any]:
+        if include_multimodal:
+            from research.multimodal.multimodal_benchmark import run_multimodal_benchmark
+            bench_data = run_multimodal_benchmark(
+                source_img=source_img,
+                reference_img=reference_img,
+                loftr_model=loftr_model,
+                ransac_thresh=config.ransac_threshold,
+            )
+            res_dict["multimodal_results"] = bench_data["results"]
+            res_dict["multimodal_comparison"] = bench_data["comparison_table"]
+        if include_scale_search:
+            from research.multimodal.scale_search import run_scale_search
+            scale_data = run_scale_search(
+                source_img=source_img,
+                reference_img=reference_img,
+                loftr_model=loftr_model,
+                ransac_thresh=config.ransac_threshold,
+            )
+            res_dict["scale_search_results"] = scale_data["results"]
+            res_dict["scale_search_comparison"] = scale_data["comparison_table"]
+        if include_rift2:
+            from research.multimodal.rift2_benchmark import run_rift2_benchmark
+            rift2_data = run_rift2_benchmark(
+                source_img=source_img,
+                reference_img=reference_img,
+                loftr_model=loftr_model,
+                ransac_thresh=config.ransac_threshold,
+            )
+            res_dict["rift2_results"] = rift2_data["results"]
+            res_dict["rift2_comparison"] = rift2_data["comparison_table"]
+        if include_rift2_matching_sweep:
+            from research.multimodal.rift2_matching_sweep import run_rift2_matching_sweep
+            sweep_data = run_rift2_matching_sweep(
+                source_img=source_img,
+                reference_img=reference_img,
+                ransac_thresh=config.ransac_threshold,
+            )
+            res_dict["rift2_matching_sweep"] = sweep_data["results"]
+            res_dict["rift2_matching_sweep_comparison"] = sweep_data["comparison_table"]
+        if include_rift2_structural_fusion:
+            from research.multimodal.rift2_structural_fusion import run_rift2_structural_fusion_sweep
+            fusion_data = run_rift2_structural_fusion_sweep(
+                source_img=source_img,
+                reference_img=reference_img,
+                ransac_thresh=config.ransac_threshold,
+            )
+            res_dict["rift2_structural_fusion"] = fusion_data["results"]
+            res_dict["rift2_structural_fusion_comparison"] = fusion_data["comparison_table"]
+        if include_mind_research:
+            from research.multimodal.mind_matcher import run_mind_matching
+            rec_nat = run_mind_matching(
+                source_img=source_img,
+                reference_img=reference_img,
+                scale_source=1.0,
+                scale_reference=1.0,
+                ransac_thresh=config.ransac_threshold,
+                pair_label="active_pair (Native)",
+            )
+            rec_scale = run_mind_matching(
+                source_img=source_img,
+                reference_img=reference_img,
+                scale_source=1.0,
+                scale_reference=0.5,
+                ransac_thresh=config.ransac_threshold,
+                pair_label="active_pair (Scale 1.0/0.5)",
+            )
+            res_dict["mind_results"] = [rec_nat, rec_scale]
+            res_dict["mind_comparison"] = pd.DataFrame([rec_nat, rec_scale])
+        if include_ssc_research:
+            from research.multimodal.ssc_matcher import run_ssc_matching
+            rec_ssc_nat = run_ssc_matching(
+                source_img=source_img,
+                reference_img=reference_img,
+                scale_source=1.0,
+                scale_reference=1.0,
+                ransac_thresh=config.ransac_threshold,
+                pair_label="active_pair (Native)",
+            )
+            rec_ssc_scale = run_ssc_matching(
+                source_img=source_img,
+                reference_img=reference_img,
+                scale_source=1.0,
+                scale_reference=0.5,
+                ransac_thresh=config.ransac_threshold,
+                pair_label="active_pair (Scale 1.0/0.5)",
+            )
+            res_dict["ssc_results"] = [rec_ssc_nat, rec_ssc_scale]
+            res_dict["ssc_comparison"] = pd.DataFrame([rec_ssc_nat, rec_ssc_scale])
+        return res_dict
 
     # Step 1: Inexpensive image characterization
     pair_chars = compute_pair_characteristics(source_img, reference_img)
@@ -959,7 +1644,7 @@ def run_adaptive_registration(
                     "the quality gate."
                 )
 
-            return {
+            return _finalize({
                 "success": False,
                 "characterization": pair_chars,
                 "difficulty_profile": profile,
@@ -968,6 +1653,12 @@ def run_adaptive_registration(
                 "primary_choice": primary_choice,
                 "primary_result": primary_res,
                 "quality_gate": q_gate,
+                "memory_check": primary_res.get("memory_check"),
+                "estimated_working_size": primary_res.get("estimated_working_size"),
+                "source_shape": primary_res.get("source_shape"),
+                "reference_shape": primary_res.get("reference_shape"),
+                "memory_safe": primary_res.get("memory_safe"),
+                "memory_reason": primary_res.get("memory_reason"),
 
                 "fallback_used": fallback_used,
                 "fallback_choice": fallback_choice,
@@ -987,7 +1678,7 @@ def run_adaptive_registration(
                     time.perf_counter() - t_start,
                     2
                 ),
-            }
+            })
     # Step 5: Common Downstream Registration Layer
     try:
         pts0_down = active_res["inlier_pts0"]
@@ -1004,7 +1695,7 @@ def run_adaptive_registration(
         )
         total_time = time.perf_counter() - t_start
 
-        return {
+        return _finalize({
             "success": True,
             "characterization": pair_chars,
             "difficulty_profile": profile,
@@ -1012,6 +1703,12 @@ def run_adaptive_registration(
             "primary_choice": primary_choice,
             "primary_result": primary_res,
             "quality_gate": q_gate,
+            "memory_check": primary_res.get("memory_check"),
+            "estimated_working_size": primary_res.get("estimated_working_size"),
+            "source_shape": primary_res.get("source_shape"),
+            "reference_shape": primary_res.get("reference_shape"),
+            "memory_safe": primary_res.get("memory_safe"),
+            "memory_reason": primary_res.get("memory_reason"),
             "fallback_used": fallback_used,
             "fallback_choice": fallback_choice,
             "fallback_result": fallback_res,
@@ -1026,10 +1723,10 @@ def run_adaptive_registration(
             "spatial_cv": downstream["spatial_cv"],
             "final_inlier_ratio": downstream["final_inlier_ratio"],
             "fit_rmse": downstream["fit_rmse"],
-        }
+        })
     except Exception as e:
         total_time = time.perf_counter() - t_start
-        return {
+        return _finalize({
             "success": False,
             "characterization": pair_chars,
             "difficulty_profile": profile,
@@ -1037,6 +1734,12 @@ def run_adaptive_registration(
             "primary_choice": primary_choice,
             "primary_result": primary_res,
             "quality_gate": q_gate,
+            "memory_check": primary_res.get("memory_check"),
+            "estimated_working_size": primary_res.get("estimated_working_size"),
+            "source_shape": primary_res.get("source_shape"),
+            "reference_shape": primary_res.get("reference_shape"),
+            "memory_safe": primary_res.get("memory_safe"),
+            "memory_reason": primary_res.get("memory_reason"),
             "fallback_used": fallback_used,
             "fallback_choice": fallback_choice,
             "fallback_result": fallback_res,
@@ -1045,4 +1748,4 @@ def run_adaptive_registration(
             "fallback_reason": fallback_reason,
             "failure_reason": f"Common downstream registration failed: {str(e)}",
             "runtime": round(total_time, 2),
-        }
+        })

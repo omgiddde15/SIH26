@@ -1,0 +1,43 @@
+{
+  "phase": 18,
+  "audit_timestamp": "2026-09-23T05:26:44Z",
+  "datasets_audited": [
+    {
+      "dataset_or_file": "data/metadata/pair01_affine_raster_calibration.json",
+      "classification": "DIAGNOSTIC REFERENCE",
+      "evidence": "Contains affine matrix fitted via empirical visual localization (20 points, RANSAC threshold 15.0 px, inlier ratio 0.95). Labeled status='AFFINE_CALIBRATION_DIAGNOSTIC'. Represents an empirical fit with residual sensor distortion, not analytical ground truth.",
+      "usable_as_subpixel_ground_truth": false
+    },
+    {
+      "dataset_or_file": "data/metadata/pair05_affine_raster_calibration.json",
+      "classification": "DIAGNOSTIC REFERENCE",
+      "evidence": "Fitted via empirical RANSAC affine calibration (20 calibration points, 15 inliers, inlier ratio 0.75, RANSAC threshold 8.0 px). Contains empirical uncertainty.",
+      "usable_as_subpixel_ground_truth": false
+    },
+    {
+      "dataset_or_file": "data/metadata/pair05_actual_geo_matches.csv",
+      "classification": "DIAGNOSTIC REFERENCE",
+      "evidence": "Approximate geographic tie points derived from SPICE/projection footprints. Subject to orbit reconstruction error, DEM discretization, and projection distortions. Not verified sub-pixel correspondence ground truth.",
+      "usable_as_subpixel_ground_truth": false
+    },
+    {
+      "dataset_or_file": "research/multimodal/phase11_results/phase11_loftr_anchor_pairs.json",
+      "classification": "DIAGNOSTIC REFERENCE",
+      "evidence": "Contains 12 anchor pairs derived by running the LoFTR deep matcher on uncalibrated IIRS/OHRC crops. Explicitly labeled in file as anchor_is_ground_truth=False.",
+      "usable_as_subpixel_ground_truth": false
+    },
+    {
+      "dataset_or_file": "Benchmark Pair (C:\\Users\\Dell\\Downloads\\souse.jpeg <-> ref.jpeg)",
+      "classification": "NO GROUND TRUTH",
+      "evidence": "No embedded camera calibration, physical GSD, orbit attitude, or verified physical control points exist for this uncalibrated test crop pair.",
+      "usable_as_subpixel_ground_truth": false
+    },
+    {
+      "dataset_or_file": "Controlled Synthetic Perturbations (ref.jpeg with Known Mathematical Transform T_gt)",
+      "classification": "VERIFIED GROUND TRUTH",
+      "evidence": "Known continuous affine transformations T_gt applied with deterministic cubic interpolation. For any point P_src in warped space, the exact true correspondence P_gt in ref space is mathematically known via P_gt = T_gt(P_src). Permits exact Euclidean error computation: error_px = ||P_est - P_gt||_2.",
+      "usable_as_subpixel_ground_truth": true
+    }
+  ],
+  "conclusion": "No real lunar image pair in the repository possesses verified physical sub-pixel ground truth. Therefore, sub-pixel accuracy can only be validated against mathematically verified synthetic transformations, while real imagery must be reported strictly via empirical held-out residuals."
+}

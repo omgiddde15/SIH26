@@ -1,0 +1,464 @@
+{
+  "experiment_name": "LunarReg GeoScale Diagnostic Research Experiment",
+  "scope": "RESEARCH LAB ONLY - NO PRODUCTION CHANGES",
+  "environment": "Windows",
+  "total_datasets_discovered": 20,
+  "total_datasets_tested": 4,
+  "total_datasets_skipped": 16,
+  "total_datasets_failed": 0,
+  "classification": "B. USEFUL DIAGNOSTIC ONLY",
+  "pair_4_reproduction": {
+    "reproduced": true,
+    "declared_gsd_m": 0.23,
+    "footprint_implied_gsd_x_m": 0.253753,
+    "footprint_implied_gsd_y_m": 0.254081,
+    "discrepancy_x_pct": 10.33,
+    "discrepancy_y_pct": 10.47,
+    "mean_abs_discrepancy_pct": 10.4,
+    "source_tif_dimensions": [
+      552,
+      4649
+    ],
+    "source_tif_effective_gsd_x_m": 5.516,
+    "source_tif_effective_gsd_y_m": 5.524,
+    "reference_declared_gsd_m": 5.0,
+    "spacecraft_altitude_km": 91.86,
+    "finding": "Pair 4 declared XML GSD is 0.23m whereas true footprint geometry implies 0.254m/px. Sibling 5m source TIFF was downsampled using 0.23m factor, resulting in an effective resolution of ~5.52m/px rather than 5.00m/px, creating a +10.4% scale divergence relative to the reference raster."
+  },
+  "registration_problem_applicability": {
+    "scale_variation": {
+      "assessment": "PARTIAL",
+      "explanation": "Provides a macro-level scale discrepancy prior (e.g., detects that Pair 4 has a 1.104 scale factor between source and reference), which could seed an affine scale prior before matching. Does not perform feature matching."
+    },
+    "viewpoint_variation": {
+      "assessment": "NO",
+      "explanation": "Computes planar/projected footprint boundaries only. Does not account for 3D perspective distortion, non-planar topography, or oblique camera look angles."
+    },
+    "sun_angle_variation": {
+      "assessment": "NO",
+      "explanation": "Footprint geometry is completely invariant to and unaffected by solar incidence or azimuth; cannot resolve illumination-induced feature dropouts."
+    },
+    "sub_pixel_accuracy": {
+      "assessment": "NO",
+      "explanation": "Footprint-implied resolution is a macro average over 25km swaths with ~meter-level accuracy. It has zero sub-pixel capability."
+    },
+    "geospatial_validation": {
+      "assessment": "YES",
+      "explanation": "Highly effective at validating metadata integrity, detecting anomalous GSD headers (+10.4% in Pair 4), and verifying that the source footprint is fully encapsulated in the reference GeoTIFF."
+    }
+  },
+  "mentor_results": [
+    {
+      "product_id": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03",
+      "xml_file": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03.xml",
+      "projection": "Polar stereographic",
+      "area": "South Pole",
+      "image_width_px": 12000,
+      "raw_scans": 93692,
+      "native_gsd_m_per_px": 0.26,
+      "nominal_width_m": 3120.0,
+      "nominal_height_m": 24359.920000000002,
+      "edge_top_m": 3217.6072727243086,
+      "edge_bottom_m": 3218.219643933455,
+      "edge_left_m": 25336.275871316502,
+      "edge_right_m": 25335.76222757974,
+      "footprint_width_m": 3217.9134583288815,
+      "footprint_height_m": 25336.01904944812,
+      "footprint_implied_gsd_x_m_per_px": 0.2681594548607401,
+      "footprint_implied_gsd_y_m_per_px": 0.2704181685677339,
+      "width_discrepancy_pct": 3.1382518695154404,
+      "height_discrepancy_pct": 4.00698791066687,
+      "mean_abs_discrepancy_pct": 3.5726198900911554,
+      "sun_azimuth_deg": "299.639023",
+      "sun_elevation_deg": "2.113221",
+      "solar_incidence_deg": "87.886779",
+      "altitude_km": "100.78",
+      "roll_deg": "4.889318",
+      "pitch_deg": "-14.545736",
+      "yaw_deg": "-0.001393",
+      "corners_projected": {
+        "topleft": [
+          -9465.642435,
+          -16217.68994
+        ],
+        "topright": [
+          -6620.015191,
+          -14715.890303
+        ],
+        "bottomleft": [
+          -21811.090434,
+          5907.336359
+        ],
+        "bottomright": [
+          -18964.688513,
+          7408.980052
+        ]
+      },
+      "corners_latlon": {
+        "topleft": [
+          -89.38196,
+          239.729533
+        ],
+        "topright": [
+          -89.468902,
+          245.779169
+        ],
+        "bottomleft": [
+          -89.256269,
+          164.845526
+        ],
+        "bottomright": [
+          -89.329873,
+          158.660785
+        ]
+      },
+      "source_info": {
+        "source_tif": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_source_at_5m.tif",
+        "source_tif_size_px": [
+          624,
+          4872
+        ],
+        "source_implied_gsd_x": 5.156912593475772,
+        "source_implied_gsd_y": 5.200332317210205
+      },
+      "ref_info": {
+        "ref_tif": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_reference_at_5m.tif",
+        "ref_tif_size_px": [
+          5916,
+          4232
+        ],
+        "ref_scale_m": [
+          5.0,
+          5.0
+        ],
+        "ref_extent_x": [
+          -19187.0,
+          10393.0
+        ],
+        "ref_extent_y": [
+          -24763.0,
+          -3603.0
+        ]
+      },
+      "src_meter_bounding_box": {
+        "x_min": -16217.68994,
+        "x_max": 7408.980052,
+        "y_min": -21811.090434,
+        "y_max": -6620.015191
+      },
+      "coverage_status": "FULLY ENCLOSED IN REFERENCE RASTER",
+      "status": "COMPATIBLE",
+      "method_classification": "CORNER-BASED FOOTPRINT",
+      "dataset_id": "mentor_ohrc_pair_01"
+    },
+    {
+      "product_id": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01",
+      "xml_file": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01.xml",
+      "projection": "Polar stereographic",
+      "area": "South Pole",
+      "image_width_px": 12000,
+      "raw_scans": 93692,
+      "native_gsd_m_per_px": 0.27,
+      "nominal_width_m": 3240.0,
+      "nominal_height_m": 25296.84,
+      "edge_top_m": 3323.552219395817,
+      "edge_bottom_m": 3320.846249415461,
+      "edge_left_m": 25208.19995622108,
+      "edge_right_m": 25207.432102395112,
+      "footprint_width_m": 3322.199234405639,
+      "footprint_height_m": 25207.816029308095,
+      "footprint_implied_gsd_x_m_per_px": 0.2768499362004699,
+      "footprint_implied_gsd_y_m_per_px": 0.2690498231365335,
+      "width_discrepancy_pct": 2.5370134075814565,
+      "height_discrepancy_pct": -0.35191735683944847,
+      "mean_abs_discrepancy_pct": 1.4444653822104525,
+      "sun_azimuth_deg": "19.910131",
+      "sun_elevation_deg": "5.103276",
+      "solar_incidence_deg": "84.896724",
+      "altitude_km": "105.77",
+      "roll_deg": "1.259034",
+      "pitch_deg": "11.815713",
+      "yaw_deg": "0.040203",
+      "corners_projected": {
+        "topleft": [
+          121889.026404,
+          73762.324746
+        ],
+        "topright": [
+          122395.985191,
+          70477.66462
+        ],
+        "bottomleft": [
+          146825.028295,
+          77456.800991
+        ],
+        "bottomright": [
+          147330.831454,
+          74174.7006
+        ]
+      },
+      "corners_latlon": {
+        "topleft": [
+          -85.313377,
+          31.180635
+        ],
+        "topright": [
+          -85.353908,
+          29.93406
+        ],
+        "bottomleft": [
+          -84.540314,
+          27.813661
+        ],
+        "bottomright": [
+          -84.574934,
+          26.723277
+        ]
+      },
+      "source_info": {
+        "source_tif": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_source_at_5m.tif",
+        "source_tif_size_px": [
+          648,
+          5059
+        ],
+        "source_implied_gsd_x": 5.126850670379072,
+        "source_implied_gsd_y": 4.982766560448328
+      },
+      "ref_info": {
+        "ref_tif": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_reference_at_5m.tif",
+        "ref_tif_size_px": [
+          2593,
+          6279
+        ],
+        "ref_scale_m": [
+          5.0,
+          5.0
+        ],
+        "ref_extent_x": [
+          67338.0,
+          80303.0
+        ],
+        "ref_extent_y": [
+          118652.0,
+          150047.0
+        ]
+      },
+      "src_meter_bounding_box": {
+        "x_min": 70477.66462,
+        "x_max": 77456.800991,
+        "y_min": 121889.026404,
+        "y_max": 147330.831454
+      },
+      "coverage_status": "FULLY ENCLOSED IN REFERENCE RASTER",
+      "status": "COMPATIBLE",
+      "method_classification": "CORNER-BASED FOOTPRINT",
+      "dataset_id": "mentor_ohrc_pair_02"
+    },
+    {
+      "product_id": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02",
+      "xml_file": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02.xml",
+      "projection": "Polar stereographic",
+      "area": "South Pole",
+      "image_width_px": 12000,
+      "raw_scans": 101074,
+      "native_gsd_m_per_px": 0.25,
+      "nominal_width_m": 3000.0,
+      "nominal_height_m": 25268.5,
+      "edge_top_m": 3097.127543452078,
+      "edge_bottom_m": 3094.2264522822793,
+      "edge_left_m": 25444.40183919295,
+      "edge_right_m": 25443.64957953405,
+      "footprint_width_m": 3095.6769978671787,
+      "footprint_height_m": 25444.0257093635,
+      "footprint_implied_gsd_x_m_per_px": 0.25797308315559825,
+      "footprint_implied_gsd_y_m_per_px": 0.25173660594577735,
+      "width_discrepancy_pct": 3.1892332622392994,
+      "height_discrepancy_pct": 0.694642378310939,
+      "mean_abs_discrepancy_pct": 1.9419378202751192,
+      "sun_azimuth_deg": "49.072662",
+      "sun_elevation_deg": "3.088558",
+      "solar_incidence_deg": "86.911442",
+      "altitude_km": "97.78",
+      "roll_deg": "-0.227192",
+      "pitch_deg": "13.806624",
+      "yaw_deg": "0.005305",
+      "corners_projected": {
+        "topleft": [
+          124790.615249,
+          67683.423999
+        ],
+        "topright": [
+          125156.627659,
+          64607.999811
+        ],
+        "bottomleft": [
+          150055.681322,
+          70699.053499
+        ],
+        "bottomright": [
+          150420.602736,
+          67626.421126
+        ]
+      },
+      "corners_latlon": {
+        "topleft": [
+          -85.330022,
+          28.474338
+        ],
+        "topright": [
+          -85.366665,
+          27.30356
+        ],
+        "bottomleft": [
+          -84.544478,
+          25.227569
+        ],
+        "bottomright": [
+          -84.575787,
+          24.207834
+        ]
+      },
+      "source_info": {
+        "source_tif": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_source_at_5m.tif",
+        "source_tif_size_px": [
+          600,
+          5054
+        ],
+        "source_implied_gsd_x": 5.159461663111965,
+        "source_implied_gsd_y": 5.034433262636229
+      },
+      "ref_info": {
+        "ref_tif": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_reference_at_5m.tif",
+        "ref_tif_size_px": [
+          2416,
+          6316
+        ],
+        "ref_scale_m": [
+          5.0,
+          5.0
+        ],
+        "ref_extent_x": [
+          61478.0,
+          73558.0
+        ],
+        "ref_extent_y": [
+          121552.0,
+          153132.0
+        ]
+      },
+      "src_meter_bounding_box": {
+        "x_min": 64607.999811,
+        "x_max": 70699.053499,
+        "y_min": 124790.615249,
+        "y_max": 150420.602736
+      },
+      "coverage_status": "FULLY ENCLOSED IN REFERENCE RASTER",
+      "status": "COMPATIBLE",
+      "method_classification": "CORNER-BASED FOOTPRINT",
+      "dataset_id": "mentor_ohrc_pair_03"
+    },
+    {
+      "product_id": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00",
+      "xml_file": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00.xml",
+      "projection": "Polar stereographic",
+      "area": "South Pole",
+      "image_width_px": 12000,
+      "raw_scans": 101074,
+      "native_gsd_m_per_px": 0.23,
+      "nominal_width_m": 2760.0,
+      "nominal_height_m": 23247.02,
+      "edge_top_m": 3042.8536794345746,
+      "edge_bottom_m": 3047.2086678158903,
+      "edge_left_m": 25681.66346085103,
+      "edge_right_m": 25680.824815413245,
+      "footprint_width_m": 3045.0311736252324,
+      "footprint_height_m": 25681.244138132137,
+      "footprint_implied_gsd_x_m_per_px": 0.2537525978021027,
+      "footprint_implied_gsd_y_m_per_px": 0.2540835836924643,
+      "width_discrepancy_pct": 10.32721643569683,
+      "height_discrepancy_pct": 10.471123344549692,
+      "mean_abs_discrepancy_pct": 10.399169890123261,
+      "sun_azimuth_deg": "256.287883",
+      "sun_elevation_deg": "-0.305664",
+      "solar_incidence_deg": "90.305664",
+      "altitude_km": "91.86",
+      "roll_deg": "5.298260",
+      "pitch_deg": "20.349658",
+      "yaw_deg": "0.011085",
+      "corners_projected": {
+        "topleft": [
+          136605.381937,
+          92754.752199
+        ],
+        "topright": [
+          137537.071687,
+          89858.044978
+        ],
+        "bottomleft": [
+          161330.506877,
+          99698.528896
+        ],
+        "bottomright": [
+          162262.575621,
+          96797.369038
+        ]
+      },
+      "corners_latlon": {
+        "topleft": [
+          -84.569341,
+          34.176418
+        ],
+        "topright": [
+          -84.596614,
+          33.158067
+        ],
+        "bottomleft": [
+          -83.763994,
+          31.715108
+        ],
+        "bottomright": [
+          -83.787265,
+          30.818093
+        ]
+      },
+      "source_info": {
+        "source_tif": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_source_at_5m.tif",
+        "source_tif_size_px": [
+          552,
+          4649
+        ],
+        "source_implied_gsd_x": 5.516360821784842,
+        "source_implied_gsd_y": 5.524036166515839
+      },
+      "ref_info": {
+        "ref_tif": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_reference_at_5m.tif",
+        "ref_tif_size_px": [
+          3164,
+          6322
+        ],
+        "ref_scale_m": [
+          5.0,
+          5.0
+        ],
+        "ref_extent_x": [
+          86683.0,
+          102503.0
+        ],
+        "ref_extent_y": [
+          133342.0,
+          164952.0
+        ]
+      },
+      "src_meter_bounding_box": {
+        "x_min": 89858.044978,
+        "x_max": 99698.528896,
+        "y_min": 136605.381937,
+        "y_max": 162262.575621
+      },
+      "coverage_status": "FULLY ENCLOSED IN REFERENCE RASTER",
+      "status": "COMPATIBLE",
+      "method_classification": "CORNER-BASED FOOTPRINT",
+      "dataset_id": "mentor_ohrc_pair_04"
+    }
+  ]
+}

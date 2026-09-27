@@ -1,0 +1,589 @@
+{
+  "metadata": {
+    "project": "LunarReg",
+    "phase": "23A.6",
+    "description": "Rigid Geodetic / Frame Offset Reconciliation Dataset",
+    "governing_discipline": "Research-Only \u2014 Production Code Frozen for this audit; historical baseline provenance not independently verified.",
+    "geometric_classification": "B \u2014 Rigid translation plus a measurable non-rigid component.",
+    "classification_note": "This classification describes the observed source-to-map residual structure; it does not identify the physical cause as a geodetic-frame, reference-map, ephemeris, timing, or raster-generation error.",
+    "mandatory_terrain_statement": "The tested DEM correction changes the corner residuals only by metres, while the observed residuals are kilometre scale. Therefore the tested topographic correction does not explain the observed rigid source-to-map offset.",
+    "affine_warning": "Four corner correspondences provide only 8 scalar observations for a 6-parameter affine model. The affine fit has only 2 residual degrees of freedom and is therefore descriptive/diagnostic, not independent evidence of physical deformation.",
+    "track7_methodological_statement": "These values are scalar equivalents obtained by applying the Phase 23A.5 along-track sensitivity coefficient to the observed translation magnitude. Because spacecraft ground-track alignment of the residual vectors was not independently established in Phase 23A.6, these values are not interpreted as actual spacecraft along-track position errors.",
+    "production_freeze_provenance": {
+      "governing_discipline": "Research-Only \u2014 Production Code Frozen for this audit; historical baseline provenance not independently verified.",
+      "provenance_status": "PRODUCTION_BASELINE_PROVENANCE = NOT_INDEPENDENTLY_VERIFIED",
+      "provenance_statement": "The current Git snapshot verifies that the tracked production files have not changed since the snapshot commit, but it does not independently establish historical equivalence to the pre-Phase-23A.6 state.",
+      "canonical_production_freeze_set": [
+        "app/app.py",
+        "app/adaptive_adapter.py",
+        "app/registration_core.py",
+        "research/adaptive_matcher/adaptive_engine.py"
+      ],
+      "nonexistent_file_audit": {
+        "app/adaptive_engine.py": "NOT PRESENT IN CANONICAL PROJECT",
+        "status": "NON-EXISTENT / NOT PART OF CANONICAL PROJECT"
+      },
+      "untracked_check": "git status --short --untracked-files=all: no canonical production files untracked",
+      "canonical_files": {
+        "app/app.py": {
+          "status": "TRACKED",
+          "tracked_in_git": true,
+          "sha256": "2a04c245f9d055cd4a747991757e77c8c5a94c1f2dbc090aadd5d4a834894467",
+          "mtime": "2026-09-23 20:08:23",
+          "size_bytes": 309228
+        },
+        "app/adaptive_adapter.py": {
+          "status": "TRACKED",
+          "tracked_in_git": true,
+          "sha256": "ab902b3c0e3d1e62a68b2612ee45fd5533e3b2c82feca37d2bd821eb8e9f1724",
+          "mtime": "2026-09-20 17:38:43",
+          "size_bytes": 22954
+        },
+        "app/registration_core.py": {
+          "status": "TRACKED",
+          "tracked_in_git": true,
+          "sha256": "d68e03161f38ce21621753e20e2ae699dcb9bb93cca789922214731a42ad06a5",
+          "mtime": "2026-09-14 10:48:51",
+          "size_bytes": 27988
+        },
+        "research/adaptive_matcher/adaptive_engine.py": {
+          "status": "TRACKED",
+          "tracked_in_git": true,
+          "sha256": "56047e8eef70e1feaafc1b80eed7a58fa8d6be7fd37ca43c43de2420480cf549",
+          "mtime": "2026-09-22 22:58:43",
+          "size_bytes": 70967
+        }
+      },
+      "git_snapshot_diff": "CLEAN"
+    },
+    "concluding_status": "PHASE 23A.6 COMPLETE \u2014 AWAITING FRAME/GEODETIC REVIEW"
+  },
+  "pairs": [
+    {
+      "pair": "OHRC_PAIR_01",
+      "target": "South Pole Crater (89.5\u00b0S)",
+      "date": "2024-11-24",
+      "time_mode": "forward",
+      "translation": {
+        "mean_dx_m": 1720.2,
+        "mean_dy_m": -1303.61,
+        "magnitude_m": 2158.36,
+        "azimuth_deg": 127.16,
+        "post_translation_rms_m": 34.8,
+        "post_translation_max_m": 35.52,
+        "angular_spread_deg": 1.88
+      },
+      "similarity_model": {
+        "scale": 0.999904,
+        "scale_delta_ppm": -96.4,
+        "rotation_deg": 0.00349,
+        "rotation_arcsec": 12.58,
+        "tx_m": 1718.92,
+        "ty_m": -1304.71,
+        "rms_m": 34.77,
+        "max_m": 34.88
+      },
+      "affine_model": {
+        "matrix": [
+          [
+            0.995434,
+            -0.008698
+          ],
+          [
+            -0.009418,
+            0.983253
+          ]
+        ],
+        "tx_m": 1576.73,
+        "ty_m": -1582.61,
+        "det": 0.978681,
+        "singular_values": [
+          1.000258,
+          0.978428
+        ],
+        "condition_number": 1.0223,
+        "anisotropy": 0.02207,
+        "rotation_deg": -0.02084,
+        "shear_non_orthogonality_deg": -1.0489,
+        "rms_m": 0.08,
+        "max_m": 0.08
+      },
+      "required_offset": {
+        "hypothetical_along_track_offset_m": 2151.17,
+        "label": "REQUIRED-OFFSET MAGNITUDE"
+      },
+      "corner_vectors": [
+        {
+          "corner": "UL",
+          "X_meta": -14687.1,
+          "Y_meta": -6607.06,
+          "X_phys": -12985.91,
+          "Y_phys": -7940.67,
+          "dx": 1701.19,
+          "dy": -1333.61,
+          "vector_mag_m": 2161.61,
+          "vector_azimuth_deg": 128.09,
+          "dx_res_m": -19.01,
+          "dy_res_m": -30.0,
+          "post_trans_res_m": 35.52,
+          "sim_res_m": 34.67,
+          "aff_res_m": 0.08,
+          "dem_vs_tiepoint_residual_m": 1973.28
+        },
+        {
+          "corner": "UR",
+          "X_meta": -16185.96,
+          "Y_meta": -9447.12,
+          "X_phys": -14453.08,
+          "Y_phys": -10719.12,
+          "dx": 1732.88,
+          "dy": -1272.0,
+          "vector_mag_m": 2149.62,
+          "vector_azimuth_deg": 126.28,
+          "dx_res_m": 12.67,
+          "dy_res_m": 31.61,
+          "post_trans_res_m": 34.06,
+          "sim_res_m": 34.86,
+          "aff_res_m": 0.08,
+          "dem_vs_tiepoint_residual_m": 1885.09
+        },
+        {
+          "corner": "LL",
+          "X_meta": 7394.49,
+          "Y_meta": -18927.59,
+          "X_phys": 9102.16,
+          "Y_phys": -20262.89,
+          "dx": 1707.67,
+          "dy": -1335.3,
+          "vector_mag_m": 2167.76,
+          "vector_azimuth_deg": 128.02,
+          "dx_res_m": -12.53,
+          "dy_res_m": -31.69,
+          "post_trans_res_m": 34.08,
+          "sim_res_m": 34.88,
+          "aff_res_m": 0.08,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "LR",
+          "X_meta": 5895.79,
+          "Y_meta": -21768.45,
+          "X_phys": 7634.87,
+          "Y_phys": -23041.99,
+          "dx": 1739.08,
+          "dy": -1273.54,
+          "vector_mag_m": 2155.53,
+          "vector_azimuth_deg": 126.22,
+          "dx_res_m": 18.88,
+          "dy_res_m": 30.07,
+          "post_trans_res_m": 35.51,
+          "sim_res_m": 34.66,
+          "aff_res_m": 0.08,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_02",
+      "target": "South Polar Highlands (84.9\u00b0S, 27\u00b0E)",
+      "date": "2025-02-08",
+      "time_mode": "inverted",
+      "translation": {
+        "mean_dx_m": 283.56,
+        "mean_dy_m": 1232.74,
+        "magnitude_m": 1264.93,
+        "azimuth_deg": 12.95,
+        "post_translation_rms_m": 23.25,
+        "post_translation_max_m": 27.04,
+        "angular_spread_deg": 2.45
+      },
+      "similarity_model": {
+        "scale": 0.999679,
+        "scale_delta_ppm": -321.3,
+        "rotation_deg": -0.01881,
+        "rotation_arcsec": -67.73,
+        "tx_m": 263.18,
+        "ty_m": 1300.15,
+        "rms_m": 22.51,
+        "max_m": 22.54
+      },
+      "affine_model": {
+        "matrix": [
+          [
+            0.986548,
+            0.002312
+          ],
+          [
+            0.00188,
+            0.999585
+          ]
+        ],
+        "tx_m": 966.05,
+        "ty_m": 1149.75,
+        "det": 0.986134,
+        "singular_values": [
+          0.999913,
+          0.98622
+        ],
+        "condition_number": 1.0139,
+        "anisotropy": 0.01379,
+        "rotation_deg": -0.01246,
+        "shear_non_orthogonality_deg": 0.2417,
+        "rms_m": 0.01,
+        "max_m": 0.01
+      },
+      "required_offset": {
+        "hypothetical_along_track_offset_m": 1260.72,
+        "label": "REQUIRED-OFFSET MAGNITUDE"
+      },
+      "corner_vectors": [
+        {
+          "corner": "UL",
+          "X_meta": 74030.77,
+          "Y_meta": 147044.95,
+          "X_phys": 74340.89,
+          "Y_phys": 148272.81,
+          "dx": 310.12,
+          "dy": 1227.86,
+          "vector_mag_m": 1266.42,
+          "vector_azimuth_deg": 14.17,
+          "dx_res_m": 26.56,
+          "dy_res_m": -4.88,
+          "post_trans_res_m": 27.01,
+          "sim_res_m": 22.48,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "UR",
+          "X_meta": 77306.51,
+          "Y_meta": 146540.15,
+          "X_phys": 77571.41,
+          "Y_phys": 147774.37,
+          "dx": 264.9,
+          "dy": 1234.22,
+          "vector_mag_m": 1262.33,
+          "vector_azimuth_deg": 12.11,
+          "dx_res_m": -18.65,
+          "dy_res_m": 1.48,
+          "post_trans_res_m": 18.71,
+          "sim_res_m": 22.51,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "LL",
+          "X_meta": 70340.62,
+          "Y_meta": 122157.99,
+          "X_phys": 70642.86,
+          "Y_phys": 123389.24,
+          "dx": 302.24,
+          "dy": 1231.25,
+          "vector_mag_m": 1267.8,
+          "vector_azimuth_deg": 13.79,
+          "dx_res_m": 18.69,
+          "dy_res_m": -1.49,
+          "post_trans_res_m": 18.74,
+          "sim_res_m": 22.54,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": 2197.09
+        },
+        {
+          "corner": "LR",
+          "X_meta": 73618.91,
+          "Y_meta": 121652.04,
+          "X_phys": 73875.87,
+          "Y_phys": 122889.67,
+          "dx": 256.96,
+          "dy": 1237.63,
+          "vector_mag_m": 1264.02,
+          "vector_azimuth_deg": 11.73,
+          "dx_res_m": -26.6,
+          "dy_res_m": 4.89,
+          "post_trans_res_m": 27.04,
+          "sim_res_m": 22.51,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": 2270.25
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_03",
+      "target": "South Polar Highlands (84.9\u00b0S, 25\u00b0E)",
+      "date": "2025-03-08",
+      "time_mode": "inverted",
+      "translation": {
+        "mean_dx_m": 274.78,
+        "mean_dy_m": 1677.59,
+        "magnitude_m": 1699.94,
+        "azimuth_deg": 9.3,
+        "post_translation_rms_m": 409.32,
+        "post_translation_max_m": 409.78,
+        "angular_spread_deg": 2.39
+      },
+      "similarity_model": {
+        "scale": 1.031541,
+        "scale_delta_ppm": 31541.0,
+        "rotation_deg": -0.01747,
+        "rotation_arcsec": -62.91,
+        "tx_m": -1898.16,
+        "ty_m": -2632.97,
+        "rms_m": 68.96,
+        "max_m": 68.98
+      },
+      "affine_model": {
+        "matrix": [
+          [
+            0.987874,
+            0.00561
+          ],
+          [
+            0.005108,
+            1.031549
+          ]
+        ],
+        "tx_m": 323.07,
+        "ty_m": -3000.23,
+        "det": 1.019012,
+        "singular_values": [
+          1.032197,
+          0.987226
+        ],
+        "condition_number": 1.0456,
+        "anisotropy": 0.04454,
+        "rotation_deg": -0.01425,
+        "shear_non_orthogonality_deg": 0.6079,
+        "rms_m": 0.02,
+        "max_m": 0.02
+      },
+      "required_offset": {
+        "hypothetical_along_track_offset_m": 1694.28,
+        "label": "REQUIRED-OFFSET MAGNITUDE"
+      },
+      "corner_vectors": [
+        {
+          "corner": "UL",
+          "X_meta": 67495.2,
+          "Y_meta": 150128.72,
+          "X_phys": 67842.09,
+          "Y_phys": 152209.68,
+          "dx": 346.89,
+          "dy": 2080.96,
+          "vector_mag_m": 2109.67,
+          "vector_azimuth_deg": 9.46,
+          "dx_res_m": 72.11,
+          "dy_res_m": 403.37,
+          "post_trans_res_m": 409.77,
+          "sim_res_m": 68.96,
+          "aff_res_m": 0.02,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "UR",
+          "X_meta": 70561.88,
+          "Y_meta": 149764.53,
+          "X_phys": 70869.5,
+          "Y_phys": 151849.67,
+          "dx": 307.62,
+          "dy": 2085.14,
+          "vector_mag_m": 2107.71,
+          "vector_azimuth_deg": 8.39,
+          "dx_res_m": 32.84,
+          "dy_res_m": 407.55,
+          "post_trans_res_m": 408.87,
+          "sim_res_m": 68.95,
+          "aff_res_m": 0.02,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "LL",
+          "X_meta": 64482.36,
+          "Y_meta": 124913.23,
+          "X_phys": 64724.28,
+          "Y_phys": 126183.28,
+          "dx": 241.92,
+          "dy": 1270.05,
+          "vector_mag_m": 1292.89,
+          "vector_azimuth_deg": 10.78,
+          "dx_res_m": -32.86,
+          "dy_res_m": -407.54,
+          "post_trans_res_m": 408.86,
+          "sim_res_m": 68.97,
+          "aff_res_m": 0.02,
+          "dem_vs_tiepoint_residual_m": 2195.31
+        },
+        {
+          "corner": "LR",
+          "X_meta": 67551.81,
+          "Y_meta": 124547.96,
+          "X_phys": 67754.5,
+          "Y_phys": 125822.16,
+          "dx": 202.69,
+          "dy": 1274.2,
+          "vector_mag_m": 1290.22,
+          "vector_azimuth_deg": 9.04,
+          "dx_res_m": -72.09,
+          "dy_res_m": -403.39,
+          "post_trans_res_m": 409.78,
+          "sim_res_m": 68.98,
+          "aff_res_m": 0.02,
+          "dem_vs_tiepoint_residual_m": 2323.73
+        }
+      ]
+    },
+    {
+      "pair": "OHRC_PAIR_04",
+      "target": "South Polar Highlands (84.2\u00b0S, 32\u00b0E)",
+      "date": "2025-10-12",
+      "time_mode": "inverted",
+      "translation": {
+        "mean_dx_m": 627.35,
+        "mean_dy_m": 2088.93,
+        "magnitude_m": 2181.1,
+        "azimuth_deg": 16.72,
+        "post_translation_rms_m": 10.72,
+        "post_translation_max_m": 13.35,
+        "angular_spread_deg": 0.69
+      },
+      "similarity_model": {
+        "scale": 1.000022,
+        "scale_delta_ppm": 21.9,
+        "rotation_deg": -0.01387,
+        "rotation_arcsec": -49.94,
+        "tx_m": 589.17,
+        "ty_m": 2108.57,
+        "rms_m": 10.25,
+        "max_m": 10.3
+      },
+      "affine_model": {
+        "matrix": [
+          [
+            0.993764,
+            0.002019
+          ],
+          [
+            0.001341,
+            0.999673
+          ]
+        ],
+        "tx_m": 916.09,
+        "ty_m": 2010.81,
+        "det": 0.993437,
+        "singular_values": [
+          1.000117,
+          0.99332
+        ],
+        "condition_number": 1.0068,
+        "anisotropy": 0.00682,
+        "rotation_deg": -0.01948,
+        "shear_non_orthogonality_deg": 0.1931,
+        "rms_m": 0.01,
+        "max_m": 0.01
+      },
+      "required_offset": {
+        "hypothetical_along_track_offset_m": 2173.84,
+        "label": "REQUIRED-OFFSET MAGNITUDE"
+      },
+      "corner_vectors": [
+        {
+          "corner": "UL",
+          "X_meta": 96610.01,
+          "Y_meta": 161948.5,
+          "X_phys": 97250.63,
+          "Y_phys": 164035.96,
+          "dx": 640.62,
+          "dy": 2087.46,
+          "vector_mag_m": 2183.55,
+          "vector_azimuth_deg": 17.06,
+          "dx_res_m": 13.27,
+          "dy_res_m": -1.47,
+          "post_trans_res_m": 13.35,
+          "sim_res_m": 10.2,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "UR",
+          "X_meta": 99505.57,
+          "Y_meta": 161018.26,
+          "X_phys": 100126.27,
+          "Y_phys": 163109.89,
+          "dx": 620.7,
+          "dy": 2091.63,
+          "vector_mag_m": 2181.78,
+          "vector_azimuth_deg": 16.53,
+          "dx_res_m": -6.65,
+          "dy_res_m": 2.7,
+          "post_trans_res_m": 7.18,
+          "sim_res_m": 10.29,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": "N/A"
+        },
+        {
+          "corner": "LL",
+          "X_meta": 89683.67,
+          "Y_meta": 137270.18,
+          "X_phys": 90317.67,
+          "Y_phys": 139356.4,
+          "dx": 634.0,
+          "dy": 2086.22,
+          "vector_mag_m": 2180.43,
+          "vector_azimuth_deg": 16.9,
+          "dx_res_m": 6.65,
+          "dy_res_m": -2.71,
+          "post_trans_res_m": 7.18,
+          "sim_res_m": 10.3,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": 3502.86
+        },
+        {
+          "corner": "LR",
+          "X_meta": 92574.77,
+          "Y_meta": 136340.31,
+          "X_phys": 93188.85,
+          "Y_phys": 138430.73,
+          "dx": 614.08,
+          "dy": 2090.42,
+          "vector_mag_m": 2178.75,
+          "vector_azimuth_deg": 16.37,
+          "dx_res_m": -13.27,
+          "dy_res_m": 1.49,
+          "post_trans_res_m": 13.35,
+          "sim_res_m": 10.21,
+          "aff_res_m": 0.01,
+          "dem_vs_tiepoint_residual_m": 3523.17
+        }
+      ]
+    }
+  ],
+  "spice_frame_audit": {
+    "CH2_OHRC": {
+      "id": -152270,
+      "status": "VERIFIED"
+    },
+    "IAU_MOON": {
+      "id": 10020,
+      "status": "VERIFIED"
+    },
+    "MOON_ME": {
+      "id": 0,
+      "status": "UNKNOWN_IN_LOADED_POOL"
+    },
+    "MOON_PA": {
+      "id": 0,
+      "status": "UNKNOWN_IN_LOADED_POOL"
+    },
+    "MOON_ME_DE421": {
+      "id": 0,
+      "status": "UNKNOWN_IN_LOADED_POOL"
+    },
+    "MOON_PA_DE421": {
+      "id": 0,
+      "status": "UNKNOWN_IN_LOADED_POOL"
+    },
+    "transform_iau_to_me_resolvable": false,
+    "transform_verdict": "FRAME_TRANSFORMATION_NOT_VERIFIED",
+    "error_detail_me": "================================================================================\n\nToolkit version: CSPICE_N0067\n\nSPICE(UNKNOWNFRAME) --\n\nThe frame MOON_ME was not recognized as a known reference frame.\n\npxform_c --> PXFORM\n\n================================================================================",
+    "statement": "The required DE421 MOON_ME realization is not available in the verified local kernel pool, so the IAU_MOON <-> MOON_ME angular difference was not independently computed in Phase 23A.6. Therefore no numerical bound on the resulting surface displacement is asserted here."
+  }
+}

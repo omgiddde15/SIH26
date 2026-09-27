@@ -1,0 +1,833 @@
+{
+  "audit_meta": {
+    "title": "3D Viewpoint / Terrain Experiment Feasibility & Metadata Sufficiency Audit",
+    "execution_date": "2026-09-24",
+    "production_status": "100% FROZEN AND UNTOUCHED",
+    "terrain_audit": {
+      "status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "found_files": [],
+      "detail": "No usable DEM, DTM, or elevation raster was found in mentor datasets, repository, research directories, or artifacts."
+    },
+    "global_recommendation": "STRICTLY HOLD 3D RAY-TRACING EXPERIMENT",
+    "readiness_summary": {
+      "OHRC_PAIR_01": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "OHRC_PAIR_02": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "OHRC_PAIR_03": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "OHRC_PAIR_04": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "IIRS_PAIR_A": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "IIRS_PAIR_B": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION"
+    }
+  },
+  "pairs": [
+    {
+      "pair_id": "OHRC_PAIR_01",
+      "pair_name": "OHRC Pair 1",
+      "instrument": "OHRC",
+      "category": "Primary OHRC",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "unorthorectified downsampled image strip with corner selenographic tiepoints",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "100.78",
+      "source_roll_deg": "4.889318",
+      "source_pitch_deg": "-14.545736",
+      "source_yaw_deg": "-0.001393",
+      "source_solar_azimuth_deg": "299.639023",
+      "source_solar_elevation_deg": "2.113221",
+      "source_solar_incidence_deg": "87.886779",
+      "source_start_utc": "2024-12-7T12:21:32.323420000",
+      "source_stop_utc": "2024-12-7T12:21:48.706710000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, TDI64)",
+        "line_sample_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, raw_no_of_scan=93692)",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "VERIFIED METADATA (Pushbroom line scanner with TDI stages TDI64, integration time 174.870 ms)",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (100.78 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (4.889318 deg)",
+        "pitch": "VERIFIED METADATA (-14.545736 deg)",
+        "yaw": "VERIFIED METADATA (-0.001393 deg)",
+        "acquisition_time": "VERIFIED METADATA (2024-12-7T12:21:32.323420000 to 2024-12-7T12:21:48.706710000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 23596, imaging orbit 23595)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (87.886779 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (2.113221 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (299.639023 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2024-12-7T12:21:32.323420000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_02",
+      "pair_name": "OHRC Pair 2",
+      "instrument": "OHRC",
+      "category": "Primary OHRC",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "unorthorectified downsampled image strip with corner selenographic tiepoints",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "105.77",
+      "source_roll_deg": "1.259034",
+      "source_pitch_deg": "11.815713",
+      "source_yaw_deg": "0.040203",
+      "source_solar_azimuth_deg": "19.910131",
+      "source_solar_elevation_deg": "5.103276",
+      "source_solar_incidence_deg": "84.896724",
+      "source_start_utc": "2025-2-8T14:2:45.757525000",
+      "source_stop_utc": "2025-2-8T14:3:2.141025000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, TDI64)",
+        "line_sample_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, raw_no_of_scan=93692)",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "VERIFIED METADATA (Pushbroom line scanner with TDI stages TDI64, integration time 174.870 ms)",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (105.77 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (1.259034 deg)",
+        "pitch": "VERIFIED METADATA (11.815713 deg)",
+        "yaw": "VERIFIED METADATA (0.040203 deg)",
+        "acquisition_time": "VERIFIED METADATA (2025-2-8T14:2:45.757525000 to 2025-2-8T14:3:2.141025000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 24365, imaging orbit 24363)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (84.896724 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (5.103276 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (19.910131 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2025-2-8T14:2:45.757525000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_03",
+      "pair_name": "OHRC Pair 3",
+      "instrument": "OHRC",
+      "category": "Primary OHRC",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "unorthorectified downsampled image strip with corner selenographic tiepoints",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "97.78",
+      "source_roll_deg": "-0.227192",
+      "source_pitch_deg": "13.806624",
+      "source_yaw_deg": "0.005305",
+      "source_solar_azimuth_deg": "49.072662",
+      "source_solar_elevation_deg": "3.088558",
+      "source_solar_incidence_deg": "86.911442",
+      "source_start_utc": "2025-3-8T1:27:52.675500000",
+      "source_stop_utc": "2025-3-8T1:28:9.58790000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, TDI64)",
+        "line_sample_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, raw_no_of_scan=101074)",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "VERIFIED METADATA (Pushbroom line scanner with TDI stages TDI64, integration time 162.100 ms)",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (97.78 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (-0.227192 deg)",
+        "pitch": "VERIFIED METADATA (13.806624 deg)",
+        "yaw": "VERIFIED METADATA (0.005305 deg)",
+        "acquisition_time": "VERIFIED METADATA (2025-3-8T1:27:52.675500000 to 2025-3-8T1:28:9.58790000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 24705, imaging orbit 24698)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (86.911442 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (3.088558 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (49.072662 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2025-3-8T1:27:52.675500000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_04",
+      "pair_name": "OHRC Pair 4",
+      "instrument": "OHRC",
+      "category": "Primary OHRC",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "unorthorectified downsampled image strip with corner selenographic tiepoints",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "91.86",
+      "source_roll_deg": "5.298260",
+      "source_pitch_deg": "20.349658",
+      "source_yaw_deg": "0.011085",
+      "source_solar_azimuth_deg": "256.287883",
+      "source_solar_elevation_deg": "-0.305664",
+      "source_solar_incidence_deg": "90.305664",
+      "source_start_utc": "2025-10-12T4:58:21.100114000",
+      "source_stop_utc": "2025-10-12T4:58:37.483739000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, TDI64)",
+        "line_sample_geometry": "VERIFIED METADATA (raw_no_of_pix=12000, raw_no_of_scan=101074)",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "VERIFIED METADATA (Pushbroom line scanner with TDI stages TDI64, integration time 162.100 ms)",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (91.86 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (5.298260 deg)",
+        "pitch": "VERIFIED METADATA (20.349658 deg)",
+        "yaw": "VERIFIED METADATA (0.011085 deg)",
+        "acquisition_time": "VERIFIED METADATA (2025-10-12T4:58:21.100114000 to 2025-10-12T4:58:37.483739000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 27367, imaging orbit 27360)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (90.305664 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (-0.305664 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (256.287883 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2025-10-12T4:58:21.100114000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    },
+    {
+      "pair_id": "IIRS_PAIR_A",
+      "pair_name": "IIRS Pair A",
+      "instrument": "IIRS",
+      "category": "Secondary Diagnostic",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "unorthorectified downsampled image strip with corner selenographic tiepoints",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "117.17",
+      "source_roll_deg": "-0.009006",
+      "source_pitch_deg": "-0.070153",
+      "source_yaw_deg": "0.016513",
+      "source_solar_azimuth_deg": "107.839819",
+      "source_solar_elevation_deg": "25.942160",
+      "source_solar_incidence_deg": "64.057840",
+      "source_start_utc": "2025-9-1T12:27:58.332595000",
+      "source_stop_utc": "2025-9-1T12:34:51.249650000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "NOT PRESENT",
+        "line_sample_geometry": "NOT PRESENT",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "NOT PRESENT",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (117.17 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (-0.009006 deg)",
+        "pitch": "VERIFIED METADATA (-0.070153 deg)",
+        "yaw": "VERIFIED METADATA (0.016513 deg)",
+        "acquisition_time": "VERIFIED METADATA (2025-9-1T12:27:58.332595000 to 2025-9-1T12:34:51.249650000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 26865, imaging orbit 26864)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (64.057840 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (25.942160 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (107.839819 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2025-9-1T12:27:58.332595000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    },
+    {
+      "pair_id": "IIRS_PAIR_B",
+      "pair_name": "IIRS Pair B",
+      "instrument": "IIRS",
+      "category": "Secondary Diagnostic",
+      "readiness_classification": "C. NOT READY \u2014 INSUFFICIENT PHYSICAL MODEL INFORMATION",
+      "terrain_status": "DEM_REQUIRED_BUT_NOT_AVAILABLE",
+      "source_raster_type": "mixed/uncertain",
+      "ref_raster_type": "resampled map-projected orthorectified mosaic product (Polar Stereographic)",
+      "camera_intrinsics_available": false,
+      "spacecraft_state_complete": false,
+      "source_solar_geometry_available": true,
+      "ref_solar_geometry_available": false,
+      "pixel_to_ray_source": "UNCONSTRUCTIBLE (Requires missing camera intrinsics, boresight calibration, and time-dependent spacecraft state vectors)",
+      "pixel_to_ray_ref": "UNCONSTRUCTIBLE (Reference raster is a resampled 2D map product without camera model or ephemeris)",
+      "source_altitude_km": "103.92",
+      "source_roll_deg": "0.012401",
+      "source_pitch_deg": "-0.085453",
+      "source_yaw_deg": "-0.005565",
+      "source_solar_azimuth_deg": "45.445786",
+      "source_solar_elevation_deg": "21.055386",
+      "source_solar_incidence_deg": "68.944614",
+      "source_start_utc": "2023-1-22T10:14:31.977460000",
+      "source_stop_utc": "2023-1-22T10:24:50.875320000",
+      "requirements_matrix": [
+        {
+          "requirement": "DEM / Elevation Model",
+          "available": false,
+          "source": "Repository & Mentor Dir search",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Camera Model Intrinsics (f, cx, cy, pitch)",
+          "available": false,
+          "source": "XML & GeoTIFF audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft 3D Orbit Position Vector",
+          "available": false,
+          "source": "XML audit",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Spacecraft Attitude Pointing (quaternion/boresight)",
+          "available": false,
+          "source": "XML audit (Only static roll/pitch/yaw scalar angles present)",
+          "confidence": "HIGH (Scalar Only)"
+        },
+        {
+          "requirement": "Source Acquisition Time",
+          "available": true,
+          "source": "XML start_time_utc / stop_time_utc",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Acquisition Time",
+          "available": false,
+          "source": "Reference GeoTIFF (No XML or timestamp tags)",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Source Solar Geometry (az, el, inc)",
+          "available": true,
+          "source": "XML Sun_azimuth / elevation / incidence",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Reference Solar Geometry",
+          "available": false,
+          "source": "Reference GeoTIFF",
+          "confidence": "HIGH (Conclusively Absent)"
+        },
+        {
+          "requirement": "Image Orientation / Georeferencing",
+          "available": true,
+          "source": "GeoTIFF tags 33922, 33550, 34735",
+          "confidence": "HIGH (Verified Present)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Source)",
+          "available": false,
+          "source": "Collinearity formulation unconstructible",
+          "confidence": "HIGH (Missing Intrinsics/Ephemeris)"
+        },
+        {
+          "requirement": "Pixel-to-Ray Model (Reference)",
+          "available": false,
+          "source": "Map product without sensor geometry",
+          "confidence": "HIGH (Map Product)"
+        }
+      ],
+      "camera_model_audit": {
+        "focal_length": "NOT PRESENT",
+        "principal_point": "NOT PRESENT",
+        "pixel_pitch": "NOT PRESENT",
+        "detector_geometry": "NOT PRESENT",
+        "line_sample_geometry": "NOT PRESENT",
+        "camera_model": "NOT PRESENT",
+        "pushbroom_frame_description": "NOT PRESENT",
+        "boresight": "NOT PRESENT",
+        "look_direction": "NOT PRESENT",
+        "viewing_angles": "NOT PRESENT (Only spacecraft body attitude angles present)",
+        "sensor_model_parameters": "NOT PRESENT"
+      },
+      "spacecraft_state_audit": {
+        "spacecraft_position_vector": "NOT PRESENT",
+        "altitude": "VERIFIED METADATA (103.92 km)",
+        "latitude_longitude_trajectory": "NOT PRESENT (Sub-satellite track trajectory absent; only ground footprint corners present)",
+        "roll": "VERIFIED METADATA (0.012401 deg)",
+        "pitch": "VERIFIED METADATA (-0.085453 deg)",
+        "yaw": "VERIFIED METADATA (-0.005565 deg)",
+        "acquisition_time": "VERIFIED METADATA (2023-1-22T10:14:31.977460000 to 2023-1-22T10:24:50.875320000)",
+        "velocity": "NOT PRESENT",
+        "orbit_state_vectors": "NOT PRESENT",
+        "spice_ck_spk_references": "NOT PRESENT (Only dumping orbit 15194, imaging orbit 15193)",
+        "state_characterization": "Static instantaneous altitude and attitude angles only; complete time-dependent spacecraft state vector absent"
+      },
+      "illumination_source_audit": {
+        "solar_incidence_deg": "VERIFIED METADATA (68.944614 deg)",
+        "solar_elevation_deg": "VERIFIED METADATA (21.055386 deg)",
+        "solar_azimuth_deg": "VERIFIED METADATA (45.445786 deg)",
+        "acquisition_timestamp": "VERIFIED METADATA (2023-1-22T10:14:31.977460000)",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      },
+      "illumination_ref_audit": {
+        "solar_incidence_deg": "NOT PRESENT",
+        "solar_elevation_deg": "NOT PRESENT",
+        "solar_azimuth_deg": "NOT PRESENT",
+        "acquisition_timestamp": "NOT PRESENT",
+        "emission_viewing_angle": "NOT PRESENT",
+        "phase_angle": "NOT PRESENT"
+      }
+    }
+  ]
+}

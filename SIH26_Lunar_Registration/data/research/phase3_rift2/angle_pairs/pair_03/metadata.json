@@ -1,0 +1,10 @@
+{
+  "pair_id": "pair_03",
+  "source_sensor": "CH2_OHRC",
+  "reference_sensor": "CH2_OHRC",
+  "test_type": "sun_angle_change",
+  "source_angle": null,
+  "reference_angle": null,
+  "angle_difference_deg": null,
+  "notes": "Multi-pass CH2 OHRC lunar imagery taken ~2 hours apart with differing solar illumination. Exact solar angles not verified."
+}

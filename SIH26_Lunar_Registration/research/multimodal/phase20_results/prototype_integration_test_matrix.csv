@@ -1,0 +1,16 @@
+category,test_name,status,details,metrics,timestamp
+Auth,Migrated Accounts Existence,PASS,"Found migrated accounts: ['202401070085@mitaoe.ac.in', 'shantaramgiddelala@gmail.com', 'lunarreg_test@example.com']","{""migrated_count"": 3}",2026-09-23 16:09:25
+Auth,Password Hash PBKDF2 Format,PASS,All user password hashes use standard PBKDF2-HMAC-SHA256,{},2026-09-23 16:09:25
+Auth,Neutral Test User Exists,PASS,Test user already provisioned: lunarreg_test@example.com,{},2026-09-23 16:09:25
+Auth,Test User Valid Authentication,PASS,"Authenticated successfully: user_id=6, name=LunarReg Test Engineer",{},2026-09-23 16:09:26
+Auth,Invalid Password Rejection,PASS,Invalid password rejected cleanly,{},2026-09-23 16:09:26
+Auth,Nonexistent User Rejection,PASS,Nonexistent account rejected cleanly,{},2026-09-23 16:09:26
+Auth,Duplicate Signup Rejection,PASS,Duplicate signup rejected: An account with this email already exists. Please sign in instead.,{},2026-09-23 16:09:26
+Metadata,Missing Metadata Graceful Fallback,PASS,Missing metadata correctly returned 'Mission metadata not available for this image.' without failing,{},2026-09-23 16:09:26
+Metadata,Footprint Catalog Lookup Hit,PASS,"Catalog hit verified: ch2_ohr_ncp_20200824T0806596861, lunar footprint: Lon [56.58°, 56.87°] | Lat [-62.44°, -61.60°]",{},2026-09-23 16:09:26
+Environment,Dynamic Environment Detection,PASS,Detected: Python 3.14.5 | PyTorch 2.14.0+cpu | CPU,{},2026-09-23 16:09:26
+Stepper,Canonical 8-Stage Pipeline Count,PASS,"Verified 8 stages: ['1. Source + Reference', '2. Metadata & Geo Information', '3. Illumination & Preprocessing', '4. Feature Correspondence Matching', '5. Geometric Estimation', '6. Homography & Registration', '7. Independent Validation', '8. Results & Export']",{},2026-09-23 16:09:26
+Benchmark,Pair 04 Optical Nominal,PASS,"Registered successfully: 54 inliers, 100.0% ratio, 100.0% occ in 1.94s","{""inliers"": 54, ""ratio"": 1.0, ""occupancy"": 1.0, ""runtime_s"": 1.94}",2026-09-23 16:09:28
+Benchmark,Pair 03 Illumination Inversion,PASS,"Adaptive router selected SIFT: 54 inliers, 100.0% ratio in 1.25s","{""matcher"": ""SIFT"", ""inliers"": 54, ""ratio"": 1.0, ""runtime_s"": 1.25}",2026-09-23 16:09:29
+Safe Rejection,Cross-Sensor Quality Gate Safe Rejection,PASS,"Rejected safely: 199 candidates, 12 inliers, 6.03% ratio (< 20.0% threshold), occ=55.6%, unsafe warp blocked","{""candidates"": 199, ""inliers"": 12, ""ratio"": 0.06030150753768844, ""occupancy"": 0.5555555555555556, ""runtime_s"": 12.38}",2026-09-23 16:09:42
+Export Engine,Export Deliverables Bundle,PASS,"Successfully built all 5 deliverables: PNG (414516 B), CSV (2295 B), JSON (1917 B), PDF (286261 B), ZIP (645600 B)","{""png_bytes"": 414516, ""pdf_bytes"": 286261, ""zip_bytes"": 645600}",2026-09-23 16:09:44

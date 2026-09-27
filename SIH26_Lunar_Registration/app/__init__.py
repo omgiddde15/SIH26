@@ -1,8 +1,8 @@
 """
-Lunar Image Registration Engine - App Package.
-Exports core computer-vision functions for pure-CV consumers and research modules.
-DO NOT import app.py here to prevent circular execution and Streamlit duplicate element errors.
+Lunar Image Registration System - Core Package.
+Provides pure computer-vision registration utilities decoupled from the Streamlit UI.
 """
+
 from .registration_core import (
     _DEVICE,
     load_loftr_matcher,

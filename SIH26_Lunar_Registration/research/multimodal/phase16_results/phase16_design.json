@@ -1,0 +1,43 @@
+{
+  "phase": 16,
+  "research_question": "After rotation has been controlled, does changing the image representation reduce the native IIRS\u2194OHRC cross-sensor descriptor mismatch?",
+  "anchor_source": "research\\multimodal\\phase11_results\\phase11_loftr_anchor_pairs.json",
+  "anchor_count": 12,
+  "patch_size": 7,
+  "radius": 4.0,
+  "descriptor_dim": 21,
+  "conditions": [
+    {
+      "code": "Condition A",
+      "name": "Baseline Grayscale",
+      "source": "Phase 7 standard grayscale"
+    },
+    {
+      "code": "Condition B",
+      "name": "Baseline CLAHE",
+      "source": "cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))"
+    },
+    {
+      "code": "Condition C",
+      "name": "Histogram Normalized",
+      "source": "cv2.equalizeHist"
+    },
+    {
+      "code": "Condition D",
+      "name": "Gradient Magnitude",
+      "source": "Sobel spatial gradient magnitude normalized to [0, 255]"
+    },
+    {
+      "code": "Condition E",
+      "name": "Local Gradient Normalized",
+      "source": "Sobel magnitude / local standard deviation (15x15 box)"
+    }
+  ],
+  "invariants": {
+    "ssc_descriptor_frozen": true,
+    "rotation_applied": 0.0,
+    "anchor_positions_fixed": true,
+    "production_modified": false,
+    "automatic_winner_selection": false
+  }
+}

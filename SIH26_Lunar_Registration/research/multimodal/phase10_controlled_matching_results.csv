@@ -1,0 +1,5 @@
+track,angle_deg,valid_points,phase7_candidates,phase7_correct,phase7_correct_rate,phase9_candidates,phase9_correct,phase9_correct_rate
+C_controlled_keypoints,10.0,1407,737,665,0.9023066485753053,1199,1191,0.9933277731442869
+C_controlled_keypoints,20.0,1367,246,49,0.1991869918699187,1082,1072,0.9907578558225508
+C_controlled_keypoints,30.0,1338,213,4,0.018779342723004695,981,958,0.9765545361875637
+C_controlled_keypoints,-20.0,1362,259,66,0.2548262548262548,1052,1035,0.9838403041825095

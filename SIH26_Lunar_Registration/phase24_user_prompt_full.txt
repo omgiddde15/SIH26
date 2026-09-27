@@ -1,0 +1,577 @@
+<USER_REQUEST>
+Start Phase 24 — Geodetic-Uncertainty-Aware Image-Space Registration Feasibility.
+
+This is RESEARCH-ONLY.
+Do NOT modify production code.
+
+==================================================
+A. GOVERNANCE / PRODUCTION FREEZE
+==================================================
+
+Do not modify:
+
+app/app.py
+app/adaptive_adapter.py
+app/registration_core.py
+research/adaptive_matcher/adaptive_engine.py
+
+Do not modify:
+- production matcher selection
+- production thresholds
+- quality gates
+- Locked LoFTR
+- RANSAC thresholds
+- production routing
+- production evidence format
+
+Research code may be added under the existing research hierarchy.
+
+Do NOT:
+- lower the 20% quality gate
+- weaken any production acceptance threshold
+- promote a research result automatically
+- fit an arbitrary global transform and call it geolocation
+- identify the unresolved reference product by appearance
+- claim absolute geodetic correctness
+
+==================================================
+B. CURRENT VERIFIED STATE
+==================================================
+
+Carry forward:
+
+REFERENCE_PRODUCT_UNRESOLVED
+REFERENCE_GEODETIC_REALIZATION = UNKNOWN
+REFERENCE_TO_MOON_ME_DE421 = NOT_VERIFIED
+PHASE_23B_STATUS = BLOCKED_PENDING_GEODETIC_REVIEW
+
+Phase 23B.2 established:
+- delivered reference CRS is interpreted with lambda_0 = 0.0 degrees
+- k_0 = 1.0
+- Polar Stereographic
+- south-polar origin
+- radius = 1,737,400 m
+- standard GDAL/Rasterio/PROJ interpretation agrees with the audited implementation
+
+Phase 23B.3 established:
+- no direct upstream reference-product provenance link was found
+- no local authoritative candidate raster was available for exact content identity
+- delivered reference identity remains unresolved
+- Pair 02/03 identical overlap remains:
+  7,089,556 / 7,089,556 pixels
+  Mean difference = 0.0000
+  RMS difference = 0.0000
+
+Phase 23A.5/23A.6 established substantial source/reference coordinate residuals under the audited physical model.
+
+IMPORTANT:
+Those residuals are evidence of coordinate discrepancy.
+They must NOT be treated as proof of a single rigid translation, a specific datum error, or a known upstream product.
+
+==================================================
+C. OBJECTIVE
+==================================================
+
+Answer this research question:
+
+"Can reliable image-to-image correspondence be recovered when the absolute geodetic placement of the delivered reference raster is uncertain, by searching a bounded image-space neighborhood around the physically predicted reference location?"
+
+The goal is to distinguish between two hypotheses:
+
+H1:
+The mentor registration failure is substantially caused by source/reference placement error, while usable common visual structure still exists in the delivered images.
+
+H2:
+Even after allowing a reasonable image-space placement uncertainty, the source/reference pair still lacks sufficiently reliable cross-modal correspondence.
+
+This phase does NOT attempt to solve absolute geolocation.
+
+It tests whether relative image registration is recoverable despite geodetic uncertainty.
+
+==================================================
+D. KEY PRINCIPLE
+==================================================
+
+Separate:
+
+ABSOLUTE GEOLOCATION
+from
+RELATIVE IMAGE CORRESPONDENCE
+
+Do not require the unresolved reference raster to have a known upstream product identity before testing whether source/reference visual correspondence exists.
+
+However:
+
+A successful image-space registration must NOT be presented as proof of the reference raster's geodetic realization.
+
+==================================================
+E. RESEARCH DATA
+==================================================
+
+Use the four OHRC mentor pairs:
+
+OHRC_PAIR_01
+OHRC_PAIR_02
+OHRC_PAIR_03
+OHRC_PAIR_04
+
+Use the already audited:
+- source physical projection
+- reference GeoTIFF CRS
+- pixel-center convention
+- DEM intersection information
+- source/reference raster dimensions
+- effective 5 m reference scale
+
+Do not regenerate or modify the source/reference images.
+
+==================================================
+F. NOMINAL SEARCH CENTRE
+==================================================
+
+For each pair:
+
+1. Use the existing Phase 23A physical projection to obtain the nominal reference-space footprint of deterministic source sample points.
+
+2. Convert the physical projection into the delivered reference raster coordinate system using the already verified 0-degree Polar Stereographic interpretation.
+
+3. Establish a nominal image-space search centre/footprint.
+
+Do NOT fit a translation using the same image evidence that will later be evaluated.
+
+The nominal search location must come from the existing audited physical model.
+
+==================================================
+G. PREDECLARED SEARCH WINDOWS
+==================================================
+
+Perform a controlled bounded image-space search around the nominal footprint.
+
+Use predeclared translational uncertainty margins:
+
+M0 = nominal footprint only
+
+M1 = ±0.5 km
+
+M2 = ±1.0 km
+
+M3 = ±2.0 km
+
+M4 = ±3.0 km
+
+Use a deterministic grid of translations within each margin.
+
+Do NOT choose the margins after seeing which one succeeds.
+
+Clearly label these as:
+RESEARCH SEARCH MARGINS
+
+They are not production parameters.
+
+The ±3 km boundary is an exploration limit, not an assertion about the true geodetic error.
+
+If the observed residual lies outside a given margin, that margin is simply classified as insufficient.
+
+==================================================
+H. SEARCH GRID
+==================================================
+
+Use a deterministic translation lattice.
+
+Recommended spacing:
+
+500 m in projected reference coordinates.
+
+Therefore each search candidate represents a predefined image-space placement hypothesis.
+
+Do not optimize the translation continuously.
+
+Do not fit sub-pixel offsets.
+
+Do not apply an affine or similarity correction.
+
+Only test the predefined discrete candidate positions.
+
+==================================================
+I. CANDIDATE TILE CONSTRUCTION
+==================================================
+
+For each candidate offset:
+
+1. derive the corresponding reference image window
+2. keep the source image unchanged
+3. crop only the reference raster
+4. preserve exact pixel scale
+5. record source/reference pixel coordinates
+6. retain the candidate offset in metadata
+7. reject windows that exceed raster bounds
+8. record support/coverage percentage
+
+Do not resample unless required by the existing frozen matcher interface.
+If resampling is necessary internally for LoFTR, record it exactly and use the existing matcher scaling behavior.
+
+==================================================
+J. MATCHING
+==================================================
+
+Use research wrappers around the existing matcher implementations.
+
+Primary:
+- existing LoFTR implementation
+
+Secondary research controls:
+- existing SIFT path if resource-safe
+- existing SuperGlue path if resource-safe
+
+Do not modify matcher internals.
+
+Do not modify Locked LoFTR.
+
+For every candidate window record:
+
+- candidate offset
+- matcher
+- candidate correspondences
+- initial inliers
+- initial inlier ratio
+- spatial occupancy
+- selected points
+- final inliers
+- final geometric fit
+- held-out validation
+- runtime
+- resource guard status
+- rejection reason
+
+==================================================
+K. COMMON DOWNSTREAM VALIDATION
+==================================================
+
+Use the existing research-equivalent common downstream logic:
+
+initial RANSAC
+→ quality scoring
+→ 3×3 spatial selection
+→ final homography
+→ warp
+→ independent held-out validation
+
+Preserve:
+- min candidates = 10
+- min initial inliers = 8
+- min initial inlier ratio = 0.20
+- min occupancy = 0.33
+- RANSAC threshold = 3.0 px
+- downstream geometric minimum = 4 inliers
+- 3×3 grid
+- max 6 points per cell
+- validation seeds 1–5
+
+Do NOT change these values.
+
+==================================================
+L. SEARCH-RANKING VS VALIDATION
+==================================================
+
+Do not allow the same metric to both select and validate a candidate.
+
+For each candidate:
+- report all measured metrics
+- mark whether the production-style quality gate would pass
+- report held-out validation separately
+
+Do NOT automatically select the "best" candidate.
+
+If multiple candidates pass:
+report all passing candidates.
+
+If none pass:
+report that no tested image-space placement recovered sufficient validated correspondence.
+
+==================================================
+M. CONTROLS
+==================================================
+
+Include at least three controls:
+
+CONTROL 1:
+A clearly non-overlapping / deliberately displaced reference window.
+
+CONTROL 2:
+A controlled known-transform image pair from the existing research validation framework.
+
+CONTROL 3:
+A same-sensor or previously validated positive control if one already exists in the project.
+
+The purpose is to ensure that a passing search candidate is not merely exploiting the scoring procedure.
+
+Do not create a new hand-selected positive control after inspecting the mentor results.
+
+==================================================
+N. LEAKAGE / BIAS CONTROL
+==================================================
+
+Do not use:
+- Phase 23A.6 fitted translations as candidate offsets
+- visually chosen windows
+- manual inspection to select candidate locations
+- post-hoc adjustment of search limits
+
+The search must be fully deterministic and predefined before evaluation.
+
+The Phase 23A.6 translation results may be reported for comparison only.
+
+==================================================
+O. IMPORTANT INTERPRETATION TEST
+==================================================
+
+For every pair answer:
+
+Question A:
+Did the physical nominal footprint have usable image support?
+
+Question B:
+Did any predefined image-space offset produce enough candidate correspondences?
+
+Question C:
+Did any candidate pass:
+- 8 initial inliers
+- 20% ratio
+- 33% occupancy
+
+Question D:
+Did the same candidate then pass independent hold-out validation?
+
+Question E:
+If a candidate passed, was the successful registration localizable to a narrow set of offsets or broadly distributed?
+
+Do not interpret a broad successful region as precise geolocation.
+
+==================================================
+P. FAILURE CATEGORIZATION
+==================================================
+
+Use these failure classes:
+
+F1:
+No valid reference image support.
+
+F2:
+Reference support exists, but no candidate correspondence recovery.
+
+F3:
+Correspondences exist, but insufficient geometric consistency.
+
+F4:
+Initial geometry passes, but independent hold-out validation fails.
+
+F5:
+A validated registration exists within the tested image-space uncertainty range.
+
+Do not automatically call F5 a geodetically correct registration.
+
+==================================================
+Q. IMPORTANT POSSIBLE OUTCOMES
+==================================================
+
+Outcome A:
+No search window passes.
+
+Interpretation:
+The problem is not explained by a bounded translational placement error alone, under the tested search range and matcher configuration.
+
+Outcome B:
+One or more windows obtain correspondence, but validation fails.
+
+Interpretation:
+Some common visual structure may exist, but current evidence does not support reliable registration.
+
+Outcome C:
+One or more windows pass the full quality gate and independent hold-out validation.
+
+Interpretation:
+This demonstrates research feasibility of relative image registration under bounded geodetic uncertainty.
+
+It does NOT establish:
+- reference product identity
+- absolute geolocation
+- geodetic realization
+- physical accuracy in metres
+- production promotion
+
+==================================================
+R. NO AUTOMATIC PROMOTION
+==================================================
+
+Even if a candidate passes all checks:
+
+DO NOT:
+- modify production routing
+- modify thresholds
+- promote a matcher
+- change the mentor benchmark status
+- declare final SIH success
+- claim geodetic correctness
+
+Instead report:
+
+RESEARCH_FEASIBILITY_RESULT
+
+and retain production freeze.
+
+==================================================
+S. OUTPUTS
+==================================================
+
+Create:
+
+1.
+run_phase24_geodetic_uncertainty_search.py
+
+2.
+phase24_geodetic_uncertainty_search_report.md
+
+3.
+phase24_candidate_results.csv
+
+4.
+phase24_candidate_results.json
+
+5.
+phase24_pair_summary.csv
+
+6.
+phase24_failure_classification.md
+
+7.
+phase24_visualization_manifest.json
+
+8.
+README.md update
+
+9.
+walkthrough.md new Phase 24 section
+
+10.
+checksums.sha256 update
+
+==================================================
+T. REPORT STRUCTURE
+==================================================
+
+Include:
+
+1. Scope
+2. Governance
+3. Question being tested
+4. Historical inputs
+5. Nominal physical projection
+6. Search margins
+7. Search-grid definition
+8. Candidate-window construction
+9. Matcher execution
+10. Common downstream validation
+11. Control experiments
+12. Pair 01 results
+13. Pair 02 results
+14. Pair 03 results
+15. Pair 04 results
+16. Failure classification
+17. Cross-pair analysis
+18. Sensitivity to search margin
+19. Whether placement uncertainty explains the failure
+20. Whether relative registration is research-feasible
+21. What this does NOT establish
+22. Final research conclusion
+23. Production impact
+24. Phase gate
+25. Reproducibility/checksums
+
+==================================================
+U. FINAL CLASSIFICATION
+==================================================
+
+Use exactly one overall research classification:
+
+A. RELATIVE_REGISTRATION_RECOVERABLE
+At least one mentor pair achieves validated registration under the predeclared image-space uncertainty search.
+
+B. PARTIALLY_RECOVERABLE
+Some pairs show validated or near-validated evidence, but cross-pair reliability is incomplete.
+
+C. NOT_RECOVERED
+No pair achieves validated registration under the tested search framework.
+
+D. SEARCH_INCONCLUSIVE
+Resource, coverage, or other experimental limitations prevent a valid conclusion.
+
+Do not rank the pairs.
+
+==================================================
+V. STATUS PRESERVATION
+==================================================
+
+Regardless of research result, preserve:
+
+REFERENCE_PRODUCT_UNRESOLVED
+REFERENCE_GEODETIC_REALIZATION = UNKNOWN
+REFERENCE_TO_MOON_ME_DE421 = NOT_VERIFIED
+
+Do not automatically unblock Phase 23B's geodetic gate.
+
+Production benchmark status must remain separate from research feasibility.
+
+==================================================
+W. SAFETY CHECKS
+==================================================
+
+Before finishing:
+
+1. Verify all four canonical production files have zero git diff.
+
+2. Verify no source/reference raster was modified.
+
+3. Verify search offsets were generated deterministically.
+
+4. Verify margins and grid spacing are explicitly recorded.
+
+5. Verify no post-hoc candidate selection.
+
+6. Verify no empirical transform fitting.
+
+7. Verify held-out validation is independent.
+
+8. Verify no threshold was lowered.
+
+9. Search generated reports for unsupported wording:
+   - solves the problem
+   - proves the geodetic offset
+   - reference identified
+   - reference product confirmed
+   - geodetically correct
+   - production-ready
+   - final solution
+
+10. Regenerate and verify checksums.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+- number of search candidates evaluated per pair
+- search margins used
+- whether any candidate passed the full quality gate
+- whether any candidate passed independent hold-out validation
+- Pair 01–04 failure classes
+- overall classification A/B/C/D
+- whether relative registration is research-feasible under bounded placement uncertainty
+- whether this changes production
+- whether the geodetic gate remains blocked
+- files generated
+- checksum result
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-24T13:11:25+05:30.
+</ADDITIONAL_METADATA>

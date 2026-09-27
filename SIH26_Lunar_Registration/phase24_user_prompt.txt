@@ -1,0 +1,141 @@
+<USER_REQUEST>
+Start Phase 24 — Geodetic-Uncertainty-Aware Image-Space Registration Feasibility.
+
+This is RESEARCH-ONLY.
+Do NOT modify production code.
+
+==================================================
+A. GOVERNANCE / PRODUCTION FREEZE
+==================================================
+
+Do not modify:
+
+app/app.py
+app/adaptive_adapter.py
+app/registration_core.py
+research/adaptive_matcher/adaptive_engine.py
+
+Do not modify:
+- production matcher selection
+- production thresholds
+- quality gates
+- Locked LoFTR
+- RANSAC thresholds
+- production routing
+- production evidence format
+
+Research code may be added under the existing research hierarchy.
+
+Do NOT:
+- lower the 20% quality gate
+- weaken any production acceptance threshold
+- promote a research result automatically
+- fit an arbitrary global transform and call it geolocation
+- identify the unresolved reference product by appearance
+- claim absolute geodetic correctness
+
+==================================================
+B. CURRENT VERIFIED STATE
+==================================================
+
+Carry forward:
+
+REFERENCE_PRODUCT_UNRESOLVED
+REFERENCE_GEODETIC_REALIZATION = UNKNOWN
+REFERENCE_TO_MOON_ME_DE421 = NOT_VERIFIED
+PHASE_23B_STATUS = BLOCKED_PENDING_GEODETIC_REVIEW
+
+Phase 23B.2 established:
+- delivered reference CRS is interpreted with lambda_0 = 0.0 degrees
+- k_0 = 1.0
+- Polar Stereographic
+- south-polar origin
+- radius = 1,737,400 m
+- standard GDAL/Rasterio/PROJ interpretation agrees with the audited implementation
+
+Phase 23B.3 established:
+- no direct upstream reference-product provenance link was found
+- no local authoritative candidate raster was available for exact content identity
+- delivered reference identity remains unresolved
+- Pair 02/03 identical overlap remains:
+  7,089,556 / 7,089,556 pixels
+  Mean difference = 0.0000
+  RMS difference = 0.0000
+
+Phase 23A.5/23A.6 established substantial source/reference coordinate residuals under the audited physical model.
+
+IMPORTANT:
+Those re
+<truncated 12503 bytes>
+ a valid conclusion.
+
+Do not rank the pairs.
+
+==================================================
+V. STATUS PRESERVATION
+==================================================
+
+Regardless of research result, preserve:
+
+REFERENCE_PRODUCT_UNRESOLVED
+REFERENCE_GEODETIC_REALIZATION = UNKNOWN
+REFERENCE_TO_MOON_ME_DE421 = NOT_VERIFIED
+
+Do not automatically unblock Phase 23B's geodetic gate.
+
+Production benchmark status must remain separate from research feasibility.
+
+==================================================
+W. SAFETY CHECKS
+==================================================
+
+Before finishing:
+
+1. Verify all four canonical production files have zero git diff.
+
+2. Verify no source/reference raster was modified.
+
+3. Verify search offsets were generated deterministically.
+
+4. Verify margins and grid spacing are explicitly recorded.
+
+5. Verify no post-hoc candidate selection.
+
+6. Verify no empirical transform fitting.
+
+7. Verify held-out validation is independent.
+
+8. Verify no threshold was lowered.
+
+9. Search generated reports for unsupported wording:
+   - solves the problem
+   - proves the geodetic offset
+   - reference identified
+   - reference product confirmed
+   - geodetically correct
+   - production-ready
+   - final solution
+
+10. Regenerate and verify checksums.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+- number of search candidates evaluated per pair
+- search margins used
+- whether any candidate passed the full quality gate
+- whether any candidate passed independent hold-out validation
+- Pair 01–04 failure classes
+- overall classification A/B/C/D
+- whether relative registration is research-feasible under bounded placement uncertainty
+- whether this changes production
+- whether the geodetic gate remains blocked
+- files generated
+- checksum result
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-24T13:11:25+05:30.
+</ADDITIONAL_METADATA>

@@ -1,0 +1,4 @@
+Method,Candidate,Initial Inliers,Selected,Final Inliers,Inlier Ratio,Fit RMSE,Mean Check RMSE,Spatial Occupancy,Spatial CV,Runtime
+Variant A — Baseline,5979,5800,5800,5783,0.9971,1.0481,1.0557,1.0,0.6521,52.22
+Variant B — Quality,5979,5800,54,54,1.0,0.0863,1.0666,0.6667,0.8315,52.1
+Variant C — Our Method,5979,5800,54,54,1.0,0.2686,1.0697,1.0,0.0,52.09

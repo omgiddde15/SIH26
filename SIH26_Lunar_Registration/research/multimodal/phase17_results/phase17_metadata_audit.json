@@ -1,0 +1,204 @@
+{
+  "phase": 17,
+  "audit_timestamp": "2026-09-23T05:03:03Z",
+  "source_image": {
+    "exists": true,
+    "file_path": "C:\\Users\\Dell\\Downloads\\souse.jpeg",
+    "file_size_bytes": 77259,
+    "pil_format": "JPEG",
+    "pil_mode": "RGB",
+    "dimensions_wh": [
+      398,
+      420
+    ],
+    "info_keys": [
+      "jfif",
+      "jfif_version",
+      "jfif_unit",
+      "jfif_density",
+      "icc_profile"
+    ],
+    "jfif_version": [
+      1,
+      1
+    ],
+    "jfif_density": [
+      1,
+      1
+    ],
+    "has_exif": false,
+    "exif_tags": {},
+    "jpeg_markers": [
+      "SOI (0xffd8)",
+      "0xffe0 (len=16, peek='JFIF\\x00\\x01\\x01\\x00\\x00\\x01\\x00\\x01\\x00\\x00')",
+      "0xffe2 (len=472, peek='ICC_PROFILE\\x00\\x01\\x01\\x00\\x00')",
+      "0xffdb (len=67, peek='\\x00\\x03\\x02\\x02\\x02\\x02\\x02\\x03\\x02\\x02\\x02\\x03\\x03\\x03\\x03\\x04')",
+      "0xffdb (len=67, peek='\\x01\\x03\\x03\\x03\\x04\\x03\\x04\\x08\\x04\\x04\\x08\\x10\\x0b\\t\\x0b\\x10')",
+      "0xffc0 (len=17, peek='\\x08\\x01\u00a4\\x01\\x8e\\x03\\x01\"\\x00\\x02\\x11\\x01\\x03\\x11\\x01')",
+      "0xffc4 (len=29, peek='\\x00\\x00\\x02\\x02\\x03\\x01\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "0xffc4 (len=74, peek='\\x10\\x00\\x02\\x01\\x03\\x04\\x01\\x03\\x02\\x04\\x04\\x04\\x03\\x06\\x04\\x01')",
+      "0xffc4 (len=22, peek='\\x01\\x01\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "0xffc4 (len=23, peek='\\x11\\x01\\x01\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "SOS (0xffda)"
+    ]
+  },
+  "reference_image": {
+    "exists": true,
+    "file_path": "C:\\Users\\Dell\\Downloads\\ref.jpeg",
+    "file_size_bytes": 80818,
+    "pil_format": "JPEG",
+    "pil_mode": "RGB",
+    "dimensions_wh": [
+      394,
+      420
+    ],
+    "info_keys": [
+      "jfif",
+      "jfif_version",
+      "jfif_unit",
+      "jfif_density",
+      "icc_profile"
+    ],
+    "jfif_version": [
+      1,
+      1
+    ],
+    "jfif_density": [
+      1,
+      1
+    ],
+    "has_exif": false,
+    "exif_tags": {},
+    "jpeg_markers": [
+      "SOI (0xffd8)",
+      "0xffe0 (len=16, peek='JFIF\\x00\\x01\\x01\\x00\\x00\\x01\\x00\\x01\\x00\\x00')",
+      "0xffe2 (len=472, peek='ICC_PROFILE\\x00\\x01\\x01\\x00\\x00')",
+      "0xffdb (len=67, peek='\\x00\\x03\\x02\\x02\\x02\\x02\\x02\\x03\\x02\\x02\\x02\\x03\\x03\\x03\\x03\\x04')",
+      "0xffdb (len=67, peek='\\x01\\x03\\x03\\x03\\x04\\x03\\x04\\x08\\x04\\x04\\x08\\x10\\x0b\\t\\x0b\\x10')",
+      "0xffc0 (len=17, peek='\\x08\\x01\u00a4\\x01\\x8a\\x03\\x01\"\\x00\\x02\\x11\\x01\\x03\\x11\\x01')",
+      "0xffc4 (len=29, peek='\\x00\\x00\\x02\\x03\\x00\\x03\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "0xffc4 (len=69, peek='\\x10\\x00\\x02\\x01\\x03\\x03\\x02\\x05\\x03\\x01\\x06\\x03\\x06\\x04\\x06\\x02')",
+      "0xffc4 (len=22, peek='\\x01\\x01\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "0xffc4 (len=26, peek='\\x11\\x01\\x01\\x01\\x01\\x01\\x01\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')",
+      "SOS (0xffda)"
+    ]
+  },
+  "repository_audit": {
+    "repo_root": "C:\\Users\\Dell\\Videos\\SIH26_Lunar_Registration",
+    "pds4_labels_found": [],
+    "geometry_tables_found": [
+      "phase12_local_footprint_bundle.zip",
+      "phase13_angle_footprint_bundle.zip",
+      "research\\multimodal\\phase12_local_footprint_diagnostic.py",
+      "research\\multimodal\\phase13_angle_footprint_diagnostic.py",
+      "research\\multimodal\\phase12_results\\phase12_fixed_anchor_footprint_results.csv",
+      "research\\multimodal\\phase13_results\\phase13_angle_footprint_report.md",
+      "research\\multimodal\\phase13_results\\phase13_angle_footprint_results.csv",
+      "data\\metadata\\image_footprints.csv",
+      "data\\metadata\\pair01_affine_raster_calibration.json",
+      "data\\metadata\\pair05_affine_raster_calibration.json"
+    ],
+    "dem_rasters_found": [],
+    "spice_kernels_found": [],
+    "benchmark_provenance_documentation": [],
+    "metadata_directory_files": [
+      "image_footprints.csv",
+      "pair01_affine_raster_calibration.json",
+      "pair05_actual_geo_matches.csv",
+      "pair05_affine_raster_calibration.json"
+    ]
+  },
+  "itemized_audit": [
+    {
+      "parameter": "sensor_instrument_identity",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Source and Reference contain JFIF 1.1 standard markers without camera make/model or instrument ID tags. While colloquially labelled 'IIRS' and 'OHRC' in research notes, this represents unverified human convention rather than verified embedded metadata."
+    },
+    {
+      "parameter": "acquisition_time",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Neither JPEG contains EXIF DateTimeOriginal, GPS timestamps, or mission epoch records."
+    },
+    {
+      "parameter": "image_dimensions",
+      "source_status": "FOUND",
+      "reference_status": "FOUND",
+      "evidence": "Source width=398, height=420; Reference width=394, height=420. Verified via SOF0 / PIL."
+    },
+    {
+      "parameter": "pixel_pitch_detector_sampling",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "No physical detector pixel pitch (e.g. micrometers/detector pixel) or spatial sampling pitch is embedded in either file or accompanying label."
+    },
+    {
+      "parameter": "camera_focal_length",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Optical focal length (f) is absent from EXIF headers and file comments."
+    },
+    {
+      "parameter": "spacecraft_altitude_range",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Orbital altitude (H) and target distance are absent from file headers and benchmark metadata."
+    },
+    {
+      "parameter": "spacecraft_position",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "No spacecraft ephemeris, orbit state vectors, or sub-spacecraft lat/lon coordinates are provided for the benchmark images."
+    },
+    {
+      "parameter": "observation_geometry",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Solar incidence angle (i), emission angle (e), phase angle (g), solar azimuth, and sub-solar coordinates are absent."
+    },
+    {
+      "parameter": "known_gsd_spatial_resolution",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "No ground sampling distance (meters/pixel) or map projection scale metadata is embedded in either JPEG image or associated benchmark sidecar."
+    },
+    {
+      "parameter": "pds4_label_association",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "No linked PDS4 XML product label (*.xml), Logical Identifier (LID), or observational product label exists for souse.jpeg or ref.jpeg in Downloads or repository."
+    },
+    {
+      "parameter": "spice_orbit_attitude_references",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "Zero SPICE kernels (*.bsp, *.bc, *.tls, *.tpc) or frame references are associated with these benchmark crop images."
+    },
+    {
+      "parameter": "known_terrain_elevation_information",
+      "source_status": "NOT FOUND",
+      "reference_status": "NOT FOUND",
+      "evidence": "No digital elevation model (DEM/DTM), SLDEM2015, or LOLA topographic track covers the localized benchmark pair."
+    },
+    {
+      "parameter": "repository_documented_provenance",
+      "source_status": "UNCERTAIN",
+      "reference_status": "UNCERTAIN",
+      "evidence": "Benchmark images were ingested as local test crops from C:\\Users\\Dell\\Downloads. While data/metadata/image_footprints.csv exists, it catalogs separate full Chandrayaan-2 OHRC strips (ch2_ohr_ncp_*.png) and does not document the origin, cropping bounds, or processing level of souse.jpeg or ref.jpeg."
+    }
+  ],
+  "feasibility_determination": {
+    "physical_scale_normalization_feasible": false,
+    "verdict": "PHYSICAL_SCALE_NORMALIZATION_NOT_REPRODUCIBLE",
+    "rationale": "Physical scale normalization requires computing an exact image-to-ground scale relationship (e.g., GSD = (H * p) / (f * cos(e)) or map pixel resolution in m/px). Because all camera optical parameters (focal length f, pixel pitch p), spacecraft orbital parameters (altitude H, attitude quaternions), observation geometry (emission angle e), and archival PDS4 labels are completely NOT FOUND in the benchmark pair, physical scale normalization cannot be computed without fabricating physical quantities.",
+    "missing_required_inputs": [
+      "Camera focal length (f) for both instruments",
+      "Detector pixel pitch (p) or sensor dimensions",
+      "Spacecraft orbital altitude / range to target (H)",
+      "Observation geometry (emission angle, incidence angle)",
+      "PDS4 product labels / mission metadata specifying calibrated GSD",
+      "SPICE kernels (spacecraft ephemeris, camera pointing) or DEM for ray-tracing"
+    ]
+  }
+}

@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import traceback
+import re
 from typing import Any, Dict, Optional
 
 import cv2
@@ -84,6 +85,56 @@ def _create_match_canvas(source_img: np.ndarray, reference_img: np.ndarray, pts0
     return canvas
 
 
+def _normalise_tiled_loftr_telemetry(
+    matcher_result: Optional[Dict[str, Any]],
+    adaptive_result: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Expose lightweight tiled-LoFTR telemetry without matcher internals."""
+    if not isinstance(matcher_result, dict) or not matcher_result.get("tiled_loftr"):
+        if isinstance(adaptive_result, dict):
+            prim = adaptive_result.get("primary_result")
+            fb = adaptive_result.get("fallback_result")
+            if isinstance(prim, dict) and prim.get("tiled_loftr"):
+                matcher_result = prim
+            elif isinstance(fb, dict) and fb.get("tiled_loftr"):
+                matcher_result = fb
+            else:
+                return {}
+        else:
+            return {}
+
+    estimate = matcher_result.get("estimated_working_size", {})
+    tile_size = matcher_result.get("tile_size", {}).get("source", ())
+    tile_records = matcher_result.get("tile_telemetry", [])
+    rss_before = [x.get("process_rss_before_bytes") for x in tile_records if isinstance(x, dict) and x.get("process_rss_before_bytes") is not None]
+    rss_after = [x.get("process_rss_after_bytes") for x in tile_records if isinstance(x, dict) and x.get("process_rss_after_bytes") is not None]
+    cap_match = re.search(r"([0-9]+(?:\.[0-9]+)?) GB conservative process cap", str(matcher_result.get("memory_reason", "")))
+
+    return {
+        "matcher": "LoFTR",
+        "execution_mode": "Memory-Safe Tiled LoFTR",
+        "tiled_loftr": True,
+        "full_image_memory_estimate_gb": matcher_result.get("estimated_workspace_gb", estimate.get("gigabytes")),
+        "memory_cap_gb": matcher_result.get("memory_cap_gb") if matcher_result.get("memory_cap_gb") is not None else (float(cap_match.group(1)) if cap_match else None),
+        "coarse_matrix_gb": matcher_result.get("coarse_matrix_gb"),
+        "runtime_oom_intercepted": matcher_result.get("runtime_oom_intercepted", False),
+        "tile_width": int(tile_size[1]) if len(tile_size) >= 2 else None,
+        "tile_height": int(tile_size[0]) if len(tile_size) >= 2 else None,
+        "tile_overlap": matcher_result.get("tile_overlap"),
+        "tiles_planned": matcher_result.get("tiles_planned", matcher_result.get("tile_count")),
+        "tiles_processed": matcher_result.get("tiles_processed", matcher_result.get("successful_tiles", 0) + matcher_result.get("failed_tiles", 0)),
+        "tiles_successful": matcher_result.get("tiles_successful", matcher_result.get("successful_tiles")),
+        "tiles_skipped": matcher_result.get("tiles_skipped", 0),
+        "skip_reason_counts": matcher_result.get("skip_reason_counts", {}),
+        "tiles_failed": matcher_result.get("tiles_failed", matcher_result.get("failed_tiles")),
+        "runtime_seconds": matcher_result.get("runtime_seconds"),
+        "tile_correspondence_count": [int(x.get("matches", 0)) for x in tile_records if isinstance(x, dict)],
+        "merged_correspondence_count": matcher_result.get("candidate_matches", matcher_result.get("n_candidates")),
+        "rss_before": rss_before[0] if rss_before else None,
+        "rss_after": rss_after[-1] if rss_after else None,
+        "secondary_fallback_used": bool((adaptive_result or {}).get("fallback_used", False)),
+    }
+
 def safe_run_adaptive_registration(
     source_image: np.ndarray,
     reference_image: np.ndarray,
@@ -136,13 +187,28 @@ def safe_run_adaptive_registration(
         )
     except Exception as e:
         elapsed = float(time.perf_counter() - start_time)
+        err_msg = str(e)
+        err_msg_lower = err_msg.lower()
+        if (
+            "out of memory" in err_msg_lower
+            or "not enough memory" in err_msg_lower
+            or "can't allocate" in err_msg_lower
+            or "allocate" in err_msg_lower
+        ):
+            error_type = "LoFTRMemoryResourceLimit"
+            user_error_message = "LoFTR CPU workspace limit exceeded; tiled fallback could not complete."
+        else:
+            error_type = "AdaptiveRegistrationRuntimeError"
+            user_error_message = f"Adaptive registration sequence halted: {err_msg}"
+
         return {
             "success": False,
             "status": "failed",
-            "error_type": "AdaptiveRegistrationRuntimeError",
-            "error_message": f"Adaptive registration sequence halted: {str(e)}",
+            "error_type": error_type,
+            "error_message": user_error_message,
+            "failure_reason": user_error_message,
             "details": traceback.format_exc(),
-            "stage": "adaptive_execution",
+            "stage": "resource_guard" if error_type == "LoFTRMemoryResourceLimit" else "adaptive_execution",
             "runtime": elapsed,
             "primary_matcher": None,
             "final_matcher_used": None,
@@ -193,13 +259,30 @@ def safe_run_adaptive_registration(
         if q_reasons:
             details_lines.append(f"Quality Gate: {'; '.join(q_reasons)}")
 
+        failed_matcher_result = adaptive_res.get("fallback_result") if fallback_used else adaptive_res.get("primary_result")
+
+        is_mem_limit = (
+            adaptive_res.get("error_type") == "LoFTRMemoryResourceLimit"
+            or "LoFTRMemoryResourceLimit" in str(adaptive_res.get("failure_reason", ""))
+            or "loftr cpu workspace limit exceeded" in str(fail_reason).lower()
+        )
+        if is_mem_limit:
+            err_type = "LoFTRMemoryResourceLimit"
+            err_stage = "resource_guard"
+        elif q_reasons:
+            err_type = "AdaptiveQualityGateFailed"
+            err_stage = "quality_gate"
+        else:
+            err_type = "AdaptiveRegistrationFailed"
+            err_stage = "quality_gate" if (fallback_used or fallback_blocked) else "matcher_execution"
+
         return {
             "success": False,
             "status": "failed",
-            "error_type": "AdaptiveQualityGateFailed" if q_reasons else "AdaptiveRegistrationFailed",
+            "error_type": err_type,
             "error_message": fail_reason,
             "details": "\n".join(details_lines),
-            "stage": "quality_gate" if (fallback_used or fallback_blocked) else "matcher_execution",
+            "stage": err_stage,
             "runtime": float(adaptive_res.get("runtime", elapsed)),
             "primary_matcher": adaptive_res.get("primary_choice"),
             "final_matcher_used": adaptive_res.get("final_matcher_used"),
@@ -211,6 +294,10 @@ def safe_run_adaptive_registration(
             "difficulty_profile": adaptive_res.get("difficulty_profile"),
             "routing_decision": adaptive_res.get("decision"),
             "quality_gate": q_gate,
+            "memory_check": adaptive_res.get("memory_check"),
+            "estimated_working_size": adaptive_res.get("estimated_working_size"),
+            "memory_safe": adaptive_res.get("memory_safe"),
+            "memory_reason": adaptive_res.get("memory_reason"),
             "fit_rmse": None,
             "check_rmse": None,
             "final_homography": None,
@@ -227,6 +314,7 @@ def safe_run_adaptive_registration(
             "match_source_shape": (compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[2], compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[1]) if adaptive_res.get("primary_choice") == "LoFTR" else (source_image.shape[0], source_image.shape[1]),
             "match_ref_shape": (compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[2], compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[1]) if adaptive_res.get("primary_choice") == "LoFTR" else (reference_image.shape[0], reference_image.shape[1]),
             "resizing_applied": bool(compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[0] < 1.0 or compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[0] < 1.0) if adaptive_res.get("primary_choice") == "LoFTR" else False,
+            **_normalise_tiled_loftr_telemetry(failed_matcher_result, adaptive_res),
         }
 
     # Step 4: Normalize Successful Registration Output
@@ -304,6 +392,7 @@ def safe_run_adaptive_registration(
         max_check_error = None
 
     held_out_valid = bool(downstream.get("held_out_valid", False))
+    tiled_telemetry = _normalise_tiled_loftr_telemetry(active_result, adaptive_res)
 
     return {
         "success": True,
@@ -318,6 +407,10 @@ def safe_run_adaptive_registration(
         "difficulty_profile": adaptive_res.get("difficulty_profile"),
         "routing_decision": adaptive_res.get("decision"),
         "quality_gate": adaptive_res.get("quality_gate"),
+        "memory_check": adaptive_res.get("memory_check"),
+        "estimated_working_size": adaptive_res.get("estimated_working_size"),
+        "memory_safe": adaptive_res.get("memory_safe"),
+        "memory_reason": adaptive_res.get("memory_reason"),
         "fit_rmse": float(fit_rmse),
         "check_rmse": check_rmse,
         "median_check_rmse": median_check_rmse,
@@ -356,4 +449,5 @@ def safe_run_adaptive_registration(
         "match_source_shape": (s_hm, s_wm),
         "match_ref_shape": (r_hm, r_wm),
         "resizing_applied": bool(scale_s < 1.0 or scale_r < 1.0),
+        **tiled_telemetry,
     }

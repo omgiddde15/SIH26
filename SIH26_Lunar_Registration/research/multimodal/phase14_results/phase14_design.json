@@ -1,0 +1,22 @@
+{
+  "phase": 14,
+  "research_question": "Is the remaining angle failure primarily rotation sensitivity or cross-sensor compatibility?",
+  "anchor_source": "research\\multimodal\\phase11_results\\phase11_loftr_anchor_pairs.json",
+  "anchor_ground_truth": false,
+  "anchor_count": 12,
+  "angles_deg": [
+    0.0,
+    10.0,
+    20.0,
+    30.0,
+    -20.0
+  ],
+  "patch_size": 7,
+  "radius": 4.0,
+  "methods": [
+    "Phase 7 SSC",
+    "Phase-9-derived Rot-Norm SSC"
+  ],
+  "production_modified": false,
+  "automatic_winner_selection": false
+}

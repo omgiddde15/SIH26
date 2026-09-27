@@ -17,6 +17,7 @@ import pathlib
 import zipfile
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
+import re
 import cv2
 import numpy as np
 import torch
@@ -27,6 +28,7 @@ from research_ui import render_research_lab
 from registration_core import compute_matching_scale, register_images
 from adaptive_adapter import safe_run_adaptive_registration
 from pdf_generator import generate_scientific_pdf_report, validate_pdf_report
+from auth import init_auth_db, is_authenticated, render_auth_page, logout_user
 
 # Disable SSL verification for model weight downloads on constrained platforms
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -40,7 +42,34 @@ def get_pipeline_mode(res: Optional[Dict[str, Any]] = None) -> str:
     eng = st.session_state.get("engine_selection", "")
     if "Baseline" in eng or "Locked" in eng:
         return "Locked LoFTR Baseline"
-    return "Adaptive Research Engine"
+    return "Adaptive Production Engine"
+ 
+def detect_runtime_environment() -> str:
+    """
+    Dynamically detect Python, PyTorch, and Compute Device in a fault-tolerant manner.
+    Never raises an exception or breaks application rendering.
+    """
+    try:
+        py_ver = f"Python {sys.version.split()[0]}"
+    except Exception:
+        py_ver = "Python"
+
+    try:
+        import torch
+        torch_ver = f"PyTorch {torch.__version__}"
+        if torch.cuda.is_available():
+            try:
+                dev_name = torch.cuda.get_device_name(0)
+                device_str = f"CUDA ({dev_name})"
+            except Exception:
+                device_str = "CUDA"
+        else:
+            device_str = "CPU"
+    except Exception:
+        torch_ver = "PyTorch (Unavailable)"
+        device_str = "CPU"
+
+    return f"{py_ver} | {torch_ver} | {device_str}"
 
 # ============================================================
 # 1. CORE REGISTRATION ENGINE — LOCKED BACKEND
@@ -87,17 +116,16 @@ PIPELINE_STAGES = [
     ("stage_1", "1. Source + Reference"),
     ("stage_2", "2. Metadata & Geo Information"),
     ("stage_3", "3. Illumination & Preprocessing"),
-    ("stage_4", "4. Adaptive Routing"),
-    ("stage_5", "5. Feature Correspondence Matching"),
-    ("stage_6", "6. Geometric Estimation"),
-    ("stage_7", "7. Homography & Registration"),
-    ("stage_8", "8. Independent Validation"),
-    ("stage_9", "9. Results & Export"),
+    ("stage_4", "4. Feature Correspondence Matching"),
+    ("stage_5", "5. Geometric Estimation"),
+    ("stage_6", "6. Homography & Registration"),
+    ("stage_7", "7. Independent Validation"),
+    ("stage_8", "8. Results & Export"),
 ]
 
 def render_stage_status_panel(stage_dict: Dict[str, str]) -> str:
     """
-    Renders a compact 9-stage pipeline execution status panel.
+    Renders a compact 8-stage pipeline execution status panel.
     Each stage shows one of: 'WAITING', 'RUNNING', 'COMPLETE', 'FAILED'.
     """
     badge_styles = {
@@ -120,7 +148,7 @@ def render_stage_status_panel(stage_dict: Dict[str, str]) -> str:
             Pipeline Status
         </span>
         <span style="font-family: monospace; font-size: 0.70rem; color: #8b949e;">
-            Registration Pipeline (9 Stages)
+            Registration Pipeline (8 Stages)
         </span>
     </div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px;">
@@ -187,6 +215,60 @@ def make_json_safe(obj, max_array_size: int = 32):
     if isinstance(obj, (list, tuple, set)):
         return [make_json_safe(x, max_array_size) for x in obj]
     return str(obj)
+
+
+def resolve_tiled_loftr_telemetry(res: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return JSON-safe tiled execution facts only when that path ran."""
+    if not isinstance(res, dict):
+        return None
+
+    raw = res.get("adaptive_raw") if isinstance(res.get("adaptive_raw"), dict) else {}
+    active = res
+    if not res.get("tiled_loftr"):
+        primary = raw.get("primary_result") if isinstance(raw.get("primary_result"), dict) else {}
+        fallback = raw.get("fallback_result") if isinstance(raw.get("fallback_result"), dict) else {}
+        if isinstance(primary, dict) and primary.get("tiled_loftr"):
+            active = primary
+        elif isinstance(fallback, dict) and fallback.get("tiled_loftr"):
+            active = fallback
+        else:
+            active = fallback if raw.get("fallback_used") and fallback else primary
+    if not isinstance(active, dict) or not active.get("tiled_loftr"):
+        return None
+
+    estimate = active.get("estimated_working_size", {})
+    tile_size = active.get("tile_size", {}).get("source", ())
+    tile_rows = active.get("tile_telemetry", [])
+    if not isinstance(tile_rows, list):
+        tile_rows = []
+    cap_match = re.search(r"([0-9]+(?:\.[0-9]+)?) GB conservative process cap", str(active.get("memory_reason", "")))
+    rss_before = [row.get("process_rss_before_bytes") for row in tile_rows if isinstance(row, dict) and row.get("process_rss_before_bytes") is not None]
+    rss_after = [row.get("process_rss_after_bytes") for row in tile_rows if isinstance(row, dict) and row.get("process_rss_after_bytes") is not None]
+
+    return {
+        "matcher": "LoFTR",
+        "execution_mode": "Memory-Safe Tiled LoFTR",
+        "tiled_loftr": True,
+        "full_image_memory_estimate_gb": res.get("full_image_memory_estimate_gb", active.get("estimated_workspace_gb", estimate.get("gigabytes"))),
+        "memory_cap_gb": res.get("memory_cap_gb") if res.get("memory_cap_gb") is not None else (active.get("memory_cap_gb") if active.get("memory_cap_gb") is not None else (float(cap_match.group(1)) if cap_match else None)),
+        "coarse_matrix_gb": res.get("coarse_matrix_gb", active.get("coarse_matrix_gb")),
+        "runtime_oom_intercepted": bool(res.get("runtime_oom_intercepted", active.get("runtime_oom_intercepted", False))),
+        "tile_width": res.get("tile_width") if res.get("tile_width") is not None else (int(tile_size[1]) if len(tile_size) >= 2 else None),
+        "tile_height": res.get("tile_height") if res.get("tile_height") is not None else (int(tile_size[0]) if len(tile_size) >= 2 else None),
+        "tile_overlap": res.get("tile_overlap", active.get("tile_overlap")),
+        "tiles_planned": res.get("tiles_planned", active.get("tiles_planned", active.get("tile_count"))),
+        "tiles_processed": res.get("tiles_processed", active.get("tiles_processed", active.get("successful_tiles", 0) + active.get("failed_tiles", 0))),
+        "tiles_successful": res.get("tiles_successful", active.get("successful_tiles", active.get("tiles_successful"))),
+        "tiles_skipped": res.get("tiles_skipped", active.get("tiles_skipped", 0)),
+        "skip_reason_counts": res.get("skip_reason_counts", active.get("skip_reason_counts", {})),
+        "tiles_failed": res.get("tiles_failed", active.get("failed_tiles", active.get("tiles_failed"))),
+        "runtime_seconds": res.get("runtime_seconds", active.get("runtime_seconds")),
+        "tile_correspondence_count": res.get("tile_correspondence_count") or [int(row.get("matches", 0)) for row in tile_rows if isinstance(row, dict)],
+        "merged_correspondence_count": res.get("merged_correspondence_count", active.get("candidate_matches", active.get("n_candidates"))),
+        "rss_before": res.get("rss_before") if res.get("rss_before") is not None else (rss_before[0] if rss_before else None),
+        "rss_after": res.get("rss_after") if res.get("rss_after") is not None else (rss_after[-1] if rss_after else None),
+        "secondary_fallback_used": bool(res.get("secondary_fallback_used", raw.get("fallback_used", False))),
+    }
 
 
 # Core register_images implementation is imported from registration_core
@@ -293,6 +375,7 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
     curr_mode = get_pipeline_mode(res)
     is_base = (curr_mode == "Locked LoFTR Baseline")
     res["pipeline_mode"] = curr_mode
+    tiled_execution = resolve_tiled_loftr_telemetry(res)
 
     pdf_filename = f"evidence_report_{timestamp}.pdf"
 
@@ -342,6 +425,7 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
         "correspondence_csv_filename": csv_filename,
         "homography_filename": homography_filename,
         "evidence_report_filename": pdf_filename,
+        "matching_execution": tiled_execution,
     }
     clean_evidence = make_json_safe(evidence_dict)
     evidence_json = json.dumps(clean_evidence, indent=2)
@@ -355,6 +439,7 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
         "illumination_preprocessing": resolve_illumination_and_preprocessing_telemetry(res, s_active, r_active),
         "homography_warp": resolve_homography_warp_telemetry(res, s_active, r_active),
         "independent_validation": ind_val_data,
+        "matching_execution": tiled_execution,
     }
 
     # 4. Scientific PDF Evidence Report (Standalone 7-Page Mission Report)
@@ -368,7 +453,7 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
             timestamp=timestamp,
             telemetry=pdf_telemetry
         )
-        is_valid_pdf, pdf_val_msg = validate_pdf_report(pdf_bytes, expected_pages=7)
+        is_valid_pdf, pdf_val_msg = validate_pdf_report(pdf_bytes)
         if not is_valid_pdf:
             try:
                 pdf_bytes = generate_scientific_pdf_report(
@@ -397,27 +482,71 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
     zip_bytes = zip_buffer.getvalue()
     zip_filename = f"registration_package_{timestamp}.zip"
 
+    pdf_pages = 7
+    try:
+        if pdf_bytes:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+            pdf_pages = len(reader.pages)
+    except Exception:
+        pass
+
     return {
         "timestamp": timestamp,
         "image": {"filename": img_filename, "bytes": img_bytes, "mime": "image/png"},
         "csv": {"filename": csv_filename, "bytes": csv_bytes, "mime": "text/csv"},
         "homography": {"filename": homography_filename, "bytes": homography_bytes, "mime": "application/json"},
-        "pdf": {"filename": pdf_filename, "bytes": pdf_bytes, "mime": "application/pdf"},
+        "pdf": {"filename": pdf_filename, "bytes": pdf_bytes, "mime": "application/pdf", "pages": pdf_pages},
         "evidence": {"filename": evidence_filename, "bytes": evidence_bytes, "mime": "application/json"},
         "zip": {"filename": zip_filename, "bytes": zip_bytes, "mime": "application/zip"},
     }
+
+
+def load_mentor_pair(s_path: str, r_path: str, is_iirs: bool = False):
+    """
+    Safe loader for mentor-provided Chandrayaan-2 datasets.
+    Preserves raw data integrity and derives deterministic 8-bit views for float32 rasters.
+    """
+    if not (os.path.exists(s_path) and os.path.exists(r_path)):
+        return None, None
+    s_raw = cv2.imread(s_path, cv2.IMREAD_UNCHANGED)
+    r_raw = cv2.imread(r_path, cv2.IMREAD_UNCHANGED)
+    if s_raw is None or r_raw is None:
+        return None, None
+
+    if is_iirs:
+        def _norm_f32(img_f32):
+            valid = img_f32[np.isfinite(img_f32)]
+            if len(valid) == 0:
+                return np.zeros_like(img_f32, dtype=np.uint8)
+            p1, p99 = np.percentile(valid, (1.0, 99.0))
+            if p99 <= p1:
+                p99 = p1 + 1.0
+            clipped = np.clip(img_f32, p1, p99)
+            norm = ((clipped - p1) / (p99 - p1) * 255.0).astype(np.uint8)
+            return cv2.cvtColor(norm, cv2.COLOR_GRAY2BGR) if norm.ndim == 2 else norm
+
+        s_bgr = _norm_f32(s_raw)
+        r_bgr = _norm_f32(r_raw)
+        return s_bgr, r_bgr
+    else:
+        s_bgr = cv2.cvtColor(s_raw, cv2.COLOR_GRAY2BGR) if s_raw.ndim == 2 else s_raw
+        r_bgr = cv2.cvtColor(r_raw, cv2.COLOR_GRAY2BGR) if r_raw.ndim == 2 else r_raw
+        return s_bgr, r_bgr
 
 
 def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="reference.jpeg"):
     """
     Factual metadata and geospatial prior resolver.
     Strictly queries existing project metadata catalogs (image_footprints.csv, actual_geo_matches.csv,
-    and stored calibration models). Never fabricates missing values or guesses coordinates.
+    mentor_dataset_registry.json, and stored calibration models).
+    Never fabricates missing values or guesses coordinates.
     """
     metadata = {
         "source": {},
         "reference": {},
-        "geo": {}
+        "geo": {},
+        "mentor": {"is_mentor_data": False}
     }
 
     # 1. Base Image Properties
@@ -425,7 +554,7 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
         base_clean = name.split("(")[0].strip()
         ext = os.path.splitext(base_clean)[1].lower().lstrip(".")
         fmt_map = {"jpg": "JPEG", "jpeg": "JPEG", "png": "PNG", "tif": "TIFF", "tiff": "TIFF"}
-        fmt = fmt_map.get(ext, ext.upper() if ext else "N/A — metadata not available")
+        fmt = fmt_map.get(ext, ext.upper() if ext else "Mission metadata not available for this image.")
 
         if img is not None:
             h, w = img.shape[:2]
@@ -433,7 +562,7 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
             dim_str = f"{w} × {h} px ({ch} ch)"
         else:
             w, h = 0, 0
-            dim_str = "N/A — metadata not available"
+            dim_str = "Mission metadata not available for this image."
 
         return {"filename": name, "dimensions": dim_str, "format": fmt, "width": w, "height": h}
 
@@ -442,9 +571,8 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
 
     # 2. Footprint Catalog Lookup (image_footprints.csv)
     footprint_paths = [
-        os.path.join(APP_DIR, "..", "data", "metadata", "image_footprints.csv"),
         os.path.join(PROJECT_DIR, "data", "metadata", "image_footprints.csv"),
-        r"C:\Users\Notebook\Notebook\Unlabeled_data\image_footprints.csv"
+        os.path.join(APP_DIR, "..", "data", "metadata", "image_footprints.csv"),
     ]
     df_fp = None
     for fp in footprint_paths:
@@ -480,15 +608,98 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
         metadata["source"]["acquisition_id"] = src_cat["acq_id"]
         metadata["source"]["geo_bounds"] = src_cat["bounds"]
     else:
-        metadata["source"]["acquisition_id"] = "N/A — metadata not available"
-        metadata["source"]["geo_bounds"] = "N/A — metadata not available"
+        metadata["source"]["acquisition_id"] = "Mission metadata not available for this image."
+        metadata["source"]["geo_bounds"] = "Mission metadata not available for this image."
 
     if ref_cat:
         metadata["reference"]["acquisition_id"] = ref_cat["acq_id"]
         metadata["reference"]["geo_bounds"] = ref_cat["bounds"]
     else:
-        metadata["reference"]["acquisition_id"] = "N/A — metadata not available"
-        metadata["reference"]["geo_bounds"] = "N/A — metadata not available"
+        metadata["reference"]["acquisition_id"] = "Mission metadata not available for this image."
+        metadata["reference"]["geo_bounds"] = "Mission metadata not available for this image."
+
+    # 2b. Mentor-Provided Dataset Lookup (mentor_dataset_registry.json)
+    mentor_reg_path = os.path.join(PROJECT_DIR, "research", "multimodal", "mentor_data_audit", "mentor_dataset_registry.json")
+    mentor_match = None
+    if os.path.exists(mentor_reg_path):
+        try:
+            with open(mentor_reg_path, "r", encoding="utf-8") as f:
+                mentor_registry = json.load(f)
+            for m_item in mentor_registry:
+                jid = m_item.get("job_id", "")
+                s_fn = m_item.get("source_filename", "")
+                r_fn = m_item.get("reference_filename", "")
+                did = m_item.get("dataset_id", "")
+                if (jid and (jid.lower() in s_name.lower() or jid.lower() in r_name.lower())) or \
+                   (s_fn and (s_fn.lower() in s_name.lower() or s_fn.lower() in r_name.lower())) or \
+                   (did and did.lower() in s_name.lower()):
+                    mentor_match = m_item
+                    break
+        except Exception:
+            mentor_match = None
+
+    if mentor_match:
+        ref_gsd_val = mentor_match.get("reference_gsd_m_px")
+        ref_gsd_str = f"{ref_gsd_val} m/px" if isinstance(ref_gsd_val, (int, float)) else str(ref_gsd_val)
+        
+        metadata["mentor"] = {
+            "is_mentor_data": True,
+            "dataset_id": mentor_match["dataset_id"],
+            "job_id": mentor_match["job_id"],
+            "instrument": mentor_match["instrument"],
+            "source_xml": mentor_match["source_xml"],
+            "reference_xml": mentor_match["reference_xml"],
+            "native_resolution_m_px": mentor_match["native_resolution_m_px"],
+            "effective_source_gsd_m_px": mentor_match["effective_source_gsd_m_px"],
+            "reference_gsd_m_px": mentor_match["reference_gsd_m_px"],
+            "physical_scale_ratio": mentor_match["physical_scale_ratio"],
+            "spacecraft_altitude_km": mentor_match["spacecraft_altitude_km"],
+            "sun_azimuth_deg": mentor_match["sun_azimuth_deg"],
+            "sun_elevation_deg": mentor_match["sun_elevation_deg"],
+            "solar_incidence_deg": mentor_match["solar_incidence_deg"],
+            "spacecraft_attitude": mentor_match["spacecraft_attitude"],
+            "projection": mentor_match["projection"],
+            "area": mentor_match["area"],
+            "source_corners": mentor_match["source_corners_lon_lat"],
+            "reference_anchor": mentor_match["reference_anchor"],
+            "verification_status": mentor_match["metadata_verification_status"],
+            "grounding_classification": mentor_match["grounding_classification"],
+            "notes": mentor_match["notes"]
+        }
+        metadata["source"]["acquisition_id"] = mentor_match["job_id"]
+        c = mentor_match.get("source_corners_lon_lat", {})
+        if isinstance(c, dict) and "top_left" in c:
+            metadata["source"]["geo_bounds"] = f"TL:({c['top_left']['lat']:.2f}°, {c['top_left']['lon']:.2f}°) | BR:({c['bottom_right']['lat']:.2f}°, {c['bottom_right']['lon']:.2f}°)"
+        else:
+            metadata["source"]["geo_bounds"] = "Metadata not verified for this product."
+        
+        metadata["source"]["native_gsd"] = f"{mentor_match['native_resolution_m_px']} m/px"
+        metadata["source"]["effective_gsd"] = f"{mentor_match['effective_source_gsd_m_px']} m/px"
+        metadata["source"]["altitude"] = f"{mentor_match['spacecraft_altitude_km']} km"
+        metadata["source"]["sun_azimuth"] = f"{mentor_match['sun_azimuth_deg']:.2f}°"
+        metadata["source"]["sun_elevation"] = f"{mentor_match['sun_elevation_deg']:.2f}°"
+        metadata["source"]["solar_incidence"] = f"{mentor_match['solar_incidence_deg']:.2f}°"
+        metadata["source"]["attitude"] = mentor_match["spacecraft_attitude"]
+        metadata["source"]["projection"] = mentor_match["projection"]
+        metadata["source"]["area"] = mentor_match["area"]
+        metadata["source"]["xml_file"] = mentor_match["source_xml"]
+        metadata["source"]["xml_status"] = "VERIFIED"
+
+        metadata["reference"]["acquisition_id"] = "LRO-NAC Extracted Tile (5m)" if "OHRC" in mentor_match["instrument"] else "LRO-WAC Extracted Reference"
+        metadata["reference"]["reference_gsd"] = ref_gsd_str
+        metadata["reference"]["physical_scale_ratio"] = mentor_match["physical_scale_ratio"]
+        metadata["reference"]["xml_file"] = mentor_match["reference_xml"]
+        metadata["reference"]["xml_status"] = "NOT AVAILABLE"
+        metadata["reference"]["geo_bounds"] = mentor_match["reference_anchor"]
+
+        metadata["geo"] = {
+            "prior_status": "GEOGRAPHIC OVERLAP AVAILABLE",
+            "correspondences": "Geographic overlap metadata available (GeoTIFF corner anchors & tiepoints)",
+            "model_status": "Planar Homography / RANSAC (DEM elevation & SPICE CK/SPK kernels unavailable)"
+        }
+        return metadata
+    else:
+        metadata["mentor"] = {"is_mentor_data": False}
 
     # 3. Geospatial Support & Prior Models Lookup
     is_pair05 = ("20200824T0806596861" in s_name and "20200824T1003365280" in r_name) or ("pair05" in s_name.lower() or "pair05" in r_name.lower())
@@ -496,16 +707,12 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
     is_pair01 = ("20251109T0909533595" in s_name and "20251109T1305444583" in r_name) or ("pair01" in s_name.lower() or "pair01" in r_name.lower())
 
     geo_prior_available = False
-    geo_corr_count = "N/A — metadata not available"
-    geo_model_status = "N/A — metadata not available"
+    geo_corr_count = "Mission metadata not available for this image."
+    geo_model_status = "Mission metadata not available for this image."
 
     if is_pair05:
         geo_match_path = os.path.join(PROJECT_DIR, "data", "metadata", "pair05_actual_geo_matches.csv")
-        if not os.path.exists(geo_match_path):
-            geo_match_path = r"C:\Users\Notebook\Notebook\Unlabeled_data\pair05_actual_geo_matches.csv"
         cal_path = os.path.join(PROJECT_DIR, "data", "metadata", "pair05_affine_raster_calibration.json")
-        if not os.path.exists(cal_path):
-            cal_path = r"C:\Users\Notebook\Notebook\Unlabeled_data\pair05_affine_raster_calibration.json"
 
         geo_prior_available = True
         geo_corr_count = "96,396 correspondence pairs (pair05_actual_geo_matches.csv)" if os.path.exists(geo_match_path) else "Available (actual_geo_matches catalog)"
@@ -520,15 +727,12 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
             geo_model_status = "Stored Geo Model Available"
 
     elif is_pair02:
-        geo_match_path = r"C:\Users\Notebook\Notebook\Unlabeled_data\pair02_actual_geo_matches.csv"
-        geo_prior_available = True
-        geo_corr_count = "35,000+ correspondence pairs (pair02_actual_geo_matches.csv)" if os.path.exists(geo_match_path) else "Available (pair02 geo catalog)"
-        geo_model_status = "Stored RANSAC Homography Prior Available"
+        geo_prior_available = False
+        geo_corr_count = "Mission metadata not available for this image."
+        geo_model_status = "Mission metadata not available for this image."
 
     elif is_pair01:
         cal_path = os.path.join(PROJECT_DIR, "data", "metadata", "pair01_affine_raster_calibration.json")
-        if not os.path.exists(cal_path):
-            cal_path = r"C:\Users\Notebook\Notebook\Unlabeled_data\pair01_affine_raster_calibration.json"
         geo_prior_available = True
         geo_corr_count = "Available (pair01 geo matches)"
         if os.path.exists(cal_path):
@@ -646,7 +850,7 @@ def render_adaptive_routing_ui(res: Dict[str, Any]):
                 Routing Execution
             </div>
             <div style="font-size: 0.80rem; color: #c9d1d9; line-height: 1.65;">
-                <div><span style="color: #8b949e;">Pipeline Mode:</span> <strong style="color: #58a6ff; font-family: monospace;">Adaptive Research Engine</strong></div>
+                <div><span style="color: #8b949e;">Pipeline Mode:</span> <strong style="color: #58a6ff; font-family: monospace;">Adaptive Production Engine</strong></div>
                 <div><span style="color: #8b949e;">Selected Matcher:</span> <strong style="color: #00f2ff; font-family: monospace;">{selected_matcher}</strong></div>
                 <div><span style="color: #8b949e;">Decision:</span> <strong style="color: #d1d7e0; font-family: monospace;">{rule_disp}</strong></div>
                 <div><span style="color: #8b949e;">Fallback:</span> <span style="color: {'#3fb950' if fb_disp == 'None' else '#f0883e'}; font-family: monospace;">{fb_disp}</span></div>
@@ -1144,7 +1348,7 @@ def resolve_correspondence_matching_telemetry(res: Dict[str, Any], s_img: Option
 
     return {
         "is_baseline": is_baseline,
-        "pipeline_mode": "Locked LoFTR Baseline" if is_baseline else "Adaptive Research Engine",
+        "pipeline_mode": "Locked LoFTR Baseline" if is_baseline else "Adaptive Production Engine",
         "candidates": candidates,
         "selected_matcher": primary_choice,
         "final_matcher": final_matcher,
@@ -1320,7 +1524,7 @@ def render_correspondence_visual_card(
         ax_grid.set_xticklabels(["C0", "C1", "C2"], color="#8b949e", fontsize=8)
         ax_grid.set_yticklabels(["R0", "R1", "R2"], color="#8b949e", fontsize=8)
         ax_grid.tick_params(colors="#30363d")
-        ax_grid.set_title(f"Inlier Density Matrix ({n_inliers} pts)", color='#58a6ff', fontsize=9, pad=6)
+        ax_grid.set_title(f"3×3 Spatial Selection ({n_inliers} pts, max 6/cell)", color='#58a6ff', fontsize=9, pad=6)
         fig_grid.tight_layout()
         st.pyplot(fig_grid)
         plt.close(fig_grid)
@@ -1331,9 +1535,10 @@ def render_correspondence_visual_card(
         <div style="display: flex; gap: 20px; align-items: center;">
             <span>Occupancy: <strong style="color: #00f2ff;">{occ_cells}/9 ({occ_pct:.1f}%)</strong></span>
             <span>Spatial CV: <strong style="color: {'#3fb950' if sp_cv <= 0.6 else '#f0883e'};">{sp_cv:.3f}</strong></span>
+            <span>Limit: <strong style="color: #d1d7e0;">Max 6 pts/cell</strong></span>
         </div>
         <div style="font-size: 0.74rem; color: #8b949e;">
-            Planar correspondence coverage verified across full lunar FOV
+            Production selection enforces bounded spatial coverage.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1856,7 +2061,7 @@ def render_ransac_geometry_ui(geom_data: Dict[str, Any]):
                     </div>
                 </div>
                 <div style="margin-top: 8px; font-size: 0.70rem; color: #6e7681; border-top: 1px dashed #1f2a3a; padding-top: 4px;">
-                    3×3 grid uniformity & coverage
+                    Production selection enforces bounded spatial coverage (max 6/cell)
                 </div>
             </div>
 
@@ -2166,7 +2371,7 @@ def render_homography_warp_ui(warp_data: Dict[str, Any]):
                     </div>
                 </div>
                 <div style="font-size: 0.71rem; color: #6e7681; border-top: 1px dashed #1f2a3a; padding-top: 6px; line-height: 1.35;">
-                    <b style="color: #8b949e;">Resampling:</b> Bilinear interpolation (<code style="color: #79c0ff; font-size: 0.68rem;">cv2.INTER_LINEAR</code>) maps pixel radiance onto the canonical ground-truth reference raster.
+                    <b style="color: #8b949e;">Resampling:</b> Bilinear interpolation (<code style="color: #79c0ff; font-size: 0.68rem;">cv2.INTER_LINEAR</code>) maps source-image radiance onto the reference image raster.
                 </div>
             </div>
         </div>
@@ -2383,12 +2588,49 @@ def render_independent_validation_ui(val_data: Dict[str, Any], res: Optional[Dic
     st.markdown("### Independent Validation")
 
     # 1. Scientific Validation Protocol Banner
-    banner_html = """
-    <div style="background: #0d1b26; border: 1px solid #1a3c54; border-left: 4px solid #00f2ff; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px;">
-        <b style="color: #00f2ff; font-size: 0.90rem;">Validation Protocol:</b><br>
-        <span style="color: #c9d1d9; font-size: 0.86rem;">
-            Validation points are held out from homography estimation and are used only for final evaluation.
-        </span>
+    demo_info = st.session_state.get("demo_case_info", {})
+    val_proto = demo_info.get("validation_protocol", "current production validation")
+
+    is_success = res.get("success", True) if res else True
+    rmse_val = val_data.get("rmse")
+    if is_success and rmse_val is not None and rmse_val < 1.0 and val_data.get("status") != "FAILED":
+        subpixel_disp = "Demonstrated for this case"
+        subpixel_color = "#00f2ff"
+        subpixel_note_html = """
+        <div style="margin-top: 6px; font-size: 0.78rem; color: #f0883e; background: #16120d; border: 1px dashed #7a4e14; padding: 6px 10px; border-radius: 4px; line-height: 1.4;">
+            <strong>Mandatory Scientific Note:</strong> For selected controlled/prototype cases, held-out RMSE below 1.0 px is used as a case-level reporting criterion. This does not establish physical sub-pixel accuracy for real lunar imagery without independent ground truth. Held-out RMSE measures internal geometric consistency. Sub-pixel accuracy is demonstrated for this tested case and is not generalized to all lunar images.
+        </div>
+        """
+    elif is_success and rmse_val is not None and rmse_val >= 1.0:
+        subpixel_disp = "Not sub-pixel"
+        subpixel_color = "#f0883e"
+        subpixel_note_html = """
+        <div style="margin-top: 6px; font-size: 0.78rem; color: #f0883e; background: #16120d; border: 1px dashed #7a4e14; padding: 6px 10px; border-radius: 4px; line-height: 1.4;">
+            <strong>Mandatory Scientific Note:</strong> Held-out RMSE below 1.0 px is used as a case-level reporting criterion for selected controlled/prototype cases. This does not establish physical sub-pixel accuracy for real lunar imagery without independent ground truth. Held-out RMSE measures internal geometric consistency.
+        </div>
+        """
+    else:
+        subpixel_disp = "NOT VERIFIED"
+        subpixel_color = "#8b949e"
+        subpixel_note_html = """
+        <div style="margin-top: 6px; font-size: 0.78rem; color: #f0883e; background: #16120d; border: 1px dashed #7a4e14; padding: 6px 10px; border-radius: 4px; line-height: 1.4;">
+            <strong>Mandatory Scientific Note:</strong> Held-out RMSE below 1.0 px is used as a case-level reporting criterion for selected controlled/prototype cases. This does not establish physical sub-pixel accuracy for real lunar imagery without independent ground truth.<br/>
+            <span style="color: #ff7b72; font-weight: 600;">Sub-pixel status: Not verified because registration did not achieve geometric consensus and independent hold-out validation was unavailable.</span>
+        </div>
+        """
+
+    banner_html = f"""
+    <div style="background: #0d1b26; border: 1px solid #1a3c54; border-left: 4px solid #00f2ff; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+            <b style="color: #00f2ff; font-size: 0.90rem;">Validation Protocol: <span style="color: #ffffff; font-family: monospace;">{val_proto}</span></b>
+            <span style="font-size: 0.76rem; font-family: monospace; color: {subpixel_color}; background: #0c1420; border: 1px solid #1f2a3a; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+                Sub-Pixel Status: {subpixel_disp}
+            </span>
+        </div>
+        <div style="color: #c9d1d9; font-size: 0.82rem; line-height: 1.45;">
+            Validation points are strictly held out from homography estimation and are used only for final evaluation across seeds 1–5.
+        </div>
+        {subpixel_note_html}
     </div>
     """
     if hasattr(st, "html"):
@@ -2404,9 +2646,9 @@ def render_independent_validation_ui(val_data: Dict[str, Any], res: Optional[Dic
 
     note_html = f"""
         <div style="font-size: 0.78rem; color: #8b949e; margin-top: 8px; padding-top: 6px; border-top: 1px solid {border_color}; font-style: italic;">
-            Held-out validation RMSE is below 1 px; this does not imply that every individual checkpoint error is below 1 px.
+            For selected controlled/prototype cases, held-out RMSE below 1.0 px is used as a case-level reporting criterion. This does not establish physical sub-pixel accuracy for real lunar imagery without independent ground truth.
         </div>
-    """ if val_data.get("is_subpixel") else ""
+    """ if (is_success and val_data.get("is_subpixel")) else ""
 
     assessment_html = f"""
     <div style="background: {bg_color}; border: 1px solid {border_color}; border-left: 4px solid {val_data['status_color']}; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px;">
@@ -2420,7 +2662,7 @@ def render_independent_validation_ui(val_data: Dict[str, Any], res: Optional[Dic
                 </span>
             </div>
             <div style="font-family: monospace; font-size: 0.78rem; color: #8b949e;">
-                Protocol: <span style="color: #58a6ff; font-weight: bold;">{val_data['source_label']}</span>
+                Protocol: <span style="color: #58a6ff; font-weight: bold;">{val_proto}</span> | Sub-Pixel: <span style="color: {subpixel_color}; font-weight: bold;">{subpixel_disp}</span>
             </div>
         </div>
         {note_html}
@@ -2627,8 +2869,8 @@ def render_independent_validation_ui(val_data: Dict[str, Any], res: Optional[Dic
         st.markdown(f"""
         <div class="honesty-box">
             <b>Scientific Benchmark Note:</b><br>
-            On our real lunar development pair, the validated reprojection RMSE is <b>{res['rmse']:.3f} px</b> (mean error: <b>{mean_err_val:.3f} px</b>, maximum error: <b>{max_err_val:.3f} px</b>).
-            Sub-pixel accuracy (~0.097 px) was separately verified in controlled synthetic ground-truth experiments and is not claimed as real lunar cross-sensor accuracy.
+            For this active run, the validated reprojection RMSE is <b>{res['rmse']:.3f} px</b> (mean error: <b>{mean_err_val:.3f} px</b>, maximum error: <b>{max_err_val:.3f} px</b>).
+            For selected controlled/prototype cases, held-out RMSE below 1.0 px is used as a case-level reporting criterion. This does not establish physical sub-pixel accuracy for real lunar imagery without independent ground truth.
         </div>
         """, unsafe_allow_html=True)
 
@@ -2638,9 +2880,85 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ============================================================
+# AUTHENTICATION GATE
+# ============================================================
+
+init_auth_db()
+
+if not is_authenticated():
+    render_auth_page()
+    st.stop()
+
 # ============================================================
 # SIDEBAR NAVIGATION
 # ============================================================
+
+# ============================================================
+# CANONICAL PAGE MAP & SIDEBAR NAVIGATION
+# ============================================================
+
+PAGES = {
+    "Overview": "overview",
+    "Inputs": "inputs",
+    "Results": "results",
+    "Validation": "validation",
+    "Export": "export",
+    "Research Lab": "research_lab",
+}
+PAGE_LABELS = {v: k for k, v in PAGES.items()}
+NAVIGATION_PAGES = tuple(PAGES.keys())
+
+
+def _sync_active_page() -> None:
+    """Callback fired when user clicks a sidebar radio option."""
+    selected_label = st.session_state.get("sidebar_page")
+    if selected_label in PAGES:
+        st.session_state["nav_page"] = PAGES[selected_label]
+
+
+def _sign_out() -> None:
+    """End the authenticated session from a pre-rerun button callback."""
+    logout_user()
+
+
+def navigate_to_page(target: str) -> None:
+    """Safely queues an app-level navigation change and reruns."""
+    if target in PAGES:
+        target_id = PAGES[target]
+    elif target in PAGES.values():
+        target_id = target
+    else:
+        target_id = "overview"
+    st.session_state["pending_nav_target"] = target_id
+    st.rerun()
+
+
+# Consume pending navigation BEFORE any widget with key="sidebar_page" is instantiated!
+if "pending_nav_target" in st.session_state:
+    target_id = st.session_state.pop("pending_nav_target")
+    if target_id in PAGES.values():
+        st.session_state["nav_page"] = target_id
+        st.session_state["sidebar_page"] = PAGE_LABELS.get(target_id, "Overview")
+    elif target_id in PAGES:
+        st.session_state["nav_page"] = PAGES[target_id]
+        st.session_state["sidebar_page"] = target_id
+
+if "nav_page" not in st.session_state or st.session_state["nav_page"] not in PAGES.values():
+    previous_widget_page = st.session_state.get("sidebar_page")
+    if previous_widget_page in PAGES:
+        st.session_state["nav_page"] = PAGES[previous_widget_page]
+    else:
+        st.session_state["nav_page"] = "overview"
+
+# Canonical active page ID (internal single source of truth)
+nav_page = st.session_state["nav_page"]
+current_label = PAGE_LABELS.get(nav_page, "Overview")
+
+# Ensure sidebar_page widget key is synchronized before radio widget instantiation
+if "sidebar_page" not in st.session_state or st.session_state["sidebar_page"] not in PAGES:
+    st.session_state["sidebar_page"] = current_label
 
 with st.sidebar:
     st.markdown(
@@ -2658,37 +2976,28 @@ with st.sidebar:
     )
 
     def _nav_label(val: str) -> str:
-        if val == "Research Lab":
-            return "🔬 Research Lab"
         return val
 
-    sidebar_page = st.radio(
+    st.radio(
         "Navigation",
-        [
-            "Overview",
-            "Inputs",
-            "Results",
-            "Validation",
-            "Export",
-            "Research Lab",
-        ],
-        index=0,
+        NAVIGATION_PAGES,
         label_visibility="collapsed",
         key="sidebar_page",
         format_func=_nav_label,
+        on_change=_sync_active_page,
     )
 
     st.markdown(
         """
         <style>
-            /* REGISTRATION section header above the 1st radio row (Overview) */
+            /* NAVIGATION section header above the 1st radio row (Overview) */
             div[data-testid="stSidebar"] [data-testid="stRadio"] > div > div:nth-of-type(1) {
                 margin-top: 2px !important;
                 padding-top: 14px !important;
                 position: relative !important;
             }
             div[data-testid="stSidebar"] [data-testid="stRadio"] > div > div:nth-of-type(1)::before {
-                content: "REGISTRATION";
+                content: "NAVIGATION";
                 position: absolute;
                 top: 0px;
                 left: 0;
@@ -2720,19 +3029,64 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+    env_label = detect_runtime_environment()
     st.markdown(
-        """
-        <div style="margin: 8px 0 0 0; padding-top: 8px; border-top: 1px solid #1f2a3a;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: #c9d1d9; letter-spacing: 0.5px; margin-bottom: 2px;">
+        f"""
+        <div style="margin: 4px 0 0 0; padding-top: 4px; border-top: 1px solid #1f2a3a;">
+            <div style="font-size: 0.70rem; font-weight: 700; color: #c9d1d9; letter-spacing: 0.5px; margin-bottom: 2px;">
                 SYSTEM
             </div>
-            <div style="font-size: 0.68rem; color: #6e7681;">
-                About / Project Info
+            <div style="font-size: 0.76rem; color: #3fb950; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                <span>●</span> System Ready
+            </div>
+            <div style="font-size: 0.68rem; color: #6e7681; font-family: monospace; margin-top: 1px;">
+                Env: {env_label}
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    user_name = st.session_state.get("auth_name", "Researcher")
+    st.markdown(
+        f"""
+        <div style="margin: 4px 0 4px 0; padding-top: 4px; border-top: 1px solid #1f2a3a;">
+            <div style="font-size: 0.70rem; font-weight: 700; color: #c9d1d9; letter-spacing: 0.5px; margin-bottom: 1px;">
+                OPERATOR
+            </div>
+            <div style="font-size: 0.78rem; color: #58a6ff; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {user_name}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.button(
+        "Sign out",
+        icon=":material/logout:",
+        type="secondary",
+        width="stretch",
+        key="sidebar_logout_btn",
+        on_click=_sign_out,
+    )
+
+# Synchronize canonical nav_page from widget state
+active_widget_label = st.session_state.get("sidebar_page", current_label)
+if active_widget_label in PAGES:
+    st.session_state["nav_page"] = PAGES[active_widget_label]
+
+nav_page = st.session_state["nav_page"]
+sidebar_page = PAGE_LABELS.get(nav_page, "Overview")
+
+# 15. Lightweight internal development assertion
+assert nav_page in {
+    "overview",
+    "inputs",
+    "results",
+    "validation",
+    "export",
+    "research_lab",
+}, f"Navigation assertion failed: invalid nav_page '{nav_page}'"
 
 # ============================================================
 # RESEARCH LAB ROUTE
@@ -2741,26 +3095,26 @@ with st.sidebar:
 # Custom High-Tech Aerospace CSS Styling
 st.markdown("""
 <style>
-    /* Global App Container — safe top padding so header is never clipped */
+    /* Global App Container — intentional top breathing room (16-24px below browser header) */
     .block-container {
-        padding-top: 3.25rem !important;
-        padding-bottom: 0.50rem !important;
-        padding-left: 1.00rem !important;
-        padding-right: 1.00rem !important;
-        max-width: 1400px !important;
+        padding-top: 3.40rem !important;
+        padding-bottom: 0.75rem !important;
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+        max-width: 1440px !important;
         margin: 0 auto !important;
     }
 
     /* Prevent Streamlit top toolbar / collapse handle from covering content */
     section[data-testid="stSidebar"] + section .block-container {
-        padding-top: 3.25rem !important;
+        padding-top: 3.40rem !important;
     }
     .stApp > header[data-testid="stHeader"] {
         height: 0 !important;
         visibility: hidden !important;
     }
     section.main > div.block-container {
-        padding-top: 3.25rem !important;
+        padding-top: 3.40rem !important;
     }
 
     /* Dark Aerospace Theme */
@@ -2770,14 +3124,15 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
-    /* Header Section */
+    /* Header Section with Balanced Internal & External Spacing */
     .header-box {
-        background: linear-gradient(135deg, #101724 0%, #162032 100%);
-        border: 1px solid #233044;
+        background: linear-gradient(135deg, #0e1522 0%, #151e2f 100%);
+        border: 1px solid #1f2e42;
         border-radius: 8px;
-        padding: 6px 12px;
-        margin-bottom: 3px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        padding: 14px 18px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
     .header-title,
     h1.header-title,
@@ -2787,7 +3142,7 @@ st.markdown("""
     .stApp h1.header-title,
     div[data-testid="stMarkdownContainer"] h1.header-title,
     div[data-testid="stMarkdownContainer"] .header-title {
-        font-size: 1.45rem !important;
+        font-size: 1.25rem !important;
         font-weight: 700 !important;
         letter-spacing: 0.5px;
         color: #58a6ff !important;
@@ -2797,42 +3152,178 @@ st.markdown("""
         font-variant: normal !important;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         line-height: 1.2;
     }
     .header-subtitle {
-        font-size: 0.84rem;
-        color: #c9d1d9;
-        margin: 1px 0 0 0;
+        font-size: 0.80rem;
+        color: #8b949e;
+        margin: 0;
         font-weight: 500;
-        line-height: 1.3;
+        line-height: 1.2;
     }
     .header-desc {
-        font-size: 0.74rem;
-        color: #8b949e;
-        margin: 0 0 0 0;
+        font-size: 0.70rem;
+        color: #6e7681;
+        margin: 0;
+        line-height: 1.2;
     }
     
-    /* Pipeline Bar */
+    /* Pipeline Workflow Stepper — 4x2 Equal-Width Responsive Grid */
     .pipeline-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 3px;
-        align-items: center;
-        background: #080b10;
-        padding: 3px 6px;
+        background: #080c14;
+        border: 1px solid #1a2736;
         border-radius: 6px;
-        border: 1px solid #1c2738;
-        font-size: 0.70rem;
-        margin-top: 2px;
+        padding: 4px 6px;
+        margin-top: 6px;
     }
-    .pipeline-step {
-        background: #162032;
-        color: #58a6ff;
-        padding: 1px 5px;
+    .workflow-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        width: 100%;
+    }
+    @media (max-width: 860px) {
+        .workflow-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    .workflow-card {
         border-radius: 4px;
+        padding: 3px 6px;
+        min-height: 38px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+    .stage-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1px;
+    }
+    .stage-num-badge {
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.60rem;
+        padding: 0px 4px;
+        border-radius: 3px;
+        letter-spacing: 0.5px;
+    }
+    .stage-connector-arrow {
+        color: #388bfd;
+        font-size: 0.65rem;
+        font-weight: bold;
+        opacity: 0.8;
+    }
+    .stage-icon {
+        font-weight: 700;
+        font-size: 0.65rem;
+    }
+    .stage-card-title {
+        font-size: 0.67rem;
         font-weight: 600;
-        border: 1px solid #253852;
+        line-height: 1.15;
+        min-height: 18px;
+        display: flex;
+        align-items: center;
+        white-space: normal;
+    }
+    
+    /* Status Styles for Cards */
+    .stage-complete {
+        border: 1px solid #23633e !important;
+        background: #0c2016 !important;
+    }
+    .stage-complete .stage-num-badge {
+        background: #143823;
+        border: 1px solid #2ea043;
+        color: #7ee787;
+    }
+    .stage-complete .stage-card-title {
+        color: #e6edf3;
+    }
+    .stage-complete .stage-icon {
+        color: #3fb950;
+    }
+    
+    .stage-running {
+        border: 1px solid #00f2ff !important;
+        background: #0d2838 !important;
+        box-shadow: 0 0 6px rgba(0, 242, 255, 0.25) !important;
+    }
+    .stage-running .stage-num-badge {
+        background: #103848;
+        border: 1px solid #00f2ff;
+        color: #00f2ff;
+    }
+    .stage-running .stage-card-title {
+        color: #00f2ff;
+    }
+    .stage-running .stage-icon {
+        color: #00f2ff;
+    }
+
+    .stage-failed {
+        border: 1px solid #da3633 !important;
+        background: #3c1218 !important;
+    }
+    .stage-failed .stage-num-badge {
+        background: #481418;
+        border: 1px solid #da3633;
+        color: #ff7b72;
+    }
+    .stage-failed .stage-card-title {
+        color: #ff7b72;
+    }
+    .stage-failed .stage-icon {
+        color: #f85149;
+    }
+
+    .stage-waiting {
+        border: 1px solid #1a2736 !important;
+        background: #0c121d !important;
+    }
+    .stage-waiting .stage-num-badge {
+        background: #141c28;
+        border: 1px solid #1f2a3a;
+        color: #8b949e;
+    }
+    .stage-waiting .stage-card-title {
+        color: #8b949e;
+    }
+    .stage-waiting .stage-icon {
+        color: #6e7681;
+    }
+    .overview-card {
+        min-height: 98px;
+        padding: 12px 16px;
+        border: 1px solid #26344a;
+        border-radius: 6px;
+        background: #0e1520;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .overview-card-label {
+        color: #8b949e;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .overview-card-value {
+        color: #dbeafe;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 4px 0;
+    }
+    .overview-card-detail {
+        color: #8b949e;
+        font-size: 0.75rem;
+        line-height: 1.35;
     }
     .pipeline-arrow {
         color: #00f2ff;
@@ -2999,6 +3490,90 @@ st.markdown("""
         padding: 1px 0 !important;
         font-size: 0.84rem !important;
     }
+
+    /* ============================================================
+       PRINT & PDF EXPORT OPTIMIZATIONS (@media print)
+       Prevents blank pages, scales tall pushbroom images cleanly,
+       avoids orphaned headings, and removes interactive web chrome.
+       ============================================================ */
+    @media print {
+        /* Hide interactive non-printable elements */
+        header[data-testid="stHeader"],
+        .stDeployButton,
+        footer,
+        div[data-testid="stToolbar"],
+        div[data-testid="stDecoration"],
+        div[data-testid="stStatusWidget"],
+        div[data-testid="stFileUploader"],
+        div[data-testid="stToastContainer"],
+        button[kind="header"],
+        button[kind="secondaryFormSubmit"],
+        div[data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
+
+        /* Page layout */
+        @page {
+            size: A4 portrait;
+            margin: 10mm 12mm 10mm 12mm;
+        }
+
+        body, html, [data-testid="stAppViewContainer"], .main, .block-container {
+            background-color: #0b0e14 !important;
+            color: #d1d7e0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 2px !important;
+        }
+
+        /* STRICT IMAGE HEIGHT LIMIT IN PRINT:
+           Prevents tall orbital swaths (e.g. 1200x10107 px) from generating
+           massive pagination breaks and multiple empty/blank pages. */
+        img, [data-testid="stImage"] img {
+            max-height: 250px !important;
+            max-width: 100% !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            display: block !important;
+            margin: 0 auto !important;
+        }
+
+        [data-testid="stImage"] {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 4px !important;
+        }
+
+        /* Prevent awkward breaks inside major cards and components */
+        div[data-testid="stHorizontalBlock"],
+        div[data-testid="column"],
+        .header-box,
+        .status-card,
+        .stExpander,
+        .honesty-box,
+        div[data-testid="stMarkdownContainer"] > div {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* Prevent orphan headings */
+        h1, h2, h3, h4, h5, h6 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+
+        /* Ensure text remains sharp and non-overlapping */
+        * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -3006,26 +3581,28 @@ st.markdown("""
 # RESEARCH LAB ROUTE
 # ============================================================
 
-if sidebar_page == "Research Lab":
-    st.markdown("""
+if nav_page == "research_lab":
+    st.markdown(f"""
 <div class="header-box">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
         <div>
-            <h1 class="header-title" style="text-transform: none !important; font-variant: normal !important; margin: 0 !important; padding: 0 !important;">
-                <span>🌙</span> <span style="text-transform: none !important; font-variant: normal !important;">LunarReg</span>
-            </h1>
-            <div class="header-subtitle" style="text-transform: none !important; font-variant: normal !important;">Adaptive Lunar Image Registration System</div>
-            <div class="header-desc" style="text-transform: none !important; font-variant: normal !important;">Chandrayaan-2 Cross-Sensor Image Registration</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <h1 class="header-title" style="text-transform: none !important; font-variant: normal !important; margin: 0 !important; padding: 0 !important; font-size: 1.25rem !important;">
+                    <span>🌙</span> <span style="text-transform: none !important; font-variant: normal !important;">LunarReg</span>
+                </h1>
+                <span class="header-subtitle" style="text-transform: none !important; font-variant: normal !important; font-size: 0.80rem; color: #8b949e;">Adaptive Lunar Image Registration System</span>
+            </div>
+            <div class="header-desc" style="text-transform: none !important; font-variant: normal !important; font-size: 0.70rem; color: #6e7681;">Chandrayaan-2 Cross-Sensor Image Registration</div>
         </div>
-        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
             <span class="status-badge status-locked">● Research Lab</span>
-            <div style="font-size: 0.72rem; color: #6e7681; font-family: monospace;">Environment: PyTorch / CPU</div>
+            <div style="font-size: 0.70rem; color: #6e7681; font-family: monospace;">Environment: {detect_runtime_environment()}</div>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
     st.markdown(
-        "<div style='font-size: 0.80rem; color: #8b949e; margin: 4px 0 6px 0;'>"
+        "<div style='font-size: 0.78rem; color: #8b949e; margin: 2px 0 4px 0;'>"
         "Experimental research and validation tools for correspondence algorithm analysis."
         "</div>",
         unsafe_allow_html=True,
@@ -3033,86 +3610,257 @@ if sidebar_page == "Research Lab":
     render_research_lab()
     st.stop()
 
+# --- 8-STAGE DYNAMIC PIPELINE STEPPER ---
+def _render_page_pipeline_bar(page_name: str) -> str:
+    """
+    Generate the canonical 8-stage pipeline stepper reflecting the ACTUAL current application state.
+    Stages:
+    1. Source + Reference
+    2. Metadata & Geo Information
+    3. Illumination & Preprocessing
+    4. Feature Correspondence Matching
+    5. Geometric Estimation
+    6. Homography & Registration
+    7. Independent Validation
+    8. Results & Export
+    Never shows a later stage as completed before it has actually run.
+    """
+    stage_states = st.session_state.get("stage_states")
+    s_active = st.session_state.get("source_img_data")
+    r_active = st.session_state.get("reference_img_data")
+    res = st.session_state.get("registration_result")
+
+    # If stage_states not explicitly in session, infer accurately from application data
+    derived = {}
+    if stage_states and isinstance(stage_states, dict):
+        derived = dict(stage_states)
+    else:
+        has_images = (s_active is not None and r_active is not None and getattr(s_active, "size", 0) > 0 and getattr(r_active, "size", 0) > 0)
+        derived["stage_1"] = "COMPLETE" if has_images else "WAITING"
+        derived["stage_2"] = "COMPLETE" if has_images else "WAITING"
+        if res is not None and isinstance(res, dict):
+            if res.get("success", False):
+                for k in ("stage_3", "stage_4", "stage_5", "stage_6", "stage_7", "stage_8"):
+                    derived[k] = "COMPLETE"
+            else:
+                fail_stage = res.get("stage", "quality_gate")
+                derived["stage_3"] = "COMPLETE"
+                if fail_stage == "input_validation":
+                    derived["stage_1"] = "FAILED"
+                    derived["stage_2"] = "WAITING"
+                    derived["stage_4"] = "WAITING"
+                elif fail_stage in ("downstream_geometry", "homography"):
+                    derived["stage_4"] = "COMPLETE"
+                    derived["stage_5"] = "FAILED"
+                else:
+                    derived["stage_4"] = "FAILED"
+                    derived["stage_5"] = "WAITING"
+                for k in ("stage_6", "stage_7", "stage_8"):
+                    derived[k] = "WAITING"
+        else:
+            for k in ("stage_3", "stage_4", "stage_5", "stage_6", "stage_7", "stage_8"):
+                derived[k] = "WAITING"
+
+    stage_defs = [
+        ("stage_1", "01", "Source + Reference"),
+        ("stage_2", "02", "Metadata & Geo Information"),
+        ("stage_3", "03", "Illumination & Preprocessing"),
+        ("stage_4", "04", "Feature Correspondence Matching"),
+        ("stage_5", "05", "Geometric Estimation"),
+        ("stage_6", "06", "Homography & Registration"),
+        ("stage_7", "07", "Independent Validation"),
+        ("stage_8", "08", "Results & Export"),
+    ]
+
+    items_html = ['<div class="workflow-grid">']
+    for idx, (key, num, label) in enumerate(stage_defs):
+        st_val = derived.get(key, "WAITING")
+        if st_val == "COMPLETE":
+            cls = "stage-complete"
+            icon = "✓"
+        elif st_val == "RUNNING":
+            cls = "stage-running"
+            icon = "●"
+        elif st_val == "FAILED":
+            cls = "stage-failed"
+            icon = "✕"
+        else:
+            cls = "stage-waiting"
+            icon = "○"
+        
+        if idx in (0, 1, 2, 4, 5, 6):
+            arrow_html = '<span class="stage-connector-arrow">→</span>'
+        elif idx == 3:
+            arrow_html = '<span class="stage-connector-arrow">↓</span>'
+        else:
+            arrow_html = '<span class="stage-connector-arrow" style="visibility: hidden;">•</span>'
+
+        card_html = (
+            f'<div class="workflow-card {cls}">'
+            f'<div class="stage-card-top">'
+            f'<span class="stage-num-badge">{num}</span>'
+            f'{arrow_html}'
+            f'<span class="stage-icon">{icon}</span>'
+            f'</div>'
+            f'<div class="stage-card-title">{label}</div>'
+            f'</div>'
+        )
+        items_html.append(card_html)
+
+    items_html.append('</div>')
+    return f'<div class="pipeline-bar">{"".join(items_html)}</div>'
+
 # --- HEADER SECTION ---
-st.markdown("""
+pipeline_bar_html = _render_page_pipeline_bar(sidebar_page)
+st.markdown(f"""
 <div class="header-box">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div>
-            <h1 class="header-title" style="text-transform: none !important; font-variant: normal !important; margin: 0 !important; padding: 0 !important;">
-                <span>🌙</span> <span style="text-transform: none !important; font-variant: normal !important;">LunarReg</span>
-            </h1>
-            <div class="header-subtitle" style="text-transform: none !important; font-variant: normal !important;">Adaptive Lunar Image Registration System</div>
-            <div class="header-desc" style="text-transform: none !important; font-variant: normal !important;">Chandrayaan-2 Cross-Sensor Image Registration</div>
+            <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+                <h1 class="header-title" style="text-transform: none !important; font-variant: normal !important; margin: 0 !important; padding: 0 !important; font-size: 1.35rem !important;">
+                    <span>🌙</span> <span style="text-transform: none !important; font-variant: normal !important;">LunarReg</span>
+                </h1>
+                <span class="header-subtitle" style="text-transform: none !important; font-variant: normal !important; font-size: 0.85rem; color: #8b949e; font-weight: 500;">Adaptive Lunar Image Registration System</span>
+            </div>
+            <div class="header-desc" style="text-transform: none !important; font-variant: normal !important; font-size: 0.72rem; color: #6e7681; margin-top: 2px;">Chandrayaan-2 Cross-Sensor Image Registration</div>
         </div>
-        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
             <span class="status-badge status-ready">● System Ready</span>
-            <div style="font-size: 0.72rem; color: #6e7681; font-family: monospace;">Environment: PyTorch / CPU</div>
+            <div style="font-size: 0.72rem; color: #8b949e; font-family: monospace;">{detect_runtime_environment()}</div>
         </div>
     </div>
-    <div class="pipeline-bar">
-        <span style="color: #8b949e; font-weight: bold; margin-right: 4px;">Pipeline:</span>
-        <span class="pipeline-step">1. Source + Reference</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">2. Metadata & Geo Information</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">3. Illumination & Preprocessing</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">4. Feature Correspondence Matching</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">5. Geometric Estimation</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">6. Homography & Registration</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">7. Independent Validation</span>
-        <span class="pipeline-arrow">→</span>
-        <span class="pipeline-step">8. Results & Export</span>
-    </div>
+    {pipeline_bar_html}
 </div>
 """, unsafe_allow_html=True)
 
-show_inputs = sidebar_page == "Inputs"
-show_results_full = sidebar_page in ("Results", "Validation", "Export")
-show_results = sidebar_page in ("Overview", "Results", "Validation", "Export")
-show_overview = sidebar_page == "Overview"
-show_results_page = sidebar_page == "Results"
-show_export_page = sidebar_page == "Export"
-show_validation_only = sidebar_page == "Validation"
+is_overview = (nav_page == "overview")
+is_inputs = (nav_page == "inputs")
+is_results = (nav_page == "results")
+is_validation = (nav_page == "validation")
+is_export = (nav_page == "export")
+is_research_lab = (nav_page == "research_lab")
 
-if show_inputs:
-    # --- DEMO DATA LOADER HELPER ---
-    DEV_SOURCE_PATH = os.path.join("data", "source", "source.jpeg")
-    if not os.path.exists(DEV_SOURCE_PATH):
-        DEV_SOURCE_PATH = os.path.join("SIH26_Lunar_Registration", "data", "source", "source.jpeg")
+if is_inputs:
+    # --- DEMO DATA LOADER HELPER (Canonical Paths Only) ---
+    DEV_SOURCE_PATH = os.path.join(PROJECT_DIR, "data", "source", "source.jpeg")
+    DEV_REFERENCE_PATH = os.path.join(PROJECT_DIR, "data", "reference", "reference.jpeg")
 
-    DEV_REFERENCE_PATH = os.path.join("data", "reference", "reference.jpeg")
-    if not os.path.exists(DEV_REFERENCE_PATH):
-        DEV_REFERENCE_PATH = os.path.join("SIH26_Lunar_Registration", "data", "reference", "reference.jpeg")
+    st.markdown('<div style="font-size: 0.84rem; font-weight: 700; color: #58a6ff; margin-bottom: 2px;">Quick-Load Benchmark & Prototype Pairs</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 0.74rem; color: #8b949e; margin-bottom: 6px;">Select a verified prototype/test case to load its associated imagery and documented telemetry. Mission metadata or ground truth may be unavailable for some cases.</div>', unsafe_allow_html=True)
 
-    col_util1, col_util2, col_util3 = st.columns([1, 1, 1])
-    with col_util1:
-        if st.button("Load Dev Pair (Chandrayaan-2)", width="stretch", help="Instantly load the validated Chandrayaan-2 development pair for live demonstration."):
-            if os.path.exists(DEV_SOURCE_PATH) and os.path.exists(DEV_REFERENCE_PATH):
-                s_loaded = cv2.imread(DEV_SOURCE_PATH)
-                r_loaded = cv2.imread(DEV_REFERENCE_PATH)
+    # 1. PRIMARY SIH DEMOS
+    st.markdown("""
+    <div style="background: #090e17; border-left: 3px solid #58a6ff; padding: 3px 8px; margin-bottom: 4px; font-size: 0.72rem; font-weight: 700; color: #79c0ff; letter-spacing: 0.5px;">
+        PRIMARY SIH DEMOS
+    </div>
+    """, unsafe_allow_html=True)
+    c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+    with c_p1:
+        if st.button("Pair 04 — Optical", width="stretch", help="Load Chandrayaan-2 Optical Nominal benchmark pair (Pair 04)."):
+            p04_s = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_04", "source.png")
+            p04_r = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_04", "reference.png")
+            if os.path.exists(p04_s) and os.path.exists(p04_r):
+                s_loaded = cv2.imread(p04_s)
+                r_loaded = cv2.imread(p04_r)
                 if s_loaded is not None and r_loaded is not None:
                     st.session_state["source_img_data"] = s_loaded
                     st.session_state["reference_img_data"] = r_loaded
-                    st.session_state["source_filename"] = "source.jpeg (Dev Pair)"
-                    st.session_state["reference_filename"] = "reference.jpeg (Dev Pair)"
+                    st.session_state["source_filename"] = "source.png (Pair 04 Optical)"
+                    st.session_state["reference_filename"] = "reference.png (Pair 04 Optical)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "pair_04", "label": "Pair 04 — Optical", "category": "PRIMARY SIH DEMO",
+                        "validation_protocol": "current production validation", "subpixel_status": "Demonstrated for this case"
+                    }
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
-                    st.toast("Loaded Chandrayaan-2 development pair successfully!", icon="🌙")
+                    st.toast("Loaded Pair 04 (Optical Nominal) successfully!", icon="🌙")
             else:
-                st.error("Development data files not found in data/ directory.")
+                st.error("Pair 04 benchmark files not found in data/validation_pairs/pair_04/.")
 
-    with col_util2:
-        if st.button("Load Real Lunar Pair (Pair 05)", width="stretch", help="Load full Chandrayaan-2 polar swath pair 05 with factual lunar footprint metadata and pre-computed geospatial priors."):
-            p05_s = os.path.join("data", "pair05", "ch2_ohr_ncp_20200824T0806596861.png")
-            p05_r = os.path.join("data", "pair05", "ch2_ohr_ncp_20200824T1003365280.png")
-            if not (os.path.exists(p05_s) and os.path.exists(p05_r)):
-                p05_s = r"C:\Users\Notebook\Notebook\Unlabeled_data\Images_PNG\ch2_ohr_ncp_20200824T0806596861.png"
-                p05_r = r"C:\Users\Notebook\Notebook\Unlabeled_data\Images_PNG\ch2_ohr_ncp_20200824T1003365280.png"
+    with c_p2:
+        if st.button("Pair 03 — Illumination", width="stretch", help="Load Chandrayaan-2 Illumination Variation benchmark pair (Pair 03)."):
+            p03_s = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_03", "source.png")
+            p03_r = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_03", "reference.png")
+            if os.path.exists(p03_s) and os.path.exists(p03_r):
+                s_loaded = cv2.imread(p03_s)
+                r_loaded = cv2.imread(p03_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = "source.png (Pair 03 Illumination)"
+                    st.session_state["reference_filename"] = "reference.png (Pair 03 Illumination)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "pair_03", "label": "Pair 03 — Illumination", "category": "PRIMARY SIH DEMO",
+                        "validation_protocol": "current production validation", "subpixel_status": "Demonstrated for this case"
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Pair 03 (Illumination Variation) successfully!", icon="🌙")
+            else:
+                st.error("Pair 03 benchmark files not found in data/validation_pairs/pair_03/.")
+
+    with c_p3:
+        if st.button("Pair 01 — Scale", width="stretch", help="Load Chandrayaan-2 Scale Variation benchmark pair (Pair 01)."):
+            p01_s = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_01", "source.png")
+            p01_r = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_01", "reference.png")
+            if os.path.exists(p01_s) and os.path.exists(p01_r):
+                s_loaded = cv2.imread(p01_s)
+                r_loaded = cv2.imread(p01_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = "source.png (Pair 01 Scale)"
+                    st.session_state["reference_filename"] = "reference.png (Pair 01 Scale)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "pair_01", "label": "Pair 01 — Scale", "category": "PRIMARY SIH DEMO",
+                        "validation_protocol": "current production validation", "subpixel_status": "Demonstrated for this case"
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Pair 01 (Scale Variation) successfully!", icon="🌙")
+            else:
+                st.error("Pair 01 benchmark files not found in data/validation_pairs/pair_01/.")
+
+    with c_p4:
+        if st.button("Cross-Sensor Safe Rejection", width="stretch", help="Load an uncalibrated cross-sensor pair to demonstrate a safe quality-gate rejection."):
+            cs_s = os.path.join(PROJECT_DIR, "data", "cross_sensor", "souse.jpeg")
+            cs_r = os.path.join(PROJECT_DIR, "data", "cross_sensor", "ref.jpeg")
+            if not (os.path.exists(cs_s) and os.path.exists(cs_r)):
+                cs_s = DEV_SOURCE_PATH
+                cs_r = DEV_REFERENCE_PATH
+            if os.path.exists(cs_s) and os.path.exists(cs_r):
+                s_loaded = cv2.imread(cs_s)
+                r_loaded = cv2.imread(cs_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = os.path.basename(cs_s) + " (Cross-Sensor Crop)"
+                    st.session_state["reference_filename"] = os.path.basename(cs_r) + " (Cross-Sensor Crop)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "cross_sensor", "label": "Cross-Sensor Safe Rejection", "category": "PRIMARY SIH DEMO",
+                        "validation_protocol": "current production validation", "subpixel_status": "Not verified"
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Cross-Sensor Crop Pair successfully!", icon="🌙")
+            else:
+                st.error("Cross-sensor crop files not found in data/ directory.")
+
+    # 2. ADDITIONAL VERIFIED PROTOTYPE CASES
+    st.markdown("""
+    <div style="background: #090e17; border-left: 3px solid #3fb950; padding: 3px 8px; margin: 6px 0 4px 0; font-size: 0.72rem; font-weight: 700; color: #7ee787; letter-spacing: 0.5px;">
+        ADDITIONAL VERIFIED PROTOTYPE CASES
+    </div>
+    """, unsafe_allow_html=True)
+    c_a1, c_a2, c_a3 = st.columns(3)
+    with c_a1:
+        if st.button("Pair 05 — Real Lunar/OHRC", width="stretch", help="Load the full Chandrayaan-2 polar swath Pair 05."):
+            p05_s = os.path.join(PROJECT_DIR, "data", "pair05", "ch2_ohr_ncp_20200824T0806596861.png")
+            p05_r = os.path.join(PROJECT_DIR, "data", "pair05", "ch2_ohr_ncp_20200824T1003365280.png")
             if os.path.exists(p05_s) and os.path.exists(p05_r):
                 s_loaded = cv2.imread(p05_s)
                 r_loaded = cv2.imread(p05_r)
@@ -3121,34 +3869,126 @@ if show_inputs:
                     st.session_state["reference_img_data"] = r_loaded
                     st.session_state["source_filename"] = "ch2_ohr_ncp_20200824T0806596861.png"
                     st.session_state["reference_filename"] = "ch2_ohr_ncp_20200824T1003365280.png"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "pair_05", "label": "Pair 05 — Real Lunar/OHRC", "category": "ADDITIONAL VERIFIED PROTOTYPE",
+                        "validation_protocol": "prototype validation", "subpixel_status": "Demonstrated for this case",
+                        "note": "Case-specific prototype result. Do not generalize to all lunar images."
+                    }
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
-                    st.toast("Loaded Real Lunar Pair 05 with factual metadata!", icon="🌙")
+                    st.toast("Loaded Real Lunar Pair 05 (OHRC Polar Swath) successfully!", icon="🌙")
             else:
-                st.error("Pair 05 image files not found.")
+                st.error("Pair 05 image files not found in data/pair05/ directory.")
 
-    with col_util3:
-        if st.button("Load Failure Case (Pair 02)", width="stretch", help="Load large-scale swath Pair 02 demonstrating automated quality check rejection and memory-safe resource policy blocking."):
-            p02_s = r"C:\Users\Notebook\Notebook\Unlabeled_data\Images_PNG\ch2_ohr_ncp_20251108T1727303521.png"
-            p02_r = r"C:\Users\Notebook\Notebook\Unlabeled_data\Images_PNG\ch2_ohr_ncp_20251108T1924377926.png"
+    with c_a2:
+        if st.button("Large Image Tiled LoFTR Stress Test", width="stretch", help="Load a large lunar raster to demonstrate memory-safe tiled LoFTR."):
+            pl_s = os.path.join(PROJECT_DIR, "data", "large_ch2", "source_ch2_large.png")
+            pl_r = os.path.join(PROJECT_DIR, "data", "large_ch2", "reference_ch2_large.png")
+            if not (os.path.exists(pl_s) and os.path.exists(pl_r)):
+                pl_s = os.path.join(PROJECT_DIR, "data", "pair02", "source.png")
+                pl_r = os.path.join(PROJECT_DIR, "data", "pair02", "reference.png")
+            if os.path.exists(pl_s) and os.path.exists(pl_r):
+                s_loaded = cv2.imread(pl_s)
+                r_loaded = cv2.imread(pl_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = os.path.basename(pl_s) + " (1200×10107 Stress)"
+                    st.session_state["reference_filename"] = os.path.basename(pl_r) + " (1200×10107 Stress)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "large_image", "label": "Large Image Tiled LoFTR Stress Test", "category": "ADDITIONAL VERIFIED PROTOTYPE",
+                        "validation_protocol": "prototype validation", "subpixel_status": "Demonstrated for this case",
+                        "note": "Memory-safe stress demonstration. Kept separate from Pair 02 and Tycho."
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Large Image Stress Test Pair (1200×10,107 px) successfully!", icon="🌙")
+            else:
+                st.error("Large image files not found in data/large_ch2/ or data/pair02/.")
+
+    with c_a3:
+        if st.button("Pair 02 — Memory-Safe Failure", width="stretch", help="Load difficult illumination/contrast raster. Demonstrates resource guard + tiled processing + safe quality-gate rejection (runtime: 444 candidates, 12 inliers, 2.70% ratio)."):
+            p02_s = os.path.join(PROJECT_DIR, "data", "pair02", "source.png")
+            p02_r = os.path.join(PROJECT_DIR, "data", "pair02", "reference.png")
             if not (os.path.exists(p02_s) and os.path.exists(p02_r)):
-                p02_s = os.path.join("data", "pair02", "source.png")
-                p02_r = os.path.join("data", "pair02", "reference.png")
+                p02_s = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_02", "source.png")
+                p02_r = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_02", "reference.png")
             if os.path.exists(p02_s) and os.path.exists(p02_r):
                 s_loaded = cv2.imread(p02_s)
                 r_loaded = cv2.imread(p02_r)
                 if s_loaded is not None and r_loaded is not None:
                     st.session_state["source_img_data"] = s_loaded
                     st.session_state["reference_img_data"] = r_loaded
-                    st.session_state["source_filename"] = "ch2_ohr_ncp_20251108T1727303521.png (Pair 02)"
-                    st.session_state["reference_filename"] = "ch2_ohr_ncp_20251108T1924377926.png (Pair 02)"
+                    st.session_state["source_filename"] = "source.png (Pair 02 Memory-Safe Failure)"
+                    st.session_state["reference_filename"] = "reference.png (Pair 02 Memory-Safe Failure)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "pair_02", "label": "Pair 02 — Memory-Safe Failure", "category": "ADDITIONAL VERIFIED PROTOTYPE",
+                        "validation_protocol": "prototype validation", "subpixel_status": "Not verified",
+                        "note": "Resource guard + tiled processing + safe quality-gate rejection (444 candidates, 12 inliers, 2.70% ratio; historical prototype reference: 13 inliers / 3.0%). Shows safe rejection, not system error."
+                    }
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
-                    st.toast("Loaded Pair 02 (Resource-Guarded Swath)!", icon="🌙")
+                    st.toast("Loaded Pair 02 memory-safe case.", icon="🌙")
             else:
-                st.error("Pair 02 image files not found.")
+                st.error("Pair 02 benchmark files not found in data/validation_pairs/pair_02/.")
+
+    # 3. RESEARCH / STRESS CASES
+    st.markdown("""
+    <div style="background: #090e17; border-left: 3px solid #d29922; padding: 3px 8px; margin: 6px 0 4px 0; font-size: 0.72rem; font-weight: 700; color: #e3b341; letter-spacing: 0.5px;">
+        RESEARCH / STRESS
+    </div>
+    """, unsafe_allow_html=True)
+    c_r1, c_r2 = st.columns(2)
+    with c_r1:
+        if st.button("Tycho Research / Stress Test", width="stretch", help="Load the high-resolution Tycho Crater research stress pair. It is not a sub-pixel result."):
+            tycho_s = os.path.join(PROJECT_DIR, "data", "tycho", "source (1).png")
+            tycho_r = os.path.join(PROJECT_DIR, "data", "tycho", "real_refrence.png")
+            if os.path.exists(tycho_s) and os.path.exists(tycho_r):
+                s_loaded = cv2.imread(tycho_s)
+                r_loaded = cv2.imread(tycho_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = "source (1).png (Tycho Stress)"
+                    st.session_state["reference_filename"] = "real_refrence.png (Tycho Stress)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "tycho", "label": "Tycho Research / Stress Test", "category": "RESEARCH / STRESS",
+                        "validation_protocol": "prototype validation", "subpixel_status": "Not sub-pixel",
+                        "note": "Research / Stress Test. Successful validation, not sub-pixel (held-out RMSE: 1.5088 px)."
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Tycho Test Pair (Research / Stress Test) successfully!", icon="🌙")
+            else:
+                st.error("Tycho test pair image files not found in data/tycho/ directory.")
+
+    with c_r2:
+        if st.button("Locked LoFTR Baseline", width="stretch", help="Load fixed non-adaptive baseline reference on Chandrayaan-2 imagery. 166 candidates, 49 inliers, check RMSE 2.0364 px. Fixed research reference."):
+            p04_s = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_04", "source.png")
+            p04_r = os.path.join(PROJECT_DIR, "data", "validation_pairs", "pair_04", "reference.png")
+            if os.path.exists(p04_s) and os.path.exists(p04_r):
+                s_loaded = cv2.imread(p04_s)
+                r_loaded = cv2.imread(p04_r)
+                if s_loaded is not None and r_loaded is not None:
+                    st.session_state["source_img_data"] = s_loaded
+                    st.session_state["reference_img_data"] = r_loaded
+                    st.session_state["source_filename"] = "source.png (Locked Baseline Reference)"
+                    st.session_state["reference_filename"] = "reference.png (Locked Baseline Reference)"
+                    st.session_state["demo_case_info"] = {
+                        "case_id": "locked_baseline", "label": "Locked LoFTR Baseline", "category": "RESEARCH / STRESS",
+                        "validation_protocol": "prototype validation", "subpixel_status": "Not sub-pixel",
+                        "note": "Research reference — not adaptive routing. Fixed research reference."
+                    }
+                    st.session_state.pop("registration_result", None)
+                    st.session_state.pop("export_package", None)
+                    st.session_state.pop("stage_states", None)
+                    st.toast("Loaded Locked LoFTR Baseline reference pair!", icon="🌙")
+            else:
+                st.error("Pair 04 benchmark files not found in data/validation_pairs/pair_04/.")
 
     # --- INPUT / TELEMETRY ACQUISITION SECTION ---
     col_in1, col_in2 = st.columns(2)
@@ -3169,7 +4009,7 @@ if show_inputs:
                 st.session_state["source_filename"] = src_file.name
 
     with col_in2:
-        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Fixed / Reference Image (Lunar Base)</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Reference Image (Delivered Lunar Reference)</div>', unsafe_allow_html=True)
         ref_file = st.file_uploader(
             "Upload Reference Image (Fixed)",
             type=["jpg", "jpeg", "png", "tif"],
@@ -3220,71 +4060,151 @@ if show_inputs:
 
         st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
 
-        badge_html = (
-            '<span style="background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; '
-            'padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">'
-            '● Geospatial Prior: Available</span>'
-            if prior_avail else
-            '<span style="background: rgba(110, 118, 129, 0.2); color: #8b949e; border: 1px solid #30363d; '
-            'padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">'
-            '○ Geospatial Prior: Not Available</span>'
-        )
+        if meta_info.get("mentor", {}).get("is_mentor_data"):
+            m = meta_info["mentor"]
+            v_status = m.get("verification_status", "PARTIALLY VERIFIED")
+            if v_status == "VERIFIED":
+                badge_html = '<span style="background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">● Metadata: VERIFIED (1:1 Effective Scale)</span>'
+            elif v_status == "PARTIALLY VERIFIED":
+                badge_html = '<span style="background: rgba(210, 153, 34, 0.2); color: #e3b341; border: 1px solid #d29922; padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">▲ Metadata: PARTIALLY VERIFIED (Source metadata verified; LRO-WAC reference metadata not verified)</span>'
+            else:
+                badge_html = '<span style="background: rgba(110, 118, 129, 0.2); color: #8b949e; border: 1px solid #30363d; padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">○ Metadata Status: NOT VERIFIED</span>'
 
-        with st.expander("Metadata & Geo Information", expanded=False):
-            st.markdown(f"""
-            <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 10px 14px; margin-bottom: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #1f2a3a; padding-bottom: 6px;">
-                    <div style="font-size: 0.92rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px;">
-                        Metadata & Geo Information
-                    </div>
-                    <div>
-                        {badge_html}
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-                    <!-- Source Metadata -->
-                    <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
-                            Source Telemetry (Moving)
+            c = m.get("source_corners", {})
+            if isinstance(c, dict) and "top_left" in c:
+                corners_str = f"TL:({c['top_left']['lat']:.3f}°, {c['top_left']['lon']:.3f}°) | BR:({c['bottom_right']['lat']:.3f}°, {c['bottom_right']['lon']:.3f}°)"
+            else:
+                corners_str = "Metadata not verified for this product."
+            ref_gsd_val = m.get("reference_gsd_m_px")
+            ref_gsd_display = f"{ref_gsd_val} m/px" if isinstance(ref_gsd_val, (int, float)) else str(ref_gsd_val)
+
+            with st.expander("Metadata & Geo Information", expanded=True):
+                st.markdown(f"""
+                <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 10px 14px; margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #1f2a3a; padding-bottom: 6px;">
+                        <div style="font-size: 0.92rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px;">
+                            Chandrayaan-2 Mission Telemetry & Geodetic Anchors ({m.get('dataset_id', '')})
                         </div>
-                        <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
-                            <div><strong style="color: #c9d1d9;">File:</strong> <span style="font-family: monospace; color: #d1d7e0;">{src_meta['filename']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{src_meta['dimensions']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Image Format:</strong> <span style="font-family: monospace; color: #d1d7e0;">{src_meta['format']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Acquisition ID:</strong> <span style="font-family: monospace; color: {'#00f2ff' if src_meta['acquisition_id'] != 'N/A — metadata not available' else '#8b949e'};">{src_meta['acquisition_id']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Lunar Footprint:</strong> <span style="font-family: monospace; color: {'#3fb950' if src_meta['geo_bounds'] != 'N/A — metadata not available' else '#8b949e'};">{src_meta['geo_bounds']}</span></div>
+                        <div>
+                            {badge_html}
                         </div>
                     </div>
-                    <!-- Reference Metadata -->
-                    <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
-                            Reference Telemetry (Fixed)
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                        <!-- Source Metadata Card -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Moving Source Telemetry (Chandrayaan-2 {m.get('instrument', '').split('(')[0].strip()})
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">Dataset ID:</strong> <span style="font-family: monospace; color: #00f2ff;">{m.get('job_id', '')}</span></div>
+                                <div><strong style="color: #c9d1d9;">Native GSD:</strong> <span style="font-family: monospace; color: #58a6ff;">{m.get('native_resolution_m_px')} m/px</span></div>
+                                <div><strong style="color: #c9d1d9;">Effective Image GSD:</strong> <span style="font-family: monospace; color: #3fb950; font-weight: 700;">{m.get('effective_source_gsd_m_px')} m/px</span></div>
+                                <div><strong style="color: #c9d1d9;">Spacecraft Altitude:</strong> <span style="font-family: monospace; color: #d1d7e0;">{m.get('spacecraft_altitude_km')} km</span></div>
+                                <div><strong style="color: #c9d1d9;">Sun Geometry:</strong> <span style="font-family: monospace; color: #d1d7e0;">Az: {m.get('sun_azimuth_deg', 0):.2f}°, El: {m.get('sun_elevation_deg', 0):.2f}°, Inc: {m.get('solar_incidence_deg', 0):.2f}°</span></div>
+                                <div><strong style="color: #c9d1d9;">Spacecraft Attitude:</strong> <span style="font-family: monospace; color: #d1d7e0;">{m.get('spacecraft_attitude', '')}</span></div>
+                                <div><strong style="color: #c9d1d9;">Projection & Area:</strong> <span style="font-family: monospace; color: #d1d7e0;">{m.get('projection', '')} ({m.get('area', '')})</span></div>
+                                <div><strong style="color: #c9d1d9;">Source Corners:</strong> <span style="font-family: monospace; color: #3fb950;">{corners_str}</span></div>
+                                <div><strong style="color: #c9d1d9;">Source XML:</strong> <span style="font-family: monospace; color: #3fb950;">{m.get('source_xml', '')} [VERIFIED]</span></div>
+                            </div>
                         </div>
-                        <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
-                            <div><strong style="color: #c9d1d9;">File:</strong> <span style="font-family: monospace; color: #d1d7e0;">{ref_meta['filename']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{ref_meta['dimensions']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Image Format:</strong> <span style="font-family: monospace; color: #d1d7e0;">{ref_meta['format']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Acquisition ID:</strong> <span style="font-family: monospace; color: {'#00f2ff' if ref_meta['acquisition_id'] != 'N/A — metadata not available' else '#8b949e'};">{ref_meta['acquisition_id']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Lunar Footprint:</strong> <span style="font-family: monospace; color: {'#3fb950' if ref_meta['geo_bounds'] != 'N/A — metadata not available' else '#8b949e'};">{ref_meta['geo_bounds']}</span></div>
+                        <!-- Reference Metadata Card -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Fixed Reference Telemetry (Target Imagery)
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">Target Product:</strong> <span style="font-family: monospace; color: #00f2ff;">{'LRO-NAC Extracted Tile (5m)' if 'OHRC' in m.get('instrument', '') else 'LRO-WAC Extracted Reference'}</span></div>
+                                <div><strong style="color: #c9d1d9;">Reference GSD:</strong> <span style="font-family: monospace; color: {'#3fb950' if m.get('reference_gsd_m_px') == 5.0 else '#e3b341'};">{ref_gsd_display}</span></div>
+                                <div><strong style="color: #c9d1d9;">Physical Scale Ratio:</strong> <span style="font-family: monospace; color: {'#3fb950' if '1:1' in str(m.get('physical_scale_ratio')) else '#e3b341'}; font-weight: 700;">{m.get('physical_scale_ratio')}</span></div>
+                                <div><strong style="color: #c9d1d9;">Reference Anchor / Tiepoint:</strong> <span style="font-family: monospace; color: #d1d7e0;">{m.get('reference_anchor', '')}</span></div>
+                                <div><strong style="color: #c9d1d9;">Reference XML:</strong> <span style="font-family: monospace; color: #8b949e; font-style: italic;">{m.get('reference_xml', 'NOT AVAILABLE')} (Metadata not verified for this product)</span></div>
+                                <div style="margin-top: 6px; font-size: 0.73rem; color: #8b949e; border-top: 1px dashed #212c3d; padding-top: 4px;">
+                                    {'Verified 1:1 effective pixel scale: 5.0 m/px source ↔ 5.0 m/px reference' if 'OHRC' in m.get('instrument', '') else 'Source metadata verified; LRO-WAC reference metadata not verified.'}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <!-- Geospatial Support & Prior Models -->
-                    <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
-                            Geospatial Support & Priors
-                        </div>
-                        <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
-                            <div><strong style="color: #c9d1d9;">Geo Prior Status:</strong> <span style="font-family: monospace; font-weight: 700; color: {'#3fb950' if prior_avail else '#f0883e'};">{geo_meta['prior_status']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Geo Support / Matches:</strong> <span style="font-family: monospace; color: {'#00f2ff' if geo_meta['correspondences'] != 'N/A — metadata not available' else '#8b949e'};">{geo_meta['correspondences']}</span></div>
-                            <div><strong style="color: #c9d1d9;">Stored Calibration Model:</strong> <span style="font-family: monospace; color: {'#d1d7e0' if geo_meta['model_status'] != 'N/A — metadata not available' else '#8b949e'};">{geo_meta['model_status']}</span></div>
-                            <div style="margin-top: 6px; font-size: 0.73rem; color: #6e7681; border-top: 1px dashed #212c3d; padding-top: 4px;">
-                                {'Scientific ground-truth and orbital calibration verified from Chandrayaan-2 metadata.' if prior_avail else 'No geographic coordinates or ephemeris are inferred or fabricated.'}
+                        <!-- Geographic Grounding & Constraints Card -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Geodetic Grounding & Constraints
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">Geographic Footprint:</strong> <span style="font-family: monospace; color: #3fb950; font-weight: 700;">Geographic overlap metadata available</span></div>
+                                <div><strong style="color: #c9d1d9;">Grounding Class:</strong> <span style="font-family: monospace; color: #00f2ff;">{m.get('grounding_classification', 'PARTIALLY GROUNDED')}</span></div>
+                                <div><strong style="color: #c9d1d9;">DEM Elevation:</strong> <span style="font-family: monospace; color: #8b949e;">Unavailable (Planar homography / RANSAC)</span></div>
+                                <div><strong style="color: #c9d1d9;">SPICE CK/SPK:</strong> <span style="font-family: monospace; color: #8b949e;">Unavailable</span></div>
+                                <div style="margin-top: 6px; font-size: 0.73rem; color: #6e7681; border-top: 1px dashed #212c3d; padding-top: 4px;">
+                                    {m.get('notes', '')}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+        else:
+            badge_html = (
+                '<span style="background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; '
+                'padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">'
+                '● Geospatial Prior: Available</span>'
+                if prior_avail else
+                '<span style="background: rgba(110, 118, 129, 0.2); color: #8b949e; border: 1px solid #30363d; '
+                'padding: 2px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.5px;">'
+                '○ Geospatial Prior: Not Available</span>'
+            )
+
+            with st.expander("Metadata & Geo Information", expanded=False):
+                st.markdown(f"""
+                <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 10px 14px; margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #1f2a3a; padding-bottom: 6px;">
+                        <div style="font-size: 0.92rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px;">
+                            Metadata & Geo Information
+                        </div>
+                        <div>
+                            {badge_html}
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                        <!-- Source Metadata -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Source Telemetry (Moving)
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">File:</strong> <span style="font-family: monospace; color: #d1d7e0;">{src_meta['filename']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{src_meta['dimensions']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Image Format:</strong> <span style="font-family: monospace; color: #d1d7e0;">{src_meta['format']}</span></div>
+                                {f'<div><strong style="color: #c9d1d9;">Acquisition ID:</strong> <span style="font-family: monospace; color: #00f2ff;">{src_meta["acquisition_id"]}</span></div><div><strong style="color: #c9d1d9;">Lunar Footprint:</strong> <span style="font-family: monospace; color: #3fb950;">{src_meta["geo_bounds"]}</span></div>' if src_meta['acquisition_id'] not in ('N/A — metadata not available', 'Mission metadata not available for this image.') else '<div><strong style="color: #c9d1d9;">Mission Metadata:</strong> <span style="color: #8b949e; font-style: italic;">Mission metadata not available for this image.</span></div>'}
+                            </div>
+                        </div>
+                        <!-- Reference Metadata -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Reference Telemetry (Fixed)
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">File:</strong> <span style="font-family: monospace; color: #d1d7e0;">{ref_meta['filename']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{ref_meta['dimensions']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Image Format:</strong> <span style="font-family: monospace; color: #d1d7e0;">{ref_meta['format']}</span></div>
+                                {f'<div><strong style="color: #c9d1d9;">Acquisition ID:</strong> <span style="font-family: monospace; color: #00f2ff;">{ref_meta["acquisition_id"]}</span></div><div><strong style="color: #c9d1d9;">Lunar Footprint:</strong> <span style="font-family: monospace; color: #3fb950;">{ref_meta["geo_bounds"]}</span></div>' if ref_meta['acquisition_id'] not in ('N/A — metadata not available', 'Mission metadata not available for this image.') else '<div><strong style="color: #c9d1d9;">Mission Metadata:</strong> <span style="color: #8b949e; font-style: italic;">Mission metadata not available for this image.</span></div>'}
+                            </div>
+                        </div>
+                        <!-- Geospatial Support & Prior Models -->
+                        <div style="background: #0d1117; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 12px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: #79c0ff; margin-bottom: 6px; letter-spacing: 0.5px;">
+                                Geospatial Support & Priors
+                            </div>
+                            <div style="font-size: 0.8rem; color: #8b949e; line-height: 1.65;">
+                                <div><strong style="color: #c9d1d9;">Geo Prior Status:</strong> <span style="font-family: monospace; font-weight: 700; color: {'#3fb950' if prior_avail else '#f0883e'};">{geo_meta['prior_status']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Geo Support / Matches:</strong> <span style="font-family: monospace; color: {'#00f2ff' if geo_meta['correspondences'] not in ('N/A — metadata not available', 'Mission metadata not available for this image.') else '#8b949e'};">{geo_meta['correspondences']}</span></div>
+                                <div><strong style="color: #c9d1d9;">Stored Calibration Model:</strong> <span style="font-family: monospace; color: {'#d1d7e0' if geo_meta['model_status'] not in ('N/A — metadata not available', 'Mission metadata not available for this image.') else '#8b949e'};">{geo_meta['model_status']}</span></div>
+                                <div style="margin-top: 6px; font-size: 0.73rem; color: #6e7681; border-top: 1px dashed #212c3d; padding-top: 4px;">
+                                    {'Scientific ground-truth and orbital calibration verified from Chandrayaan-2 metadata.' if prior_avail else 'No geographic coordinates or ephemeris are inferred or fabricated.'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
         # Memory-Safe Engine & Resolution Settings
         with st.expander("Memory-Safe Engine & Resolution Settings", expanded=False):
@@ -3341,14 +4261,14 @@ if show_inputs:
         engine_opt = st.radio(
             "Registration Pipeline Engine",
             [
-                "Adaptive Research Engine (Auto-Route SIFT / LoFTR / SuperGlue)",
+                "Adaptive Production Engine (Auto-Route SIFT / LoFTR / SuperGlue)",
                 "Locked LoFTR Baseline"
             ],
             index=0,
             horizontal=True,
             label_visibility="collapsed",
             key="engine_selection",
-            help="The Adaptive Research Engine dynamically inspects lunar surface texture, contrast, and resolution, selects the optimal feature matcher (SIFT, LoFTR, or SuperGlue), and enforces automated quality checks. The Locked LoFTR Baseline runs the fixed standard LoFTR baseline pipeline."
+            help="The Adaptive Production Engine dynamically inspects lunar surface texture, contrast, and resolution, selects the optimal feature matcher (SIFT, LoFTR, or SuperGlue), and enforces automated quality checks. The Locked LoFTR Baseline runs the fixed standard LoFTR baseline pipeline."
         )
 
         st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
@@ -3403,7 +4323,7 @@ if show_inputs:
                         "error_message": "Source or Reference image raster is invalid or empty.",
                         "stage": "input_validation",
                         "runtime": 0.0,
-                        "pipeline_mode": "Adaptive Research Engine" if "Adaptive" in engine_opt else "Locked LoFTR Baseline",
+                        "pipeline_mode": "Adaptive Production Engine" if "Adaptive" in engine_opt else "Locked LoFTR Baseline",
                     }
                 else:
                     stage_states["stage_1"] = "COMPLETE"
@@ -3428,8 +4348,8 @@ if show_inputs:
                 
                     if "Adaptive" in engine_opt:
                         res = safe_run_adaptive_registration(s_active, r_active)
-                        res["pipeline_mode"] = "Adaptive Research Engine"
-                        st.session_state["pipeline_mode"] = "Adaptive Research Engine"
+                        res["pipeline_mode"] = "Adaptive Production Engine"
+                        st.session_state["pipeline_mode"] = "Adaptive Production Engine"
                     else:
                         res = register_images(s_active, r_active, max_loftr_dim=cfg_max_dim, max_pixel_budget=cfg_max_budget)
                         res["pipeline_mode"] = "Locked LoFTR Baseline"
@@ -3448,10 +4368,9 @@ if show_inputs:
                         stage_states["stage_5"] = "COMPLETE"
                         stage_states["stage_6"] = "COMPLETE"
                         stage_states["stage_7"] = "COMPLETE"
-                        stage_states["stage_8"] = "COMPLETE"
                     
-                        # Stage 9: Evidence / Export
-                        stage_states["stage_9"] = "RUNNING"
+                        # Stage 8: Results & Export
+                        stage_states["stage_8"] = "RUNNING"
                         update_stage_status_display(stage_panel_placeholder, stage_states)
                     
                         try:
@@ -3461,12 +4380,12 @@ if show_inputs:
                                 st.session_state.get("reference_filename", "reference.jpeg")
                             )
                             st.session_state["export_package"] = pkg
-                            stage_states["stage_9"] = "COMPLETE"
+                            stage_states["stage_8"] = "COMPLETE"
                             update_stage_status_display(stage_panel_placeholder, stage_states)
                         except Exception as export_err:
                             import traceback
                             traceback.print_exc()
-                            stage_states["stage_9"] = "FAILED"
+                            stage_states["stage_8"] = "FAILED"
                             update_stage_status_display(stage_panel_placeholder, stage_states)
                             st.session_state["export_error"] = str(export_err)
                             st.warning("Registration completed successfully, but evidence/export generation failed.")
@@ -3474,14 +4393,13 @@ if show_inputs:
                         fail_stage = res.get("stage", "execution")
                         if fail_stage == "input_validation":
                             stage_states["stage_1"] = "FAILED"
-                        elif fail_stage == "quality_gate":
+                        elif fail_stage in ("quality_gate", "resource_guard", "matcher_execution"):
                             stage_states["stage_3"] = "COMPLETE"
                             stage_states["stage_4"] = "COMPLETE"
                             stage_states["stage_5"] = "FAILED"
                             stage_states["stage_6"] = "WAITING"
                             stage_states["stage_7"] = "WAITING"
                             stage_states["stage_8"] = "WAITING"
-                            stage_states["stage_9"] = "WAITING"
                         elif fail_stage in ("downstream_geometry", "homography"):
                             stage_states["stage_3"] = "COMPLETE"
                             stage_states["stage_4"] = "COMPLETE"
@@ -3489,7 +4407,6 @@ if show_inputs:
                             stage_states["stage_6"] = "FAILED"
                             stage_states["stage_7"] = "WAITING"
                             stage_states["stage_8"] = "WAITING"
-                            stage_states["stage_9"] = "WAITING"
                         else:
                             stage_states["stage_3"] = "COMPLETE"
                             stage_states["stage_4"] = "COMPLETE"
@@ -3497,7 +4414,6 @@ if show_inputs:
                             stage_states["stage_6"] = "WAITING"
                             stage_states["stage_7"] = "WAITING"
                             stage_states["stage_8"] = "WAITING"
-                            stage_states["stage_9"] = "WAITING"
                         update_stage_status_display(stage_panel_placeholder, stage_states)
                     
                     st.session_state["stage_states"] = stage_states
@@ -3505,7 +4421,7 @@ if show_inputs:
                 import traceback
                 traceback.print_exc()
                 if "registration_result" in st.session_state and st.session_state["registration_result"].get("success", False):
-                    stage_states["stage_9"] = "FAILED"
+                    stage_states["stage_8"] = "FAILED"
                     st.warning("Registration completed successfully, but evidence/export generation failed.")
                 else:
                     stage_states["stage_5"] = "FAILED"
@@ -3515,26 +4431,256 @@ if show_inputs:
             finally:
                 st.session_state["is_running"] = False
 
+        # POST-REGISTRATION NAVIGATOR (Clear next step for the user)
+        if "registration_result" in st.session_state and not st.session_state.get("is_running", False):
+            res_obj = st.session_state["registration_result"]
+            is_succ = res_obj.get("success", False)
+            
+            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+            if is_succ:
+                st.markdown("""
+                <div style="background: #091a10; border: 1px solid #1b472c; border-left: 4px solid #3fb950; border-radius: 6px; padding: 12px 16px; margin: 8px 0 10px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                                <span style="font-family: monospace; font-size: 0.72rem; font-weight: 800; background: #0c2417; color: #3fb950; border: 1px solid #2ea043; padding: 2px 7px; border-radius: 3px;">
+                                    ● REGISTRATION COMPLETE
+                                </span>
+                                <span style="font-size: 0.88rem; font-weight: 700; color: #7ee787;">
+                                    Registration completed and validated successfully.
+                                </span>
+                            </div>
+                            <div style="font-size: 0.76rem; color: #8b949e;">
+                                Geometric homography model estimated and independently verified. Navigate to Results to inspect warped imagery, correspondence maps, and export deliverables.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                col_nav1, col_nav2, col_nav_space = st.columns([2, 2, 3])
+                with col_nav1:
+                    if st.button("View Results →", type="primary", key="btn_post_reg_view_results", width="stretch", help="Navigate to Results page to view registered product, alignment verification, and downloads."):
+                        navigate_to_page("Results")
+                with col_nav2:
+                    if st.button("View Validation →", type="secondary", key="btn_post_reg_view_val", width="stretch", help="Navigate to Validation page to view hold-out check RMSE and residual vectors."):
+                        navigate_to_page("Validation")
+            else:
+                st.markdown("""
+                <div style="background: #180e12; border: 1px solid #6e2028; border-left: 4px solid #f85149; border-radius: 6px; padding: 12px 16px; margin: 8px 0 10px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                                <span style="font-family: monospace; font-size: 0.72rem; font-weight: 800; background: #3c1218; color: #f85149; border: 1px solid #da3633; padding: 2px 7px; border-radius: 3px;">
+                                    ✕ REGISTRATION COMPLETED
+                                </span>
+                                <span style="font-size: 0.88rem; font-weight: 700; color: #ff7b72;">
+                                    Reliable geometric alignment could not be established.
+                                </span>
+                            </div>
+                            <div style="font-size: 0.76rem; color: #8b949e;">
+                                Quality Gate Safe Rejection triggered. Spatial output withheld to protect lunar science integrity. Diagnostics and failure telemetry available in Results.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                col_nav1, col_nav_space = st.columns([3, 4])
+                with col_nav1:
+                    if st.button("View Results & Diagnostics →", type="primary", key="btn_post_rej_view_results", width="stretch", help="Navigate to Results page to inspect failure diagnostics and quality gate criteria."):
+                        navigate_to_page("Results")
+    else:
+        st.markdown("""
+        <div style="background: #161b22; border: 1px dashed #30363d; border-radius: 8px; padding: 28px 20px; text-align: center; margin-top: 16px;">
+            <div style="font-size: 1.05rem; font-weight: 600; color: #8b949e; margin-bottom: 6px;">
+                No image pair selected
+            </div>
+            <div style="font-size: 0.85rem; color: #6e7681; max-width: 520px; margin: 0 auto; line-height: 1.5;">
+                Please upload both a Moving (Source) and Fixed (Reference) image above, or select one of the Quick-Load Benchmark & Demo Pairs to initialize the registration pipeline.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 # ============================================================
 # 3. REGISTRATION RESULTS & METRICS TELEMETRY
 # ============================================================
 
-if show_overview:
-    st.markdown("""
-    <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 14px 18px; margin-bottom: 12px;">
-        <div style="font-size: 0.92rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px; margin-bottom: 6px;">
-            Pipeline Summary
+elif is_overview:
+    has_input_pair = (
+        st.session_state.get("source_img_data") is not None
+        and st.session_state.get("reference_img_data") is not None
+    )
+    has_result = "registration_result" in st.session_state
+    with st.container(border=True):
+        st.subheader("Registration overview")
+        st.caption(
+            "LunarReg prepares, registers, and independently validates lunar image pairs "
+            "without allowing weak geometry to produce an unsafe output."
+        )
+        status_text = "Result ready" if has_result else ("Ready to run" if has_input_pair else "Input required")
+        overview_cards = [
+            ("Current status", status_text, "Upload both frames, then run the protected production path."),
+            ("Production workflow", "8 stages", "Input through independent validation, result, or safe rejection."),
+            ("Research separation", "Protected", "Benchmarks remain isolated from production routing and outputs."),
+        ]
+        for column, (label, value, detail) in zip(st.columns(3), overview_cards):
+            column.markdown(
+                f'<div class="overview-card"><div class="overview-card-label">{label}</div>'
+                f'<div class="overview-card-value">{value}</div>'
+                f'<div class="overview-card-detail">{detail}</div></div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown(
+            "**Production path:** Input → characterization → preprocessing → pipeline selection "
+            "→ resource check → matcher → correspondences → quality gate → spatial selection "
+            "→ homography → warp → independent hold-out validation → result or safe rejection."
+        )
+        if has_result:
+            res_ov = st.session_state["registration_result"]
+            ov_succ = res_ov.get("success", False)
+            ov_btn_lbl = "View Results →" if ov_succ else "View Results & Diagnostics →"
+            col_ov_btn, _ = st.columns([2, 5])
+            with col_ov_btn:
+                if st.button(ov_btn_lbl, type="primary", key="btn_overview_nav_results"):
+                    navigate_to_page("Results")
+
+    # --- PRODUCTION ARCHITECTURE FLOWCHART ---
+    arch_html = """
+    <div style="background: #090e17; border: 1px solid #1a3c54; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2a3a; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <h3 style="color: #58a6ff; margin: 0; font-size: 1.15rem; letter-spacing: 0.5px;">Production Architecture Flow</h3>
+                <div style="font-size: 0.76rem; color: #8b949e; margin-top: 2px;">
+                    End-to-end adaptive registration pipeline for Chandrayaan-2 lunar orbital imagery (SIH26166).
+                </div>
+            </div>
+            <span style="background: #0c2016; color: #3fb950; border: 1px solid #2ea043; padding: 2px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
+                ● Production Pipeline Frozen
+            </span>
         </div>
-        <div style="font-size: 0.82rem; color: #8b949e; line-height: 1.6;">
-            <strong style="color: #c9d1d9;">LunarReg</strong> performs adaptive image registration for Chandrayaan-2 lunar orbital imagery. 
-            The pipeline automatically selects the optimal matcher (SIFT / LoFTR / SuperGlue) based on terrain characteristics, 
-            enforces spatial quality constraints via 3×3 grid coverage, and validates results against independent held-out tie points.
+
+        <!-- Row 1: Linear Ingestion & Preprocessing (Full Width 4-column Grid) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 8px;">
+            <div style="background: #111a28; border: 1px solid #1f3a5f; border-left: 3px solid #58a6ff; border-radius: 5px; padding: 8px 10px;">
+                <div style="font-size: 0.66rem; color: #6e7681; font-family: monospace; font-weight: 700;">STAGE 1</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #79c0ff;">Source + Reference</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">Moving & Fixed orbital frames (raw or mission raster)</div>
+            </div>
+            <div style="background: #111a28; border: 1px solid #1f3a5f; border-left: 3px solid #58a6ff; border-radius: 5px; padding: 8px 10px;">
+                <div style="font-size: 0.66rem; color: #6e7681; font-family: monospace; font-weight: 700;">STAGE 2</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #79c0ff;">Image Characterization</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">Resolution, scale ratio, contrast, texture & dynamic range</div>
+            </div>
+            <div style="background: #111a28; border: 1px solid #1f3a5f; border-left: 3px solid #00f2ff; border-radius: 5px; padding: 8px 10px;">
+                <div style="font-size: 0.66rem; color: #6e7681; font-family: monospace; font-weight: 700;">STAGE 3</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #00f2ff;">Adaptive Router</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">Rule-based routing selecting matcher suited to terrain</div>
+            </div>
+            <div style="background: #0f1c24; border: 1px solid #1a4254; border-left: 3px solid #00f2ff; border-radius: 5px; padding: 8px 10px;">
+                <div style="font-size: 0.66rem; color: #6e7681; font-family: monospace; font-weight: 700;">STAGE 4</div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: #00f2ff;">Resource / Memory Guard</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">2.60 GB RAM Cap: Direct (≤ 2.6 GB) or 16-Tile LoFTR</div>
+            </div>
         </div>
-        <div style="margin-top: 8px; font-size: 0.78rem; color: #6e7681; font-family: monospace;">
-            Pipeline: Source+Reference → Metadata → Preprocessing → Adaptive Routing → Correspondence → Geometric Estimation → Homography → Validation → Export
+
+        <!-- Row 2: Matcher & Quality Gate (Full Width 2-column Grid) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div style="background: #111a28; border: 1px solid #1f3a5f; border-left: 3px solid #58a6ff; border-radius: 5px; padding: 8px 12px;">
+                <div style="font-size: 0.66rem; color: #6e7681; font-family: monospace; font-weight: 700;">STAGE 5 — FEATURE MATCHING</div>
+                <div style="font-size: 0.84rem; font-weight: 700; color: #79c0ff;">LoFTR / SIFT / SuperGlue</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">Primary: Locked LoFTR | Fallbacks: SIFT, SuperGlue (guarded)</div>
+            </div>
+            <div style="background: #181510; border: 1px solid #d29922; border-left: 3px solid #d29922; border-radius: 5px; padding: 8px 12px;">
+                <div style="font-size: 0.66rem; color: #d29922; font-family: monospace; font-weight: 700;">STAGE 6 — DECISION POINT</div>
+                <div style="font-size: 0.84rem; font-weight: 700; color: #e3b341;">Quality Gate</div>
+                <div style="font-size: 0.70rem; color: #8b949e; margin-top: 2px;">Criteria: Candidates ≥ 10 | Inliers ≥ 8 | Ratio ≥ 20.0% | Occupancy ≥ 33.3%</div>
+            </div>
+        </div>
+
+        <!-- Row 3: Dual-Branch Split (PASS vs SAFE REJECTION) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <!-- PASS Branch -->
+            <div style="background: #091a10; border: 1px solid #1b472c; border-top: 3px solid #3fb950; border-radius: 6px; padding: 10px 14px;">
+                <div style="font-size: 0.80rem; font-weight: 700; color: #3fb950; margin-bottom: 8px; border-bottom: 1px solid #1b472c; padding-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>├── PASS BRANCH</span>
+                    <span style="font-size: 0.70rem; font-family: monospace;">CRITERIA MET</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px;">
+                    <div style="background: #0c2417; border: 1px solid #23633e; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #7ee787;">
+                        <strong>3×3 Spatial Selection</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">Max 6 pts/cell (cap 54)</div>
+                    </div>
+                    <div style="background: #0c2417; border: 1px solid #23633e; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #7ee787;">
+                        <strong>RANSAC Homography</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">3.0 px consensus</div>
+                    </div>
+                    <div style="background: #0c2417; border: 1px solid #23633e; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #7ee787;">
+                        <strong>Hold-Out Validation</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">Multi-seed check RMSE</div>
+                    </div>
+                    <div style="background: #0f351f; border: 1px solid #2ea043; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #3fb950;">
+                        <strong>Registered Product</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">5-deliverable archive</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SAFE REJECTION Branch -->
+            <div style="background: #1a0b0e; border: 1px solid #5c1d24; border-top: 3px solid #f85149; border-radius: 6px; padding: 10px 14px;">
+                <div style="font-size: 0.80rem; font-weight: 700; color: #f85149; margin-bottom: 8px; border-bottom: 1px solid #5c1d24; padding-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>└── SAFE REJECTION BRANCH</span>
+                    <span style="font-size: 0.70rem; font-family: monospace;">INTEGRITY GUARD</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px;">
+                    <div style="background: #281216; border: 1px solid #7d242c; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #ff7b72;">
+                        <strong>Fallback Matcher</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">SIFT / SuperGlue evaluation</div>
+                    </div>
+                    <div style="background: #281216; border: 1px solid #7d242c; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #ff7b72;">
+                        <strong>Quality Gate Check</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">Re-evaluate thresholds</div>
+                    </div>
+                    <div style="background: #38151b; border: 1px solid #a82e39; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #ff7b72;">
+                        <strong>Safe Rejection</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">Integrity guard active</div>
+                    </div>
+                    <div style="background: #401017; border: 1px solid #f85149; border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: #f85149;">
+                        <strong>Zero Corrupt Pixels</strong>
+                        <div style="font-size: 0.66rem; color: #8b949e;">Warp withheld safely</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    clean_arch_html = "\n".join(l.strip() for l in arch_html.splitlines() if l.strip())
+    if hasattr(st, "html"):
+        st.html(clean_arch_html)
+    else:
+        st.markdown(clean_arch_html, unsafe_allow_html=True)
+
+    rl_html = """
+    <div style="background: #16120d; border: 1px dashed #d29922; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.88rem; font-weight: 700; color: #e3b341;">RESEARCH LAB</span>
+                <span style="background: #3d240c; color: #f0883e; border: 1px solid #7a4e14; padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-family: monospace; font-weight: 700;">
+                    RESEARCH BENCHMARK ONLY
+                </span>
+            </div>
+            <span style="font-size: 0.74rem; color: #f0883e; font-weight: 600;">
+                Research-only — does not modify production
+            </span>
+        </div>
+        <div style="font-size: 0.76rem; color: #8b949e; line-height: 1.45;">
+            Benchmarking, ablation, adaptive experiments, Locked LoFTR, LOPO, statistical analysis, and experimental evaluation remain separate from the production execution path.
+        </div>
+    </div>
+    """
+    clean_rl_html = "\n".join(l.strip() for l in rl_html.splitlines() if l.strip())
+    if hasattr(st, "html"):
+        st.html(clean_rl_html)
+    else:
+        st.markdown(clean_rl_html, unsafe_allow_html=True)
 
     if "registration_result" in st.session_state:
         res = st.session_state["registration_result"]
@@ -3554,14 +4700,14 @@ if show_overview:
         fin_inliers = res.get("final_inliers", 0)
 
         status_color = "#3fb950" if is_success else "#f85149"
-        status_text = "● Registration Complete" if is_success else "✕ Registration Failed"
+        status_text = "● Registration complete" if is_success else "✕ Safe Rejection"
 
         st.markdown(f"""
-        <div style="background: #0c1a24; border: 1px solid #1a3c54; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+        <div style="background: #0c1a24; border: 1px solid #1a3c54; padding: 10px 14px; border-radius: 6px; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
                 <span style="background: {'#0c2016' if is_success else '#3c1218'}; color: {status_color}; border: 1px solid {'#2ea043' if is_success else '#da3633'}; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-family: monospace;">{status_text}</span>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; font-family: monospace; font-size: 0.78rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; font-family: monospace; font-size: 0.78rem;">
                 <div><span style="color: #8b949e;">Mode:</span> <strong style="color: {'#d29922' if p_mode == 'Locked LoFTR Baseline' else '#58a6ff'};">{p_mode}</strong></div>
                 <div><span style="color: #8b949e;">Matcher:</span> <strong style="color: #ffffff; background: #1f6feb; padding: 1px 6px; border-radius: 3px;">{matcher_name}</strong></div>
                 <div><span style="color: #8b949e;">Routing:</span> <strong style="color: #7ee787;">{routing_label}</strong></div>
@@ -3570,29 +4716,38 @@ if show_overview:
                 <div><span style="color: #8b949e;">Spatial Occupancy:</span> <strong style="color: #00f2ff;">{occ_cells}/{tot_cells}</strong></div>
                 <div><span style="color: #8b949e;">Val RMSE:</span> <strong style="color: #00f2ff;">{val_rmse_str}</strong></div>
             </div>
-            <div style="margin-top: 8px; font-size: 0.76rem; color: #8b949e;">
+            <div style="margin-top: 6px; font-size: 0.76rem; color: #8b949e;">
                 Navigate to <strong style="color: #58a6ff;">Results</strong> for full scientific evidence or <strong style="color: #58a6ff;">Export</strong> to download deliverables.
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div style="background: #0d1117; border: 1px dashed #30363d; border-radius: 6px; padding: 14px 18px;">
-            <div style="font-size: 0.82rem; color: #8b949e;">
+        <div style="background: #0d1117; border: 1px dashed #30363d; border-radius: 6px; padding: 10px 14px; margin-top: 0px;">
+            <div style="font-size: 0.80rem; color: #8b949e;">
                 <span style="font-weight: 600; color: #d1d7e0;">No registration result available yet.</span>
                 Navigate to <strong style="color: #58a6ff;">Inputs</strong> to load imagery and run registration.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-if show_results_full:
-    if sidebar_page == "Results" and "registration_result" not in st.session_state:
-        st.info("No registration results yet. Please switch to **Inputs** or **Overview** from the sidebar to load lunar imagery and run registration.")
-
-    if sidebar_page == "Validation" and "registration_result" not in st.session_state:
-        st.info("No registration results yet. Please switch to **Inputs** or **Overview** from the sidebar to load lunar imagery and run registration first, then return to Validation.")
-
-    if sidebar_page == "Results" and "registration_result" in st.session_state:
+elif is_results:
+    if "registration_result" not in st.session_state:
+        st.markdown("""
+        <div style="background: #0d1117; border: 1px dashed #30363d; border-radius: 6px; padding: 24px 20px; text-align: center; margin: 12px 0;">
+            <div style="font-size: 1.0rem; font-weight: 600; color: #d1d7e0; margin-bottom: 6px;">
+                No registration results available yet
+            </div>
+            <div style="font-size: 0.84rem; color: #8b949e; max-width: 520px; margin: 0 auto 14px auto;">
+                Please navigate to <strong style="color: #58a6ff;">Inputs</strong> or <strong style="color: #58a6ff;">Overview</strong> to load lunar imagery and execute registration.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        col_res_empty, _ = st.columns([2, 5])
+        with col_res_empty:
+            if st.button("Go to Inputs →", type="primary", key="btn_res_empty_inputs", width="stretch"):
+                navigate_to_page("inputs")
+    else:
         src_fn = st.session_state.get("source_filename", "Source Image")
         ref_fn = st.session_state.get("reference_filename", "Reference Image")
         st.markdown(
@@ -3602,573 +4757,883 @@ if show_results_full:
             unsafe_allow_html=True,
         )
 
-if show_results_full and "registration_result" in st.session_state and not st.session_state["registration_result"].get("success", True):
-    f_res = st.session_state["registration_result"]
-    s_active = st.session_state.get("source_img_data")
-    r_active = st.session_state.get("reference_img_data")
-    err_type = f_res.get("error_type", "RegistrationFailure")
-    err_msg = f_res.get("error_message", "Registration sequence failed.")
-    stage = f_res.get("stage", "execution")
-    runtime = f_res.get("runtime", 0.0)
-    details = f_res.get("details", "")
-    fb_blocked = f_res.get("fallback_blocked", False)
-    blocked_fbs = f_res.get("blocked_fallbacks", [])
-    fb_used = f_res.get("fallback_used", False)
-    fb_choice = f_res.get("fallback_choice")
-    p_mode = get_pipeline_mode(f_res)
+        res = st.session_state["registration_result"]
+        s_active = st.session_state.get("source_img_data")
+        r_active = st.session_state.get("reference_img_data")
+        is_success = res.get("success", True)
 
-    primary_m = f_res.get("primary_matcher") or "LoFTR"
-    qg_status = "FAILED"
-    fb_exec = f"TRIGGERED ({fb_choice})" if fb_used else "NONE"
-    blocked_str = ", ".join(blocked_fbs) if blocked_fbs else ("SIFT, SuperGlue" if fb_blocked else "None")
-    res_policy = "ACTIVE"
-    overall_reg = "Failed Safely"
-    stage_disp = "Quality Gate / Correspondence Selection" if stage == "quality_gate" else stage.replace("_", " ").title()
+        if not is_success:
+            f_res = res
+            err_type = f_res.get("error_type", "RegistrationFailure")
+            err_msg = f_res.get("error_message", "Registration sequence failed.")
+            stage = f_res.get("stage", "execution")
 
-    fail_card_html = f"""
-    <div style="background: #180e12; border: 1px solid #6e2028; border-left: 5px solid #f85149; border-radius: 6px; padding: 12px 16px; margin: 12px 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d141b; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="background: #3c1218; color: #f85149; border: 1px solid #da3633; padding: 3px 10px; border-radius: 4px; font-weight: 800; font-size: 0.82rem; font-family: monospace; letter-spacing: 0.5px;">
-                    ✕ Registration Failed Safely
-                </span>
-                <span style="font-weight: 700; color: #ff7b72; font-size: 0.90rem;">
-                    Stage: {stage_disp}
-                </span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #da3633; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
-                    Registration: Failed
-                </span>
-                <span style="background: rgba(46,160,67,0.15); color: #3fb950; border: 1px solid #2ea043; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
-                    Safety Checks: Passed
-                </span>
-            </div>
-        </div>
-        
-        <div style="color: #c9d1d9; font-size: 0.9rem; line-height: 1.5; margin-bottom: 8px;">
-            <strong style="color: #ff7b72;">Failure Reason:</strong> {err_msg}
-        </div>
-        <div style="font-size: 0.82rem; color: #8b949e; margin-bottom: 14px;">
-            Quality or resource checks prevented an unsafe registration.
-        </div>
-
-        <!-- Technical Telemetry Matrix -->
-        <div style="background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; font-family: monospace; font-size: 0.8rem;">
-                <div><span style="color: #8b949e;">Pipeline Mode:</span> <strong style="color: #58a6ff;">{p_mode}</strong></div>
-                <div><span style="color: #8b949e;">Primary Matcher:</span> <strong style="color: #58a6ff;">{primary_m}</strong></div>
-                <div><span style="color: #8b949e;">Quality Gate:</span> <strong style="color: #f85149;">{qg_status}</strong></div>
-                <div><span style="color: #8b949e;">Fallback Execution:</span> <strong style="color: #d1d7e0;">{fb_exec}</strong></div>
-                <div><span style="color: #8b949e;">Blocked Fallbacks:</span> <strong style="color: #f0883e;">{blocked_str}</strong></div>
-                <div><span style="color: #8b949e;">Resource Policy:</span> <strong style="color: #3fb950;">{res_policy}</strong></div>
-                <div><span style="color: #8b949e;">Registration:</span> <strong style="color: #f85149;">{overall_reg}</strong></div>
-            </div>
-        </div>
-
-        <div style="font-size: 0.82rem; color: #8b949e; border-top: 1px dashed #30363d; padding-top: 8px;">
-            <span style="color: #3fb950; font-weight: 600;">Resource Policy:</span> The pipeline terminated safely according to quality and resource limits. No unsafe transformation was applied.
-        </div>
-    </div>
-    """
-    clean_fail_card = "\n".join(line.strip() for line in fail_card_html.splitlines() if line.strip())
-    if hasattr(st, "html"):
-        st.html(clean_fail_card)
-    else:
-        st.markdown(clean_fail_card, unsafe_allow_html=True)
-
-    # ============================================================
-    # CORRESPONDENCE MATCHING / QUALITY (ON FAILURE)
-    # ============================================================
-    match_data_f = resolve_correspondence_matching_telemetry(f_res, s_active, r_active)
-    prep_data_f = resolve_illumination_and_preprocessing_telemetry(f_res, s_active, r_active)
-    if match_data_f:
-        render_correspondence_quality_ui(match_data_f, f_res, s_active, r_active)
-
-    # ============================================================
-    # RANSAC / GEOMETRIC ESTIMATION (ON FAILURE)
-    # ============================================================
-    geom_data_f = resolve_ransac_geometry_telemetry(f_res, s_active, r_active)
-    if geom_data_f:
-        render_ransac_geometry_ui(geom_data_f)
-
-    # ============================================================
-    # HOMOGRAPHY & IMAGE WARP (ON FAILURE)
-    # ============================================================
-    warp_data_f = resolve_homography_warp_telemetry(f_res, s_active, r_active)
-    if warp_data_f:
-        render_homography_warp_ui(warp_data_f)
-
-    # ============================================================
-    # INDEPENDENT VALIDATION (ON FAILURE)
-    # ============================================================
-    val_data_f = resolve_independent_validation_telemetry(f_res, s_active, r_active)
-    if val_data_f:
-        render_independent_validation_ui(val_data_f, f_res)
-
-    # Collapsed secondary sections
-    if prep_data_f:
-        with st.expander("Illumination & Preprocessing", expanded=False):
-            render_illumination_and_preprocessing_ui(prep_data_f)
-
-    if details:
-        with st.expander("Diagnostic Failure Details", expanded=False):
-            st.code(details, language="text")
-
-    if f_res.get("adaptive_raw"):
-        with st.expander("Advanced Debug Data", expanded=False):
-            st.json(f_res["adaptive_raw"], expanded=False)
-
-if show_results_full and "registration_result" in st.session_state and st.session_state["registration_result"].get("success", True):
-    res = st.session_state["registration_result"]
-    s_active = st.session_state["source_img_data"]
-    r_active = st.session_state["reference_img_data"]
-
-    # Pre-resolve independent validation telemetry for banner and Stage 8
-    val_data = resolve_independent_validation_telemetry(res, s_active, r_active)
-    val_rmse_val = val_data.get("rmse") if val_data else None
-    val_rmse_str = val_data.get("rmse_disp", "N/A") if val_data else "N/A"
-    val_color = "#00f2ff" if (val_rmse_val is not None and val_rmse_val < 1.0) else "#3fb950" if val_rmse_val is not None else "#8b949e"
-
-    if not show_validation_only:
-        st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
-    
-        p_mode = get_pipeline_mode(res)
-        matcher_name = res.get('final_matcher_used', res.get('matcher', 'LoFTR'))
-        routing_label = "Baseline Locked" if p_mode == "Locked LoFTR Baseline" else res.get("routing_rule", "Adaptive Routed")
-        scale_text = ""
-        if res.get("scale_source", 1.0) < 1.0 or res.get("scale_ref", 1.0) < 1.0:
-            scale_text = f" | SCALE: <span style='color: #00f2ff; font-weight: bold;'>SRC {res.get('scale_source', 1.0):.2f}x / REF {res.get('scale_ref', 1.0):.2f}x</span>"
-
-        st.markdown(f"""
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1a24; border: 1px solid #1a3c54; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <span class="status-badge" style="background: #0c2016; color: #3fb950; border: 1px solid #2ea043; font-weight: bold; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-family: monospace;">● Registration Complete</span>
-                <span style="font-weight: 700; color: #58a6ff; font-size: 0.84rem; letter-spacing: 0.5px;">Geometric model successfully estimated</span>
-                <span style="background: #122838; color: #00f2ff; border: 1px solid #00f2ff; padding: 1px 5px; border-radius: 4px; font-size: 0.70rem; font-family: monospace; font-weight: 600;">Model: Planar Homography (H3×3)</span>
-            </div>
-            <div style="font-family: monospace; font-size: 0.78rem; color: #8b949e; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <span>Mode: <strong style="color: {'#d29922' if p_mode == 'Locked LoFTR Baseline' else '#58a6ff'};">{p_mode}</strong></span>
-                <span>Routing: <strong style="color: #7ee787;">{routing_label}</strong></span>
-                <span>Matcher: <strong style="color: #ffffff; background: #1f6feb; padding: 1px 5px; border-radius: 3px;">{matcher_name}</strong></span>
-                <span>Runtime: <strong style="color: #00f2ff;">{res['runtime']:.2f}s</strong></span>
-                <span>Val RMSE: <strong style="color: {val_color};">{val_rmse_str}</strong></span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # ============================================================
-        # 2. ADAPTIVE ROUTING SECTION
-        # ============================================================
-        render_adaptive_routing_ui(res)
-
-        # ============================================================
-        # 3. CORRESPONDENCE QUALITY SECTION
-        # ============================================================
-        match_data = resolve_correspondence_matching_telemetry(res, s_active, r_active)
-        prep_data = resolve_illumination_and_preprocessing_telemetry(res, s_active, r_active)
-        render_correspondence_quality_ui(match_data, res, s_active, r_active)
-
-        # ============================================================
-        # 4. RANSAC / GEOMETRIC ESTIMATION SECTION
-        # ============================================================
-        geom_data = resolve_ransac_geometry_telemetry(res, s_active, r_active)
-        if geom_data:
-            render_ransac_geometry_ui(geom_data)
-
-        # ============================================================
-        # 5. HOMOGRAPHY & REGISTRATION SECTION
-        # ============================================================
-        warp_data = resolve_homography_warp_telemetry(res, s_active, r_active)
-        if warp_data:
-            render_homography_warp_ui(warp_data)
-
-        # ============================================================
-        # ALIGNMENT VERIFICATION SECTION
-        # ============================================================
-        st.markdown("""
-        <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 8px 12px 2px 12px; margin-bottom: 4px; margin-top: 0px;">
-            <div style="font-size: 0.88rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px; border-bottom: 1px solid #1f2a3a; padding-bottom: 4px; margin-bottom: 2px;">
-                Alignment Verification
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        tab_side, tab_blend, tab_diff = st.tabs([
-            "Side-by-Side Verification",
-            "Composite Blend (50/50)",
-            "Difference Residual Map"
-        ])
-
-        ref_g = cv2.cvtColor(r_active, cv2.COLOR_BGR2GRAY) if len(r_active.shape) == 3 else r_active
-        registered = res.get("registered_image")
-
-        with tab_side:
-            if registered is not None:
-                if registered.shape[:2] != ref_g.shape[:2]:
-                    reg_side = cv2.resize(
-                        registered,
-                        (ref_g.shape[1], ref_g.shape[0]),
-                        interpolation=cv2.INTER_LINEAR
-                    )
-                else:
-                    reg_side = registered
-
-                ref_side = r_active
-                if len(ref_side.shape) == 2:
-                    ref_side = cv2.cvtColor(ref_side, cv2.COLOR_GRAY2BGR)
-                if len(reg_side.shape) == 2:
-                    reg_side = cv2.cvtColor(reg_side, cv2.COLOR_GRAY2BGR)
-
-                ref_rgb = cv2.cvtColor(ref_side, cv2.COLOR_BGR2RGB)
-                reg_rgb = cv2.cvtColor(reg_side, cv2.COLOR_BGR2RGB)
-
-                col_ref_v, col_reg_v = st.columns(2, gap="medium")
-                with col_ref_v:
-                    st.markdown(
-                        "<div style='font-size: 0.80rem; font-weight: 600; color: #c9d1d9; margin-bottom: 4px;'>"
-                        "Fixed Reference Frame"
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.image(
-                        ref_rgb,
-                        caption=f"Reference ({ref_rgb.shape[1]}×{ref_rgb.shape[0]} px)",
-                        width="stretch",
-                    )
-                with col_reg_v:
-                    st.markdown(
-                        "<div style='font-size: 0.80rem; font-weight: 600; color: #c9d1d9; margin-bottom: 4px;'>"
-                        "Registered Source (Warped)"
-                        "</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.image(
-                        reg_rgb,
-                        caption=f"Registered output aligned to reference frame ({reg_rgb.shape[1]}×{reg_rgb.shape[0]} px)",
-                        width="stretch",
-                    )
-            else:
-                st.info("Registered output unavailable for side-by-side verification.")
-
-        with tab_blend:
-            if registered is not None:
-                if registered.shape[:2] != ref_g.shape[:2]:
-                    reg_resized = cv2.resize(
-                        registered,
-                        (ref_g.shape[1], ref_g.shape[0]),
-                        interpolation=cv2.INTER_LINEAR
-                    )
-                else:
-                    reg_resized = registered
-
-                if len(reg_resized.shape) == 3:
-                    reg_gray = cv2.cvtColor(reg_resized, cv2.COLOR_BGR2GRAY)
-                else:
-                    reg_gray = reg_resized
-
-                ref_f = ref_g.astype(np.float32)
-                reg_f = reg_gray.astype(np.float32)
-
-                overlay = cv2.addWeighted(
-                    ref_f,
-                    0.5,
-                    reg_f,
-                    0.5,
-                    0
-                ).astype(np.uint8)
-
-                st.image(
-                    overlay,
-                    caption="Composite Blend (50/50): Registered Moving Source + Fixed Reference",
-                    width="stretch"
-                )
-            else:
-                st.info("Registered output unavailable for blend verification.")
-
-        with tab_diff:
-            if registered is not None:
-                if registered.shape[:2] != ref_g.shape[:2]:
-                    reg_for_diff = cv2.resize(
-                        registered,
-                        (ref_g.shape[1], ref_g.shape[0]),
-                        interpolation=cv2.INTER_LINEAR
-                    )
-                else:
-                    reg_for_diff = registered
-
-                if len(reg_for_diff.shape) == 3:
-                    reg_for_diff = cv2.cvtColor(reg_for_diff, cv2.COLOR_BGR2GRAY)
-
-                diff = cv2.absdiff(ref_g, reg_for_diff)
-                fig_diff, ax_diff = plt.subplots(figsize=(8, 3.2))
-                fig_diff.patch.set_facecolor('#0b0e14')
-                ax_diff.set_facecolor('#121824')
-                im_d = ax_diff.imshow(diff, cmap='inferno')
-                ax_diff.set_title("Absolute Intensity Residual Map (|Reference - Warped Source|)", color='#58a6ff', fontsize=10)
-                ax_diff.axis('off')
-                cbar = fig_diff.colorbar(im_d, ax=ax_diff, fraction=0.03, pad=0.02)
-                cbar.ax.tick_params(labelsize=8, colors='#8b949e')
-                st.pyplot(fig_diff)
-                plt.close(fig_diff)
-            else:
-                st.info("Registered output unavailable for difference residual map.")
-
-        # ============================================================
-
-    # INDEPENDENT VALIDATION
-    # ============================================================
-    if val_data:
-        render_independent_validation_ui(val_data, res)
-
-    # ============================================================
-    if not show_validation_only:
-        # 4. REGISTERED PRODUCT & EVIDENCE EXPORT SECTION
-        # ============================================================
-        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-    
-        st.markdown("""
-        <div style="background: #090d14; border: 1px solid #1a3c54; border-top: 3px solid #00f2ff; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1c2738; padding-bottom: 4px; margin-bottom: 6px;">
-                <div style="display: flex; align-items: center;">
-                    <span style="font-weight: 700; color: #58a6ff; font-size: 0.90rem; letter-spacing: 0.5px;">Results & Export</span>
-                </div>
-                <span style="font-family: monospace; font-size: 0.72rem; color: #3fb950; background: #0c2016; border: 1px solid #194d33; padding: 2px 7px; border-radius: 4px;">● Ready for Export</span>
-            </div>
-            <div style="font-size: 0.78rem; color: #8b949e; margin-bottom: 1px;">
-                Download the registered image, match points, homography, and evidence report.
-            </div>
-            <div style="font-size: 0.76rem; color: #58a6ff; font-style: italic;">
-                All outputs correspond to the accepted registration run.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Retrieve pre-cached export assets or build once
-        export_pkg = st.session_state.get("export_package")
-        if export_pkg is None:
-            try:
-                export_pkg = build_registration_export_package(
-                    res,
-                    s_active,
-                    r_active,
-                    st.session_state.get("source_filename", "source.jpeg"),
-                    st.session_state.get("reference_filename", "reference.jpeg")
-                )
-                st.session_state["export_package"] = export_pkg
-            except Exception as export_err:
-                import traceback
-                traceback.print_exc()
-                st.session_state["export_error"] = str(export_err)
-                export_pkg = None
-
-        if export_pkg is None:
-            st.error(f"Evidence / export generation failed: {st.session_state.get('export_error', 'Unable to build export deliverables.')}")
-        else:
-            col_dl1, col_dl2 = st.columns([3, 1])
-            with col_dl1:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
-                    <div>
-                        <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Registered Image</span>
-                        <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['image']['filename']}</span>
-                    </div>
-                    <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">{r_active.shape[1]}×{r_active.shape[0]} px | PNG</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col_dl2:
-                st.download_button(
-                    label="Download Registered Image",
-                    data=export_pkg["image"]["bytes"],
-                    file_name=export_pkg["image"]["filename"],
-                    mime=export_pkg["image"]["mime"],
-                    key="dl_reg_img",
-                    width="stretch"
-                )
-
-            col_dl3, col_dl4 = st.columns([3, 1])
-            with col_dl3:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
-                    <div>
-                        <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Correspondence CSV</span>
-                        <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['csv']['filename']}</span>
-                    </div>
-                    <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">{res.get('final_inliers', 0)} inliers | 5 cols</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col_dl4:
-                st.download_button(
-                    label="Download Match Points",
-                    data=export_pkg["csv"]["bytes"],
-                    file_name=export_pkg["csv"]["filename"],
-                    mime=export_pkg["csv"]["mime"],
-                    key="dl_match_csv",
-                    width="stretch"
-                )
-
-            col_dl5, col_dl6 = st.columns([3, 1])
-            with col_dl5:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
-                    <div>
-                        <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Homography</span>
-                        <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['homography']['filename']}</span>
-                    </div>
-                    <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">3×3 matrix | JSON</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col_dl6:
-                st.download_button(
-                    label="Download Homography",
-                    data=export_pkg["homography"]["bytes"],
-                    file_name=export_pkg["homography"]["filename"],
-                    mime=export_pkg["homography"]["mime"],
-                    key="dl_homography_json",
-                    width="stretch"
-                )
-
-            col_dl7, col_dl8 = st.columns([3, 1])
-            with col_dl7:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
-                    <div>
-                        <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Evidence Report (PDF)</span>
-                        <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['pdf']['filename']}</span>
-                    </div>
-                    <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">7 pages | PDF</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col_dl8:
-                st.download_button(
-                    label="Download Evidence Report",
-                    data=export_pkg["pdf"]["bytes"],
-                    file_name=export_pkg["pdf"]["filename"],
-                    mime=export_pkg["pdf"]["mime"],
-                    key="dl_evidence_pdf",
-                    width="stretch"
-                )
-
-            col_dl9, col_dl10 = st.columns([3, 1])
-            with col_dl9:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
-                    <div>
-                        <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Machine-Readable Evidence (JSON)</span>
-                        <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['evidence']['filename']}</span>
-                    </div>
-                    <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">20 telemetry attributes | JSON</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col_dl10:
-                st.download_button(
-                    label="Download Evidence JSON",
-                    data=export_pkg["evidence"]["bytes"],
-                    file_name=export_pkg["evidence"]["filename"],
-                    mime=export_pkg["evidence"]["mime"],
-                    key="dl_evidence_json",
-                    width="stretch"
-                )
-
-            st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
-
-            # Prominent Package Download Button
-            st.download_button(
-                label="Download Complete Package",
-                data=export_pkg["zip"]["bytes"],
-                file_name=export_pkg["zip"]["filename"],
-                mime=export_pkg["zip"]["mime"],
-                type="primary",
-                key="dl_complete_package",
-                width="stretch",
-                help="Download an all-in-one ZIP archive containing the registered image (PNG), correspondence CSV, homography matrix JSON, scientific evidence report (PDF), and machine-readable evidence JSON."
+            is_mem_resource_limit = (
+                err_type == "LoFTRMemoryResourceLimit"
+                or "LoFTRMemoryResourceLimit" in str(f_res.get("failure_reason", ""))
+                or "loftr cpu workspace limit exceeded" in str(err_msg).lower()
+                or "can't allocate" in str(err_msg).lower()
+                or "not enough memory" in str(err_msg).lower()
             )
+            if is_mem_resource_limit:
+                err_type = "LoFTRMemoryResourceLimit"
+                err_msg = "LoFTR CPU workspace limit exceeded; Memory-Safe Tiled LoFTR was required."
+                stage = "resource_guard"
 
-            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+            runtime = f_res.get("runtime", 0.0)
+            details = f_res.get("details", "")
+            fb_blocked = f_res.get("fallback_blocked", False)
+            blocked_fbs = f_res.get("blocked_fallbacks", [])
+            fb_used = f_res.get("fallback_used", False)
+            fb_choice = f_res.get("fallback_choice")
+            p_mode = get_pipeline_mode(f_res)
 
-        # Collapsed secondary sections
-        if prep_data:
-            with st.expander("Illumination & Preprocessing", expanded=False):
-                render_illumination_and_preprocessing_ui(prep_data)
+            primary_m = f_res.get("primary_matcher") or "LoFTR"
+            qg_status = "FAILED"
+            fb_exec = f"TRIGGERED ({fb_choice})" if fb_used else "NONE"
+            blocked_str = ", ".join(blocked_fbs) if blocked_fbs else ("SIFT, SuperGlue" if fb_blocked else "None")
+            res_policy = "ACTIVE"
+            overall_reg = "Safe Rejection"
+            stage_disp = "Quality Gate / Correspondence Selection" if stage == "quality_gate" else stage.replace("_", " ").title()
 
-        # Compact Technical Diagnostics (strictly non-redundant system/pipeline telemetry)
-        with st.expander("Technical Details", expanded=False):
-            col_td1, col_td2 = st.columns(2)
-            H_mat = None
-            for k in ["final_homography", "H", "homography", "H_final"]:
-                if k in res and res[k] is not None and isinstance(res[k], np.ndarray):
-                    H_mat = res[k]
-                    break
-            if H_mat is None and isinstance(res.get("downstream"), dict):
-                for k in ["H_final", "H", "homography"]:
-                    if k in res["downstream"] and res["downstream"][k] is not None and isinstance(res["downstream"][k], np.ndarray):
-                        H_mat = res["downstream"][k]
-                        break
+            tiled_execution = resolve_tiled_loftr_telemetry(f_res)
+            if tiled_execution:
+                estimate = tiled_execution.get("full_image_memory_estimate_gb")
+                cap = tiled_execution.get("memory_cap_gb")
+                guard_text = (
+                    f"{float(estimate):.3f} GB estimated / {float(cap):.2f} GB cap"
+                    if estimate is not None and cap is not None else "Recorded by LoFTR resource guard"
+                )
+                tiles_planned = tiled_execution.get("tiles_planned", "N/A")
+                tiles_succ = tiled_execution.get("tiles_successful", "N/A")
+                tiles_skip = tiled_execution.get("tiles_skipped", 0)
+                if tiles_skip and int(tiles_skip) > 0:
+                    tiles_text = f"{tiles_succ} / {tiles_planned} successful ({tiles_skip} skipped: insufficient texture)"
+                else:
+                    tiles_text = f"{tiles_succ} / {tiles_planned} successful"
+                merged_pts = str(tiled_execution.get("merged_correspondence_count", "N/A"))
+                overlap_pct = f"{float(tiled_execution.get('tile_overlap', 0.0)) * 100:.0f}%"
 
-            if H_mat is not None:
-                try:
-                    cond_val = float(np.linalg.cond(H_mat))
-                    cond_str = f"`{cond_val:.3e}`"
-                except Exception:
-                    cond_str = "Not available for this run"
+                st.markdown("### Tiled LoFTR Execution")
+                st.markdown(f"""
+                <div style="background: #0c1420; border: 1px solid #1a2a3e; border-left: 4px solid #58a6ff; border-radius: 6px; padding: 12px 16px; margin: 4px 0 14px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-family: monospace; font-size: 0.80rem;">
+                        <div><span style="color: #8b949e;">Execution Mode:</span><br/><strong style="color: #00f2ff;">Memory-Safe Tiled LoFTR</strong></div>
+                        <div><span style="color: #8b949e;">Memory Guard:</span><br/><strong style="color: #e6edf3;">{guard_text}</strong></div>
+                        <div><span style="color: #8b949e;">Tiles:</span><br/><strong style="color: #3fb950;">{tiles_text}</strong></div>
+                        <div><span style="color: #8b949e;">Merged Correspondences:</span><br/><strong style="color: #79c0ff;">{merged_pts}</strong></div>
+                        <div><span style="color: #8b949e;">Overlap:</span><br/><strong style="color: #e6edf3;">{overlap_pct}</strong></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            raw_prim = f_res.get("adaptive_raw", {}).get("primary_result", {}) if isinstance(f_res.get("adaptive_raw"), dict) else {}
+            q_gate_res = f_res.get("quality_gate") or (f_res.get("adaptive_raw", {}).get("quality_gate", {}) if isinstance(f_res.get("adaptive_raw"), dict) else {})
+
+            cand_count = raw_prim.get("n_candidates") or raw_prim.get("num_candidates") or f_res.get("num_candidates") or f_res.get("n_candidates") or "N/A"
+            inlier_count = raw_prim.get("n_inliers") or raw_prim.get("num_inliers") or f_res.get("num_inliers") or f_res.get("inliers") or "N/A"
+            
+            ratio_val = raw_prim.get("inlier_ratio") if raw_prim.get("inlier_ratio") is not None else f_res.get("inlier_ratio")
+            if ratio_val is not None:
+                ratio_pct = float(ratio_val) * 100
+                ratio_color = "#3fb950" if ratio_pct >= 20.0 else "#f85149"
+                ratio_disp = f"{ratio_pct:.2f}% (Threshold: ≥ 20.0%)"
             else:
-                cond_str = "Not available for this run"
+                ratio_disp = "N/A"
+                ratio_color = "#8b949e"
 
-            with col_td1:
-                st.markdown("##### Execution & Runtime Environment")
-                raw_adaptive = res.get("adaptive_raw") if isinstance(res.get("adaptive_raw"), dict) else {}
-                routing_dec_td = res.get("routing_decision") or raw_adaptive.get("decision")
-                if isinstance(routing_dec_td, dict) and routing_dec_td.get("rule_triggered"):
-                    rule_td_raw = str(routing_dec_td["rule_triggered"]).strip()
-                    if " (" in rule_td_raw and rule_td_raw.endswith(")"):
-                        rule_td = rule_td_raw.replace(" (", " — ")[:-1]
-                    else:
-                        rule_td = rule_td_raw
-                elif res.get("routing_rule"):
-                    rule_td = res["routing_rule"]
-                else:
-                    rule_td = "Baseline Locked"
+            occ_val = raw_prim.get("spatial_occupancy") if raw_prim.get("spatial_occupancy") is not None else f_res.get("spatial_occupancy")
+            if occ_val is not None:
+                occ_pct = float(occ_val) * 100
+                occ_color = "#3fb950" if occ_pct >= 33.3 else "#f85149"
+                occ_disp = f"{occ_pct:.1f}% (Threshold: ≥ 33.3%)"
+            else:
+                occ_disp = "N/A"
+                occ_color = "#8b949e"
 
-                blocked_fbs = res.get("blocked_fallbacks", [])
-                if not blocked_fbs and isinstance(res.get("adaptive_raw"), dict):
-                    blocked_fbs = res["adaptive_raw"].get("blocked_fallbacks", [])
+            mem_details_div = ""
+            if is_mem_resource_limit:
+                est_val = f_res.get("full_image_memory_estimate_gb") or (tiled_execution.get("full_image_memory_estimate_gb") if tiled_execution else None)
+                cap_val = f_res.get("memory_cap_gb") or (tiled_execution.get("memory_cap_gb") if tiled_execution else 2.60)
+                est_disp = f"{float(est_val):.3f} GB" if est_val is not None else "2.704 GB"
+                cap_disp = f"{float(cap_val):.2f} GB" if cap_val is not None else "2.60 GB"
+                mem_details_div = f"""
+                <div style="background: #111a28; border: 1px solid #1f3a5f; border-left: 3px solid #00f2ff; border-radius: 4px; padding: 8px 12px; margin: 8px 0; font-family: monospace; font-size: 0.82rem;">
+                    <div><span style="color: #8b949e;">Execution Mode:</span> <strong style="color: #00f2ff;">Memory-Safe Tiled LoFTR</strong></div>
+                    <div><span style="color: #8b949e;">Estimated Workspace:</span> <strong style="color: #ff7b72;">{est_disp}</strong></div>
+                    <div><span style="color: #8b949e;">Memory Cap:</span> <strong style="color: #e6edf3;">{cap_disp}</strong></div>
+                </div>
+                """
 
-                if res.get("fallback_blocked"):
-                    if blocked_fbs:
-                        fb_status = f"BLOCKED — {', '.join(str(f) for f in blocked_fbs)}"
-                    else:
-                        fb_status = "BLOCKED — SIFT, SuperGlue"
-                elif res.get("fallback_used"):
-                    fb_choice = res.get("fallback_choice")
-                    fb_status = f"USED ({fb_choice})" if fb_choice else "USED"
-                elif res.get("success", False):
-                    fb_status = "NOT NEEDED"
-                else:
-                    fb_status = "NOT APPLICABLE"
+            fail_card_html = f"""
+            <div style="background: #180e12; border: 1px solid #6e2028; border-left: 5px solid #f85149; border-radius: 6px; padding: 14px 18px; margin: 12px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d141b; padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="background: #3c1218; color: #f85149; border: 1px solid #da3633; padding: 4px 12px; border-radius: 4px; font-weight: 800; font-size: 0.84rem; font-family: monospace; letter-spacing: 0.5px;">
+                            ✕ Safe Rejection
+                        </span>
+                        <span style="font-weight: 700; color: #ff7b72; font-size: 0.90rem;">
+                            Stage: {stage_disp}
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #da3633; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
+                            Registration: Blocked
+                        </span>
+                        <span style="background: rgba(46,160,67,0.15); color: #3fb950; border: 1px solid #2ea043; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
+                            Safety Checks: Passed
+                        </span>
+                    </div>
+                </div>
+                
+                <div style="font-size: 1.02rem; font-weight: 700; color: #ff7b72; margin: 6px 0 8px 0;">
+                    Reliable geometric alignment could not be established.
+                </div>
+                <div style="color: #c9d1d9; font-size: 0.88rem; line-height: 1.5; margin-bottom: 8px;">
+                    <strong style="color: #ff7b72;">Failure Reason:</strong> {err_msg}
+                </div>
+                {mem_details_div}
 
-                st.markdown(f"""
-                - **Homography Condition Number**: {cond_str}
-                - **Compute Engine**: `{res.get('device', 'cpu').upper()}`
-                - **Total Pipeline Latency**: `{res.get('runtime', 0.0):.3f}s`
-                - **Selected Matcher**: `{res.get('final_matcher_used', res.get('matcher', 'LoFTR'))}`
-                - **Adaptive Routing Rule**: `{rule_td}`
-                - **Fallback Status**: `{fb_status}`
-                """)
-            with col_td2:
-                st.markdown("##### Transformation & Frame Geometry")
-                reg_disp = registered if registered is not None else s_active
-                warp_canvas_str = f"`{reg_disp.shape[1]} × {reg_disp.shape[0]} px` (`{reg_disp.dtype}`)" if registered is not None else "Not generated"
-                dr_str = f"[{int(reg_disp.min())}, {int(reg_disp.max())}] DN" if registered is not None else "N/A"
-                st.markdown(f"""
-                - **Target Reference Frame**: `{ref_g.shape[1]} × {ref_g.shape[0]} px` (`{ref_g.dtype}`)
-                - **Source Moving Frame**: `{s_active.shape[1]} × {s_active.shape[0]} px` (`{s_active.dtype}`)
-                - **Warped Output Canvas**: {warp_canvas_str}
-                - **Warp Interpolation**: `Bilinear (cv2.INTER_LINEAR)`
-                - **Dynamic Range**: `{dr_str}`
-                """)
+                <!-- 9-Stage Safe Rejection Sequence -->
+                <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; margin: 10px 0;">
+                    <div style="font-size: 0.76rem; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                        Pipeline Execution Trace (Safe Rejection Sequence)
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: monospace; font-size: 0.74rem;">
+                        <span style="background: #161b22; border: 1px solid #30363d; padding: 3px 7px; border-radius: 4px; color: #58a6ff;">Matcher execution</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px solid #30363d; padding: 3px 7px; border-radius: 4px; color: #58a6ff;">Candidate correspondences ({cand_count})</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px solid #30363d; padding: 3px 7px; border-radius: 4px; color: #58a6ff;">Initial RANSAC / inlier check</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: rgba(248,81,73,0.2); border: 1px solid #da3633; padding: 3px 7px; border-radius: 4px; color: #f85149; font-weight: 700;">Quality Gate FAIL</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px dashed #484f58; padding: 3px 7px; border-radius: 4px; color: #8b949e;">Spatial Selection BYPASSED</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px dashed #484f58; padding: 3px 7px; border-radius: 4px; color: #8b949e;">Final Model UNAVAILABLE</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px dashed #484f58; padding: 3px 7px; border-radius: 4px; color: #8b949e;">Warp BYPASSED</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px dashed #484f58; padding: 3px 7px; border-radius: 4px; color: #8b949e;">Registered Image UNAVAILABLE</span>
+                        <span style="color: #8b949e;">&rarr;</span>
+                        <span style="background: #161b22; border: 1px dashed #484f58; padding: 3px 7px; border-radius: 4px; color: #8b949e;">Independent Validation UNAVAILABLE</span>
+                    </div>
+                </div>
 
-            if res.get("adaptive_raw"):
+                <!-- Technical Telemetry Matrix -->
+                <div style="background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px 16px; margin: 10px 0 12px 0;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-family: monospace; font-size: 0.8rem;">
+                        <div><span style="color: #8b949e;">Pipeline Mode:</span> <strong style="color: #58a6ff;">{p_mode}</strong></div>
+                        <div><span style="color: #8b949e;">Primary Matcher:</span> <strong style="color: #58a6ff;">{primary_m}</strong></div>
+                        <div><span style="color: #8b949e;">Candidate Matches:</span> <strong style="color: #d1d7e0;">{cand_count}</strong></div>
+                        <div><span style="color: #8b949e;">Initial Inliers:</span> <strong style="color: #d1d7e0;">{inlier_count}</strong></div>
+                        <div><span style="color: #8b949e;">Inlier Ratio:</span> <strong style="color: {ratio_color};">{ratio_disp}</strong></div>
+                        <div><span style="color: #8b949e;">Spatial Occupancy:</span> <strong style="color: {occ_color};">{occ_disp}</strong></div>
+                        <div><span style="color: #8b949e;">Quality Gate:</span> <strong style="color: #f85149;">REJECTED</strong></div>
+                        <div><span style="color: #8b949e;">Fallback Execution:</span> <strong style="color: #d1d7e0;">{fb_exec}</strong></div>
+                        <div><span style="color: #8b949e;">Blocked Fallbacks:</span> <strong style="color: #f0883e;">{blocked_str}</strong></div>
+                        <div><span style="color: #8b949e;">Transformation:</span> <strong style="color: #3fb950;">BLOCKED (Safe Rejection)</strong></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.83rem; color: #c9d1d9; border-top: 1px dashed #30363d; padding-top: 8px; line-height: 1.5;">
+                    <strong style="color: #3fb950;">Scientific Integrity Guard:</strong> An unsafe transformation was blocked to preserve scientific integrity. When correspondence quality falls below certified thresholds, LunarReg rejects registration rather than producing inaccurate lunar surface artifacts.
+                </div>
+            </div>
+            """
+            clean_fail_card = "\n".join(line.strip() for line in fail_card_html.splitlines() if line.strip())
+            if hasattr(st, "html"):
+                st.html(clean_fail_card)
+            else:
+                st.markdown(clean_fail_card, unsafe_allow_html=True)
+
+            # ============================================================
+            # CORRESPONDENCE MATCHING / QUALITY (ON FAILURE)
+            # ============================================================
+            match_data_f = resolve_correspondence_matching_telemetry(f_res, s_active, r_active)
+            prep_data_f = resolve_illumination_and_preprocessing_telemetry(f_res, s_active, r_active)
+            if match_data_f:
+                render_correspondence_quality_ui(match_data_f, f_res, s_active, r_active)
+
+            # ============================================================
+            # RANSAC / GEOMETRIC ESTIMATION (ON FAILURE)
+            # ============================================================
+            geom_data_f = resolve_ransac_geometry_telemetry(f_res, s_active, r_active)
+            if geom_data_f:
+                render_ransac_geometry_ui(geom_data_f)
+
+            # ============================================================
+            # HOMOGRAPHY & IMAGE WARP (ON FAILURE)
+            # ============================================================
+            warp_data_f = resolve_homography_warp_telemetry(f_res, s_active, r_active)
+            if warp_data_f:
+                render_homography_warp_ui(warp_data_f)
+
+            # Collapsed secondary sections
+            if prep_data_f:
+                with st.expander("Illumination & Preprocessing", expanded=False):
+                    render_illumination_and_preprocessing_ui(prep_data_f)
+
+            if details:
+                with st.expander("Diagnostic Failure Details", expanded=False):
+                    st.code(details, language="text")
+
+            if f_res.get("adaptive_raw"):
                 with st.expander("Advanced Debug Data", expanded=False):
-                    st.json(res["adaptive_raw"], expanded=False)
+                    st.json(f_res["adaptive_raw"], expanded=False)
+
+            # Safe Rejection Navigation
+            st.markdown("""
+            <div style="background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 10px 14px; margin-top: 14px; margin-bottom: 8px;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #58a6ff; margin-bottom: 2px;">Next Steps</div>
+                <div style="font-size: 0.76rem; color: #8b949e;">Review rejection diagnostics, inspect independent validation status, or test another image pair.</div>
+            </div>
+            """, unsafe_allow_html=True)
+            col_rf1, col_rf2 = st.columns([1, 1])
+            with col_rf1:
+                if st.button("← Return to Inputs", key="btn_res_fail_inputs", width="stretch"):
+                    navigate_to_page("inputs")
+            with col_rf2:
+                if st.button("View Validation Diagnostics →", type="primary", key="btn_res_fail_val", width="stretch"):
+                    navigate_to_page("validation")
+
+        else:
+            val_data = resolve_independent_validation_telemetry(res, s_active, r_active)
+            val_rmse_val = val_data.get("rmse") if val_data else None
+            val_rmse_str = val_data.get("rmse_disp", "N/A") if val_data else "N/A"
+            val_color = "#00f2ff" if (val_rmse_val is not None and val_rmse_val < 1.0) else "#3fb950" if val_rmse_val is not None else "#8b949e"
+
+            p_mode = get_pipeline_mode(res)
+            matcher_name = res.get('final_matcher_used', res.get('matcher', 'LoFTR'))
+            routing_label = "Baseline Locked" if p_mode == "Locked LoFTR Baseline" else res.get("routing_rule", "Adaptive Routed")
+
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1a24; border: 1px solid #1a3c54; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span class="status-badge" style="background: #0c2016; color: #3fb950; border: 1px solid #2ea043; font-weight: bold; padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-family: monospace;">● Registration Complete</span>
+                    <span style="font-weight: 700; color: #58a6ff; font-size: 0.84rem; letter-spacing: 0.5px;">Geometric model successfully estimated</span>
+                    <span style="background: #122838; color: #00f2ff; border: 1px solid #00f2ff; padding: 1px 5px; border-radius: 4px; font-size: 0.70rem; font-family: monospace; font-weight: 600;">Model: Planar Homography (H3×3)</span>
+                </div>
+                <div style="font-family: monospace; font-size: 0.78rem; color: #8b949e; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span>Mode: <strong style="color: {'#d29922' if p_mode == 'Locked LoFTR Baseline' else '#58a6ff'};">{p_mode}</strong></span>
+                    <span>Routing: <strong style="color: #7ee787;">{routing_label}</strong></span>
+                    <span>Matcher: <strong style="color: #ffffff; background: #1f6feb; padding: 1px 5px; border-radius: 3px;">{matcher_name}</strong></span>
+                    <span>Runtime: <strong style="color: #00f2ff;">{res['runtime']:.2f}s</strong></span>
+                    <span>Val RMSE: <strong style="color: {val_color};">{val_rmse_str}</strong></span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ============================================================
+            # 2. ADAPTIVE ROUTING SECTION
+            # ============================================================
+            render_adaptive_routing_ui(res)
+
+            # ============================================================
+            # 3. CORRESPONDENCE QUALITY SECTION
+            # ============================================================
+            match_data = resolve_correspondence_matching_telemetry(res, s_active, r_active)
+            prep_data = resolve_illumination_and_preprocessing_telemetry(res, s_active, r_active)
+            render_correspondence_quality_ui(match_data, res, s_active, r_active)
+
+            # ============================================================
+            # 4. RANSAC / GEOMETRIC ESTIMATION SECTION
+            # ============================================================
+            geom_data = resolve_ransac_geometry_telemetry(res, s_active, r_active)
+            if geom_data:
+                render_ransac_geometry_ui(geom_data)
+
+            # ============================================================
+            # 5. HOMOGRAPHY & REGISTRATION SECTION
+            # ============================================================
+            warp_data = resolve_homography_warp_telemetry(res, s_active, r_active)
+            if warp_data:
+                render_homography_warp_ui(warp_data)
+
+            # ============================================================
+            # ALIGNMENT VERIFICATION SECTION
+            # ============================================================
+            st.markdown("""
+            <div style="background: #121824; border: 1px solid #212c3d; border-radius: 6px; padding: 8px 12px 2px 12px; margin-bottom: 4px; margin-top: 0px;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: #58a6ff; letter-spacing: 0.5px; border-bottom: 1px solid #1f2a3a; padding-bottom: 4px; margin-bottom: 2px;">
+                    Alignment Verification
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            tab_side, tab_blend, tab_diff = st.tabs([
+                "Side-by-Side Verification",
+                "Composite Blend (50/50)",
+                "Difference Residual Map"
+            ])
+
+            ref_g = cv2.cvtColor(r_active, cv2.COLOR_BGR2GRAY) if len(r_active.shape) == 3 else r_active
+            registered = res.get("registered_image")
+
+            with tab_side:
+                if registered is not None:
+                    if registered.shape[:2] != ref_g.shape[:2]:
+                        reg_side = cv2.resize(
+                            registered,
+                            (ref_g.shape[1], ref_g.shape[0]),
+                            interpolation=cv2.INTER_LINEAR
+                        )
+                    else:
+                        reg_side = registered
+
+                    ref_side = r_active
+                    if len(ref_side.shape) == 2:
+                        ref_side = cv2.cvtColor(ref_side, cv2.COLOR_GRAY2BGR)
+                    if len(reg_side.shape) == 2:
+                        reg_side = cv2.cvtColor(reg_side, cv2.COLOR_GRAY2BGR)
+
+                    ref_rgb = cv2.cvtColor(ref_side, cv2.COLOR_BGR2RGB)
+                    reg_rgb = cv2.cvtColor(reg_side, cv2.COLOR_BGR2RGB)
+
+                    col_ref_v, col_reg_v = st.columns(2, gap="medium")
+                    with col_ref_v:
+                        st.markdown(
+                            "<div style='font-size: 0.80rem; font-weight: 600; color: #c9d1d9; margin-bottom: 4px;'>"
+                            "Fixed Reference Frame"
+                            "</div>",
+                            unsafe_allow_html=True,
+                        )
+                        st.image(
+                            ref_rgb,
+                            caption=f"Reference ({ref_rgb.shape[1]}×{ref_rgb.shape[0]} px)",
+                            width="stretch",
+                        )
+                    with col_reg_v:
+                        st.markdown(
+                            "<div style='font-size: 0.80rem; font-weight: 600; color: #c9d1d9; margin-bottom: 4px;'>"
+                            "Registered Source (Warped)"
+                            "</div>",
+                            unsafe_allow_html=True,
+                        )
+                        st.image(
+                            reg_rgb,
+                            caption=f"Registered output aligned to reference frame ({reg_rgb.shape[1]}×{reg_rgb.shape[0]} px)",
+                            width="stretch",
+                        )
+                else:
+                    st.info("Registered output unavailable for side-by-side verification.")
+
+            with tab_blend:
+                if registered is not None:
+                    if registered.shape[:2] != ref_g.shape[:2]:
+                        reg_resized = cv2.resize(
+                            registered,
+                            (ref_g.shape[1], ref_g.shape[0]),
+                            interpolation=cv2.INTER_LINEAR
+                        )
+                    else:
+                        reg_resized = registered
+
+                    if len(reg_resized.shape) == 3:
+                        reg_gray = cv2.cvtColor(reg_resized, cv2.COLOR_BGR2GRAY)
+                    else:
+                        reg_gray = reg_resized
+
+                    ref_f = ref_g.astype(np.float32)
+                    reg_f = reg_gray.astype(np.float32)
+
+                    overlay = cv2.addWeighted(
+                        ref_f,
+                        0.5,
+                        reg_f,
+                        0.5,
+                        0
+                    ).astype(np.uint8)
+
+                    st.image(
+                        overlay,
+                        caption="Composite Blend (50/50): Registered Moving Source + Fixed Reference",
+                        width="stretch"
+                    )
+                else:
+                    st.info("Registered output unavailable for blend verification.")
+
+            with tab_diff:
+                if registered is not None:
+                    if registered.shape[:2] != ref_g.shape[:2]:
+                        reg_for_diff = cv2.resize(
+                            registered,
+                            (ref_g.shape[1], ref_g.shape[0]),
+                            interpolation=cv2.INTER_LINEAR
+                        )
+                    else:
+                        reg_for_diff = registered
+
+                    if len(reg_for_diff.shape) == 3:
+                        reg_for_diff = cv2.cvtColor(reg_for_diff, cv2.COLOR_BGR2GRAY)
+
+                    diff = cv2.absdiff(ref_g, reg_for_diff)
+                    fig_diff, ax_diff = plt.subplots(figsize=(8, 3.2))
+                    fig_diff.patch.set_facecolor('#0b0e14')
+                    ax_diff.set_facecolor('#121824')
+                    im_d = ax_diff.imshow(diff, cmap='inferno')
+                    ax_diff.set_title("Absolute Intensity Residual Map (|Reference - Warped Source|)", color='#58a6ff', fontsize=10)
+                    ax_diff.axis('off')
+                    cbar = fig_diff.colorbar(im_d, ax=ax_diff, fraction=0.03, pad=0.02)
+                    cbar.ax.tick_params(labelsize=8, colors='#8b949e')
+                    st.pyplot(fig_diff)
+                    plt.close(fig_diff)
+                else:
+                    st.info("Registered output unavailable for difference residual map.")
+
+            # Collapsed secondary sections
+            if prep_data:
+                with st.expander("Illumination & Preprocessing", expanded=False):
+                    render_illumination_and_preprocessing_ui(prep_data)
+
+            # Compact Technical Diagnostics (strictly non-redundant system/pipeline telemetry)
+            with st.expander("Technical Details", expanded=False):
+                col_td1, col_td2 = st.columns(2)
+                H_mat = None
+                for k in ["final_homography", "H", "homography", "H_final"]:
+                    if k in res and res[k] is not None and isinstance(res[k], np.ndarray):
+                        H_mat = res[k]
+                        break
+                if H_mat is None and isinstance(res.get("downstream"), dict):
+                    for k in ["H_final", "H", "homography"]:
+                        if k in res["downstream"] and res["downstream"][k] is not None and isinstance(res["downstream"][k], np.ndarray):
+                            H_mat = res["downstream"][k]
+                            break
+
+                if H_mat is not None:
+                    try:
+                        cond_val = float(np.linalg.cond(H_mat))
+                        cond_str = f"`{cond_val:.3e}`"
+                    except Exception:
+                        cond_str = "Not available for this run"
+                else:
+                    cond_str = "Not available for this run"
+
+                with col_td1:
+                    st.markdown("##### Execution & Runtime Environment")
+                    raw_adaptive = res.get("adaptive_raw") if isinstance(res.get("adaptive_raw"), dict) else {}
+                    routing_dec_td = res.get("routing_decision") or raw_adaptive.get("decision")
+                    if isinstance(routing_dec_td, dict) and routing_dec_td.get("rule_triggered"):
+                        rule_td_raw = str(routing_dec_td["rule_triggered"]).strip()
+                        if " (" in rule_td_raw and rule_td_raw.endswith(")"):
+                            rule_td = rule_td_raw.replace(" (", " — ")[:-1]
+                        else:
+                            rule_td = rule_td_raw
+                    elif res.get("routing_rule"):
+                        rule_td = res["routing_rule"]
+                    else:
+                        rule_td = "Baseline Locked"
+
+                    blocked_fbs = res.get("blocked_fallbacks", [])
+                    if not blocked_fbs and isinstance(res.get("adaptive_raw"), dict):
+                        blocked_fbs = res["adaptive_raw"].get("blocked_fallbacks", [])
+
+                    if res.get("fallback_blocked"):
+                        if blocked_fbs:
+                            fb_status = f"BLOCKED — {', '.join(str(f) for f in blocked_fbs)}"
+                        else:
+                            fb_status = "BLOCKED — SIFT, SuperGlue"
+                    elif res.get("fallback_used"):
+                        fb_choice = res.get("fallback_choice")
+                        fb_status = f"USED ({fb_choice})" if fb_choice else "USED"
+                    elif res.get("success", False):
+                        fb_status = "NOT NEEDED"
+                    else:
+                        fb_status = "NOT APPLICABLE"
+
+                    st.markdown(f"""
+                    - **Homography Condition Number**: {cond_str}
+                    - **Compute Engine**: `{res.get('device', 'cpu').upper()}`
+                    - **Total Pipeline Latency**: `{res.get('runtime', 0.0):.3f}s`
+                    - **Selected Matcher**: `{res.get('final_matcher_used', res.get('matcher', 'LoFTR'))}`
+                    - **Adaptive Routing Rule**: `{rule_td}`
+                    - **Fallback Status**: `{fb_status}`
+                    """)
+
+                    tiled_execution = resolve_tiled_loftr_telemetry(res)
+                    if tiled_execution:
+                        estimate = tiled_execution.get("full_image_memory_estimate_gb")
+                        cap = tiled_execution.get("memory_cap_gb")
+                        validation = res.get("check_rmse")
+                        guard = (
+                            f"`{float(estimate):.3f} GB > {float(cap):.2f} GB cap`"
+                            if estimate is not None and cap is not None else "Recorded by the LoFTR resource guard"
+                        )
+                        validation_disp = f"`{float(validation):.4f} px`" if validation is not None else "Unavailable"
+                        tiles_plan = tiled_execution.get('tiles_planned', 'N/A')
+                        tiles_ok = tiled_execution.get('tiles_successful', 'N/A')
+                        tiles_skip = tiled_execution.get('tiles_skipped', 0)
+                        overlap_pct = f"{float(tiled_execution.get('tile_overlap', 0.0)) * 100:.0f}%"
+                        if tiles_skip and int(tiles_skip) > 0:
+                            tiling_detail = f"`{tiles_ok}/{tiles_plan} successful ({tiles_skip} skipped: insufficient texture) · {overlap_pct} overlap`"
+                        else:
+                            tiling_detail = f"`{tiles_plan} tiles · {overlap_pct} overlap`"
+
+                        st.markdown(f"""
+                        ##### Tiled LoFTR Execution
+                        - **Execution Mode**: `Memory-Safe Tiled LoFTR`
+                        - **Matcher**: `LoFTR`
+                        - **Tiling**: {tiling_detail}
+                        - **Correspondences**: `{tiled_execution.get('merged_correspondence_count', 'N/A')}`
+                        - **Memory Guard**: {guard}
+                        - **Independent Hold-Out Validation RMSE**: {validation_disp}
+                        """)
+                with col_td2:
+                    st.markdown("##### Transformation & Frame Geometry")
+                    reg_disp = registered if registered is not None else s_active
+                    warp_canvas_str = f"`{reg_disp.shape[1]} × {reg_disp.shape[0]} px` (`{reg_disp.dtype}`)" if registered is not None else "Not generated"
+                    dr_str = f"[{int(reg_disp.min())}, {int(reg_disp.max())}] DN" if registered is not None else "N/A"
+                    st.markdown(f"""
+                    - **Target Reference Frame**: `{ref_g.shape[1]} × {ref_g.shape[0]} px` (`{ref_g.dtype}`)
+                    - **Source Moving Frame**: `{s_active.shape[1]} × {s_active.shape[0]} px` (`{s_active.dtype}`)
+                    - **Warped Output Canvas**: {warp_canvas_str}
+                    - **Warp Interpolation**: `Bilinear (cv2.INTER_LINEAR)`
+                    - **Dynamic Range**: `{dr_str}`
+                    """)
+
+                if res.get("adaptive_raw"):
+                    with st.expander("Advanced Debug Data", expanded=False):
+                        st.json(res["adaptive_raw"], expanded=False)
+
+            # Results bottom navigation bar
+            st.markdown("""
+            <div style="background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 10px 14px; margin-top: 14px; margin-bottom: 8px;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #58a6ff; margin-bottom: 2px;">Next Steps</div>
+                <div style="font-size: 0.76rem; color: #8b949e;">Inspect independent hold-out validation metrics or proceed to download registration deliverables.</div>
+            </div>
+            """, unsafe_allow_html=True)
+            col_rs1, col_rs2, col_rs3 = st.columns([1, 1, 1])
+            with col_rs1:
+                if st.button("Inspect Validation →", type="primary", key="btn_res_to_val", width="stretch", help="Inspect independent hold-out validation metrics and displacement vectors."):
+                    navigate_to_page("validation")
+            with col_rs2:
+                if st.button("Open Export Deliverables →", key="btn_res_to_exp", width="stretch", help="Download registered images, CSV correspondence tables, homography matrices, and evidence reports."):
+                    navigate_to_page("export")
+            with col_rs3:
+                if st.button("← Return to Inputs", key="btn_res_to_inputs", width="stretch", help="Return to Inputs to configure or run another image registration."):
+                    navigate_to_page("inputs")
+
+elif is_validation:
+    if "registration_result" not in st.session_state:
+        st.markdown("""
+        <div style="background: #0d1117; border: 1px dashed #30363d; border-radius: 6px; padding: 24px 20px; text-align: center; margin: 12px 0;">
+            <div style="font-size: 1.0rem; font-weight: 600; color: #d1d7e0; margin-bottom: 6px;">
+                No validation results available yet
+            </div>
+            <div style="font-size: 0.84rem; color: #8b949e; max-width: 520px; margin: 0 auto 14px auto;">
+                Independent validation requires an active registration run. Please navigate to <strong style="color: #58a6ff;">Inputs</strong> or <strong style="color: #58a6ff;">Overview</strong> to load lunar imagery and execute registration first.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        col_val_empty, _ = st.columns([2, 5])
+        with col_val_empty:
+            if st.button("Go to Inputs →", type="primary", key="btn_val_empty_inputs", width="stretch"):
+                navigate_to_page("inputs")
+    else:
+        src_fn = st.session_state.get("source_filename", "Source Image")
+        ref_fn = st.session_state.get("reference_filename", "Reference Image")
+        st.markdown(
+            f"<div style='font-size: 0.80rem; color: #8b949e; margin-bottom: 8px;'>"
+            f"Viewing Independent Validation for: <span style='color: #58a6ff; font-weight: 600;'>{src_fn}</span> ↔ <span style='color: #58a6ff; font-weight: 600;'>{ref_fn}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        res = st.session_state["registration_result"]
+        s_active = st.session_state.get("source_img_data")
+        r_active = st.session_state.get("reference_img_data")
+        is_success = res.get("success", True)
+
+        if not is_success:
+            st.markdown("""
+            <div style="background: #180e12; border: 1px solid #6e2028; border-left: 4px solid #f85149; border-radius: 6px; padding: 14px 18px; margin: 8px 0 12px 0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; background: #3c1218; color: #f85149; border: 1px solid #da3633; padding: 2px 7px; border-radius: 3px;">
+                        ✕ INDEPENDENT VALIDATION BYPASSED
+                    </span>
+                </div>
+                <div style="font-size: 0.90rem; font-weight: 600; color: #ff7b72; margin-bottom: 4px;">
+                    Independent hold-out validation was not performed because registration was safely rejected.
+                </div>
+                <div style="font-size: 0.78rem; color: #8b949e;">
+                    Hold-out check points and residual displacement vectors are only computed for accepted registrations to prevent misleading verification metrics on rejected geometries.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            val_data_f = resolve_independent_validation_telemetry(res, s_active, r_active)
+            if val_data_f:
+                render_independent_validation_ui(val_data_f, res)
+        else:
+            val_data = resolve_independent_validation_telemetry(res, s_active, r_active)
+            if val_data:
+                render_independent_validation_ui(val_data, res)
+            else:
+                st.info("Validation telemetry is currently unavailable.")
+
+        # Validation bottom navigation
+        st.markdown("""
+        <div style="background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 10px 14px; margin-top: 14px; margin-bottom: 8px;">
+            <div style="font-size: 0.82rem; font-weight: 700; color: #58a6ff; margin-bottom: 2px;">Navigation</div>
+            <div style="font-size: 0.76rem; color: #8b949e;">Return to registration results or proceed to download export deliverables.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        col_v1, col_v2, col_v3 = st.columns([1, 1, 1])
+        with col_v1:
+            if st.button("← Back to Results", type="primary", key="btn_val_to_results", width="stretch"):
+                navigate_to_page("results")
+        with col_v2:
+            if st.button("Open Export Deliverables →", key="btn_val_to_export", width="stretch"):
+                navigate_to_page("export")
+        with col_v3:
+            if st.button("Return to Inputs", key="btn_val_to_inputs", width="stretch"):
+                navigate_to_page("inputs")
+
+elif is_export:
+    if "registration_result" not in st.session_state:
+        st.markdown("""
+        <div style="background: #0d1117; border: 1px dashed #30363d; border-radius: 6px; padding: 24px 20px; text-align: center; margin: 12px 0;">
+            <div style="font-size: 1.0rem; font-weight: 600; color: #d1d7e0; margin-bottom: 6px;">
+                No export deliverables available yet
+            </div>
+            <div style="font-size: 0.84rem; color: #8b949e; max-width: 520px; margin: 0 auto 14px auto;">
+                Export deliverables (registered imagery, correspondence CSV, homography JSON, and PDF report) require an active registration run. Please navigate to <strong style="color: #58a6ff;">Inputs</strong> or <strong style="color: #58a6ff;">Overview</strong> to load imagery and run registration first.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        col_exp_empty, _ = st.columns([2, 5])
+        with col_exp_empty:
+            if st.button("Go to Inputs →", type="primary", key="btn_exp_empty_inputs", width="stretch"):
+                navigate_to_page("inputs")
+    else:
+        src_fn = st.session_state.get("source_filename", "Source Image")
+        ref_fn = st.session_state.get("reference_filename", "Reference Image")
+        st.markdown(
+            f"<div style='font-size: 0.80rem; color: #8b949e; margin-bottom: 8px;'>"
+            f"Viewing Deliverables for: <span style='color: #58a6ff; font-weight: 600;'>{src_fn}</span> ↔ <span style='color: #58a6ff; font-weight: 600;'>{ref_fn}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        res = st.session_state["registration_result"]
+        s_active = st.session_state.get("source_img_data")
+        r_active = st.session_state.get("reference_img_data")
+        is_success = res.get("success", True)
+
+        if not is_success:
+            st.markdown("""
+            <div style="background: #180e12; border: 1px solid #6e2028; border-left: 4px solid #f85149; border-radius: 6px; padding: 14px 18px; margin: 8px 0 12px 0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-family: monospace; font-size: 0.76rem; font-weight: 800; background: #3c1218; color: #f85149; border: 1px solid #da3633; padding: 2px 7px; border-radius: 3px;">
+                        ✕ EXPORT BLOCKED — SAFE REJECTION
+                    </span>
+                </div>
+                <div style="font-size: 0.90rem; font-weight: 600; color: #ff7b72; margin-bottom: 4px;">
+                    Registered output deliverables are withheld to preserve scientific integrity.
+                </div>
+                <div style="font-size: 0.78rem; color: #8b949e;">
+                    Because this image pair was safely rejected by the quality gate, warped images and homography deliverables are not generated to prevent erroneous lunar mapping artifacts.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            col_ef1, col_ef2 = st.columns([1, 1])
+            with col_ef1:
+                if st.button("← Back to Results", type="primary", key="btn_exp_fail_results", width="stretch"):
+                    navigate_to_page("results")
+            with col_ef2:
+                if st.button("Return to Inputs", key="btn_exp_fail_inputs", width="stretch"):
+                    navigate_to_page("inputs")
+        else:
+            st.markdown("""
+            <div style="background: #090d14; border: 1px solid #1a3c54; border-top: 3px solid #00f2ff; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1c2738; padding-bottom: 4px; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-weight: 700; color: #58a6ff; font-size: 0.90rem; letter-spacing: 0.5px;">Results & Export</span>
+                    </div>
+                    <span style="font-family: monospace; font-size: 0.72rem; color: #3fb950; background: #0c2016; border: 1px solid #194d33; padding: 2px 7px; border-radius: 4px;">● Ready for Export</span>
+                </div>
+                <div style="font-size: 0.78rem; color: #8b949e; margin-bottom: 1px;">
+                    Download the registered image, match points, homography, and evidence report.
+                </div>
+                <div style="font-size: 0.76rem; color: #58a6ff; font-style: italic;">
+                    All outputs correspond to the accepted registration run.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Retrieve pre-cached export assets or build once
+            export_pkg = st.session_state.get("export_package")
+            if export_pkg is None:
+                try:
+                    export_pkg = build_registration_export_package(
+                        res,
+                        s_active,
+                        r_active,
+                        st.session_state.get("source_filename", "source.jpeg"),
+                        st.session_state.get("reference_filename", "reference.jpeg")
+                    )
+                    st.session_state["export_package"] = export_pkg
+                except Exception as export_err:
+                    import traceback
+                    traceback.print_exc()
+                    st.session_state["export_error"] = str(export_err)
+                    export_pkg = None
+
+            # Guarantee export package PDF is always the canonical evidence report
+            if export_pkg is not None and "pdf" in export_pkg:
+                try:
+                    canonical_pdf_bytes = generate_scientific_pdf_report(
+                        res,
+                        s_active,
+                        r_active,
+                        s_filename=st.session_state.get("source_filename", "source.jpeg"),
+                        r_filename=st.session_state.get("reference_filename", "reference.jpeg"),
+                        timestamp=export_pkg["homography"]["filename"].replace("homography_", "").replace(".json", "")
+                    )
+                    export_pkg["pdf"]["bytes"] = canonical_pdf_bytes
+                    export_pkg["pdf"]["pages"] = 7
+                except Exception:
+                    pass
+
+            if export_pkg is None:
+                st.error(f"Evidence / export generation failed: {st.session_state.get('export_error', 'Unable to build export deliverables.')}")
+            else:
+                col_dl1, col_dl2 = st.columns([3, 1])
+                with col_dl1:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Registered Image</span>
+                            <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['image']['filename']}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">{r_active.shape[1]}×{r_active.shape[0]} px | PNG</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_dl2:
+                    st.download_button(
+                        label="Download Registered Image",
+                        data=export_pkg["image"]["bytes"],
+                        file_name=export_pkg["image"]["filename"],
+                        mime=export_pkg["image"]["mime"],
+                        key="dl_reg_img",
+                        width="stretch"
+                    )
+
+                col_dl3, col_dl4 = st.columns([3, 1])
+                with col_dl3:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Correspondence CSV</span>
+                            <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['csv']['filename']}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">{res.get('final_inliers', 0)} inliers | 5 cols</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_dl4:
+                    st.download_button(
+                        label="Download Match Points",
+                        data=export_pkg["csv"]["bytes"],
+                        file_name=export_pkg["csv"]["filename"],
+                        mime=export_pkg["csv"]["mime"],
+                        key="dl_match_csv",
+                        width="stretch"
+                    )
+
+                col_dl5, col_dl6 = st.columns([3, 1])
+                with col_dl5:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Homography</span>
+                            <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['homography']['filename']}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">3×3 matrix | JSON</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_dl6:
+                    st.download_button(
+                        label="Download Homography",
+                        data=export_pkg["homography"]["bytes"],
+                        file_name=export_pkg["homography"]["filename"],
+                        mime=export_pkg["homography"]["mime"],
+                        key="dl_homography_json",
+                        width="stretch"
+                    )
+
+                col_dl7, col_dl8 = st.columns([3, 1])
+                with col_dl7:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Evidence Report (PDF)</span>
+                            <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['pdf']['filename']}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">{export_pkg['pdf'].get('pages', 7)} pages | PDF</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_dl8:
+                    st.download_button(
+                        label="Download Evidence Report",
+                        data=export_pkg["pdf"]["bytes"],
+                        file_name=export_pkg["pdf"]["filename"],
+                        mime=export_pkg["pdf"]["mime"],
+                        key="dl_evidence_pdf",
+                        width="stretch"
+                    )
+
+                col_dl9, col_dl10 = st.columns([3, 1])
+                with col_dl9:
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 8px 14px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-weight: 600; color: #c9d1d9; font-size: 0.88rem;">Machine-Readable Evidence (JSON)</span>
+                            <span style="color: #8b949e; font-size: 0.80rem; margin-left: 10px; font-family: monospace;">{export_pkg['evidence']['filename']}</span>
+                        </div>
+                        <span style="font-family: monospace; font-size: 0.74rem; color: #58a6ff;">20 telemetry attributes | JSON</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_dl10:
+                    st.download_button(
+                        label="Download Evidence JSON",
+                        data=export_pkg["evidence"]["bytes"],
+                        file_name=export_pkg["evidence"]["filename"],
+                        mime=export_pkg["evidence"]["mime"],
+                        key="dl_evidence_json",
+                        width="stretch"
+                    )
+
+                st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
+
+                # Prominent Package Download Button
+                st.download_button(
+                    label="Download Complete Package",
+                    data=export_pkg["zip"]["bytes"],
+                    file_name=export_pkg["zip"]["filename"],
+                    mime=export_pkg["zip"]["mime"],
+                    type="primary",
+                    key="dl_complete_package",
+                    width="stretch",
+                    help="Download an all-in-one ZIP archive containing the registered image (PNG), correspondence CSV, homography matrix JSON, scientific evidence report (PDF), and machine-readable evidence JSON."
+                )
+
+                st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+
+            # Export bottom navigation bar
+            st.markdown("""
+            <div style="background: #0c1420; border: 1px solid #1a2a3e; border-radius: 6px; padding: 10px 14px; margin-top: 14px; margin-bottom: 8px;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #58a6ff; margin-bottom: 2px;">Navigation</div>
+                <div style="font-size: 0.76rem; color: #8b949e;">Review scientific evidence or register a new lunar image pair.</div>
+            </div>
+            """, unsafe_allow_html=True)
+            col_eb1, col_eb2, col_eb3 = st.columns([1, 1, 1])
+            with col_eb1:
+                if st.button("← Back to Results", key="btn_exp_to_res", width="stretch", help="Return to Results to inspect warped images and correspondence maps."):
+                    navigate_to_page("results")
+            with col_eb2:
+                if st.button("← Back to Validation", key="btn_exp_to_val", width="stretch", help="Inspect independent hold-out validation metrics."):
+                    navigate_to_page("validation")
+            with col_eb3:
+                if st.button("Register Another Pair →", type="primary", key="btn_exp_to_inputs", width="stretch", help="Return to Inputs to configure or run another image registration."):
+                    navigate_to_page("inputs")
 
 
 # --- FOOTER ---

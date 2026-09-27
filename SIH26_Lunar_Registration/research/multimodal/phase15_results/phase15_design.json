@@ -1,0 +1,29 @@
+{
+  "phase": 15,
+  "research_question": "Does decoupling coarse global orientation alignment from local structure-tensor orientation estimation improve cross-sensor descriptor transfer?",
+  "anchor_source": "research\\multimodal\\phase11_results\\phase11_loftr_anchor_pairs.json",
+  "anchor_count": 12,
+  "angles_deg": [
+    0.0,
+    10.0,
+    20.0,
+    30.0,
+    -20.0
+  ],
+  "patch_size": 7,
+  "radius": 4.0,
+  "descriptor_dim": 21,
+  "conditions": [
+    "Condition A: Phase 7 Frozen SSC",
+    "Condition B: Phase 9 Frozen Rot-Norm SSC",
+    "Condition C: Global Orientation Prior (Oracle Diagnostic)"
+  ],
+  "safeguards": {
+    "condition_c_nature": "Oracle diagnostic using exact known synthetic angle theta_global = -radians(phi_applied)",
+    "cross_sensor_delta_definition": "cross_sensor_distance_at_phi - cross_sensor_distance_at_0 computed separately within each condition",
+    "angle_search_tuning": false,
+    "per_anchor_results_saved": true
+  },
+  "production_modified": false,
+  "automatic_winner_selection": false
+}

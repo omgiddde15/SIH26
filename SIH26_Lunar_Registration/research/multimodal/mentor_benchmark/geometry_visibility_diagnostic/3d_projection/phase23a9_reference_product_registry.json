@@ -1,0 +1,502 @@
+{
+  "audit_metadata": {
+    "project": "LunarReg \u2014 Chandrayaan-2 OHRC Registration Benchmark",
+    "phase": "23A.9 \u2014 External Reference Product Provenance Identification",
+    "status": "COMPLETE & AUDITED",
+    "date": "2026-09-24",
+    "governing_status": "RESEARCH-ONLY \u2014 Production Code Frozen for this audit; historical baseline provenance not independently verified.",
+    "production_freeze_canonical_files": [
+      "app/app.py",
+      "app/adaptive_adapter.py",
+      "app/registration_core.py",
+      "research/adaptive_matcher/adaptive_engine.py"
+    ],
+    "explicit_non_existent_file": "app/adaptive_engine.py",
+    "primary_classification": "REFERENCE_PRODUCT_UNRESOLVED",
+    "reference_geodetic_realization": "REFERENCE_GEODETIC_REALIZATION = UNKNOWN",
+    "reference_to_moon_me_de421": "REFERENCE_TO_MOON_ME_DE421 = NOT_VERIFIED",
+    "grid_alignment_invariant": "E mod 5 = 3.0 m, N mod 5 = 2.0 m across all 4 mentor reference rasters",
+    "pair02_pair03_identical_overlap_pixels": "7,089,556 / 7,089,556 (100.00%)",
+    "phase23b_readiness_gate": {
+      "gate_status": "PHASE_23B_STATUS = BLOCKED_PENDING_GEODETIC_REVIEW",
+      "reason": "External reference product provenance and geodetic realization remain unrecorded."
+    },
+    "concluding_status": "PHASE 23A.9 COMPLETE \u2014 REFERENCE PRODUCT REMAINS UNRESOLVED"
+  },
+  "mentor_reference_audits": [
+    {
+      "pair_id": "OHRC_PAIR_01",
+      "filename": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_reference_at_5m.tif",
+      "dimensions": [
+        5916,
+        4232
+      ],
+      "mode": "L",
+      "format": "TIFF",
+      "pixel_scale": [
+        5.0,
+        5.0,
+        0.0
+      ],
+      "tiepoint": [
+        0.0,
+        0.0,
+        0.0,
+        -19187.0,
+        -3603.0,
+        0.0
+      ],
+      "easting_bounds": [
+        -19187.0,
+        10393.0
+      ],
+      "northing_bounds": [
+        -24763.0,
+        -3603.0
+      ],
+      "grid_alignment": {
+        "e_mod_5": 3.0,
+        "n_mod_5": 2.0,
+        "grid_index_kx": -3838,
+        "grid_index_ky": -721,
+        "grid_offset_meters": [
+          3.0,
+          2.0
+        ]
+      },
+      "geokeys": {
+        "GTModelTypeGeoKey": 1,
+        "GTRasterTypeGeoKey": 1,
+        "GTCitationGeoKey": "PolarStereographic Moon|",
+        "GeographicTypeGeoKey": 32767,
+        "GeogCitationGeoKey": "GCS Name = GCS_Moon|Datum = D_Moon|Ellipsoid = Moon|Primem = Reference_Meridian||",
+        "GeogGeodeticDatumGeoKey": 32767,
+        "GeogAngularUnitsGeoKey": 9102,
+        "GeogEllipsoidGeoKey": 32767,
+        "GeogSemiMajorAxisGeoKey": 1737400.0,
+        "GeogSemiMinorAxisGeoKey": 1737400.0,
+        "GeogPrimeMeridianLongGeoKey": 0.0,
+        "ProjectedCSTypeGeoKey": 32767,
+        "ProjectionGeoKey": 32767,
+        "ProjCoordTransGeoKey": 15,
+        "ProjLinearUnitsGeoKey": 9001,
+        "ProjNatOriginLatGeoKey": -90.0,
+        "ProjFalseEastingGeoKey": 0.0,
+        "ProjFalseNorthingGeoKey": 0.0,
+        "ProjScaleAtNatOriginGeoKey": 1.0,
+        "ProjStraightVertPoleLongGeoKey": 0.0
+      },
+      "tags": {
+        "TIFFTAG_SOFTWARE": null,
+        "TIFFTAG_IMAGEDESCRIPTION": null,
+        "TIFFTAG_ARTIST": null,
+        "TIFFTAG_DATETIME": null
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_02",
+      "filename": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_reference_at_5m.tif",
+      "dimensions": [
+        2593,
+        6279
+      ],
+      "mode": "L",
+      "format": "TIFF",
+      "pixel_scale": [
+        5.0,
+        5.0,
+        0.0
+      ],
+      "tiepoint": [
+        0.0,
+        0.0,
+        0.0,
+        67338.0,
+        150047.0,
+        0.0
+      ],
+      "easting_bounds": [
+        67338.0,
+        80303.0
+      ],
+      "northing_bounds": [
+        118652.0,
+        150047.0
+      ],
+      "grid_alignment": {
+        "e_mod_5": 3.0,
+        "n_mod_5": 2.0,
+        "grid_index_kx": 13467,
+        "grid_index_ky": 30009,
+        "grid_offset_meters": [
+          3.0,
+          2.0
+        ]
+      },
+      "geokeys": {
+        "GTModelTypeGeoKey": 1,
+        "GTRasterTypeGeoKey": 1,
+        "GTCitationGeoKey": "PolarStereographic Moon|",
+        "GeographicTypeGeoKey": 32767,
+        "GeogCitationGeoKey": "GCS Name = GCS_Moon|Datum = D_Moon|Ellipsoid = Moon|Primem = Reference_Meridian||",
+        "GeogGeodeticDatumGeoKey": 32767,
+        "GeogAngularUnitsGeoKey": 9102,
+        "GeogEllipsoidGeoKey": 32767,
+        "GeogSemiMajorAxisGeoKey": 1737400.0,
+        "GeogSemiMinorAxisGeoKey": 1737400.0,
+        "GeogPrimeMeridianLongGeoKey": 0.0,
+        "ProjectedCSTypeGeoKey": 32767,
+        "ProjectionGeoKey": 32767,
+        "ProjCoordTransGeoKey": 15,
+        "ProjLinearUnitsGeoKey": 9001,
+        "ProjNatOriginLatGeoKey": -90.0,
+        "ProjFalseEastingGeoKey": 0.0,
+        "ProjFalseNorthingGeoKey": 0.0,
+        "ProjScaleAtNatOriginGeoKey": 1.0,
+        "ProjStraightVertPoleLongGeoKey": 0.0
+      },
+      "tags": {
+        "TIFFTAG_SOFTWARE": null,
+        "TIFFTAG_IMAGEDESCRIPTION": null,
+        "TIFFTAG_ARTIST": null,
+        "TIFFTAG_DATETIME": null
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_03",
+      "filename": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_reference_at_5m.tif",
+      "dimensions": [
+        2416,
+        6316
+      ],
+      "mode": "L",
+      "format": "TIFF",
+      "pixel_scale": [
+        5.0,
+        5.0,
+        0.0
+      ],
+      "tiepoint": [
+        0.0,
+        0.0,
+        0.0,
+        61478.0,
+        153132.0,
+        0.0
+      ],
+      "easting_bounds": [
+        61478.0,
+        73558.0
+      ],
+      "northing_bounds": [
+        121552.0,
+        153132.0
+      ],
+      "grid_alignment": {
+        "e_mod_5": 3.0,
+        "n_mod_5": 2.0,
+        "grid_index_kx": 12295,
+        "grid_index_ky": 30626,
+        "grid_offset_meters": [
+          3.0,
+          2.0
+        ]
+      },
+      "geokeys": {
+        "GTModelTypeGeoKey": 1,
+        "GTRasterTypeGeoKey": 1,
+        "GTCitationGeoKey": "PolarStereographic Moon|",
+        "GeographicTypeGeoKey": 32767,
+        "GeogCitationGeoKey": "GCS Name = GCS_Moon|Datum = D_Moon|Ellipsoid = Moon|Primem = Reference_Meridian||",
+        "GeogGeodeticDatumGeoKey": 32767,
+        "GeogAngularUnitsGeoKey": 9102,
+        "GeogEllipsoidGeoKey": 32767,
+        "GeogSemiMajorAxisGeoKey": 1737400.0,
+        "GeogSemiMinorAxisGeoKey": 1737400.0,
+        "GeogPrimeMeridianLongGeoKey": 0.0,
+        "ProjectedCSTypeGeoKey": 32767,
+        "ProjectionGeoKey": 32767,
+        "ProjCoordTransGeoKey": 15,
+        "ProjLinearUnitsGeoKey": 9001,
+        "ProjNatOriginLatGeoKey": -90.0,
+        "ProjFalseEastingGeoKey": 0.0,
+        "ProjFalseNorthingGeoKey": 0.0,
+        "ProjScaleAtNatOriginGeoKey": 1.0,
+        "ProjStraightVertPoleLongGeoKey": 0.0
+      },
+      "tags": {
+        "TIFFTAG_SOFTWARE": null,
+        "TIFFTAG_IMAGEDESCRIPTION": null,
+        "TIFFTAG_ARTIST": null,
+        "TIFFTAG_DATETIME": null
+      }
+    },
+    {
+      "pair_id": "OHRC_PAIR_04",
+      "filename": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_reference_at_5m.tif",
+      "dimensions": [
+        3164,
+        6322
+      ],
+      "mode": "L",
+      "format": "TIFF",
+      "pixel_scale": [
+        5.0,
+        5.0,
+        0.0
+      ],
+      "tiepoint": [
+        0.0,
+        0.0,
+        0.0,
+        86683.0,
+        164952.0,
+        0.0
+      ],
+      "easting_bounds": [
+        86683.0,
+        102503.0
+      ],
+      "northing_bounds": [
+        133342.0,
+        164952.0
+      ],
+      "grid_alignment": {
+        "e_mod_5": 3.0,
+        "n_mod_5": 2.0,
+        "grid_index_kx": 17336,
+        "grid_index_ky": 32990,
+        "grid_offset_meters": [
+          3.0,
+          2.0
+        ]
+      },
+      "geokeys": {
+        "GTModelTypeGeoKey": 1,
+        "GTRasterTypeGeoKey": 1,
+        "GTCitationGeoKey": "PolarStereographic Moon|",
+        "GeographicTypeGeoKey": 32767,
+        "GeogCitationGeoKey": "GCS Name = GCS_Moon|Datum = D_Moon|Ellipsoid = Moon|Primem = Reference_Meridian||",
+        "GeogGeodeticDatumGeoKey": 32767,
+        "GeogAngularUnitsGeoKey": 9102,
+        "GeogEllipsoidGeoKey": 32767,
+        "GeogSemiMajorAxisGeoKey": 1737400.0,
+        "GeogSemiMinorAxisGeoKey": 1737400.0,
+        "GeogPrimeMeridianLongGeoKey": 0.0,
+        "ProjectedCSTypeGeoKey": 32767,
+        "ProjectionGeoKey": 32767,
+        "ProjCoordTransGeoKey": 15,
+        "ProjLinearUnitsGeoKey": 9001,
+        "ProjNatOriginLatGeoKey": -90.0,
+        "ProjFalseEastingGeoKey": 0.0,
+        "ProjFalseNorthingGeoKey": 0.0,
+        "ProjScaleAtNatOriginGeoKey": 1.0,
+        "ProjStraightVertPoleLongGeoKey": 0.0
+      },
+      "tags": {
+        "TIFFTAG_SOFTWARE": null,
+        "TIFFTAG_IMAGEDESCRIPTION": null,
+        "TIFFTAG_ARTIST": null,
+        "TIFFTAG_DATETIME": null
+      }
+    }
+  ],
+  "candidate_products_registry": [
+    {
+      "candidate_id": "CAND_01_ISRO_TMC2_ORTHO_STRIP",
+      "institution": "ISRO / ISSDC / SAC",
+      "product_name": "Chandrayaan-2 TMC-2 Standard Level-2 Ortho-Image (ch2_tmc_..._d_oth_...)",
+      "product_type": "Single-Orbit Swath Ortho-Image",
+      "instrument": "TMC-2 (Terrain Mapping Camera-2, 5m GSD, 20km swath)",
+      "source_url": "https://pradan.issdc.gov.in / https://www.issdc.gov.in",
+      "official_status": "OFFICIAL_ARCHIVED_PRODUCT",
+      "pixel_scale": "5.000 m/px",
+      "projection": "Polar Stereographic (latitudes > 75\u00b0S) / Equirectangular",
+      "radius": "1,737,400.0 m",
+      "frame": "IAU_MOON (ISRO PDS4 selenocentric frame)",
+      "dimensions": "~4,000 px width (20 km swath) \u00d7 variable along-track length",
+      "bounds": "Single orbital swath footprint (~20 km \u00d7 100\u2013300 km)",
+      "tiepoint": "Standard ModelTiepointTag / PDS4 GeoTransform",
+      "pixel_scale_tag": "(5.0, 5.0, 0.0)",
+      "data_type": "Byte (uint8) or UInt16",
+      "nodata": "0 or documented in XML label",
+      "control_source": "Spacecraft telemetry / SelenoTagging; optionally bundle adjusted",
+      "bundle_adjustment": "Documented in SIS when applied",
+      "geodetic_realization": "Selenocentric / IAU_MOON (link to MOON_ME_DE421 unrecorded)",
+      "mentor_match_score": "LOW",
+      "metadata_match_status": "MISMATCH",
+      "content_match_status": "MISMATCH_ON_SWATH_WIDTH",
+      "lineage_status": "REJECTED_AS_SINGLE_STRIP",
+      "final_classification": "CANDIDATE_REJECTED_AS_SINGLE_STRIP",
+      "evidence_notes": "Single-strip TMC-2 products have a maximum swath width of 20 km (4,000 px at 5m/px). Pair 01 mentor reference has width of 5,916 px (29.58 km), strictly exceeding a single TMC-2 swath. Furthermore, the identical Pair 02/03 overlap is consistent with both references drawing from common pre-existing reference content; the upstream acquisition and mosaic-generation history remains unverified."
+    },
+    {
+      "candidate_id": "CAND_02_ISRO_TMC2_POLAR_MOSAIC",
+      "institution": "ISRO / ISSDC / SAC",
+      "product_name": "Chandrayaan-2 TMC-2 Regional South Polar Ortho-Mosaic",
+      "product_type": "Multi-Strip Controlled/Uncontrolled Ortho-Mosaic",
+      "instrument": "TMC-2 (Terrain Mapping Camera-2)",
+      "source_url": "https://pradan.issdc.gov.in",
+      "official_status": "DERIVED_SPECIAL_PRODUCT",
+      "pixel_scale": "5.000 m/px",
+      "projection": "Polar Stereographic (phi_0=-90\u00b0, lambda_0=0\u00b0, k_0=1.0)",
+      "radius": "1,737,400.0 m",
+      "frame": "IAU_MOON / Internal SAC Project Frame",
+      "dimensions": "Regional mosaic tile",
+      "bounds": "Circumpolar / regional south polar highlands (84\u00b0S\u201390\u00b0S)",
+      "tiepoint": "Projected grid tile origin",
+      "pixel_scale_tag": "(5.0, 5.0, 0.0)",
+      "data_type": "Byte (uint8)",
+      "nodata": "0 or unassigned",
+      "control_source": "Orbital telemetry / SelenoTagging; cross-strip tiepoints; potentially LOLA co-registered",
+      "bundle_adjustment": "UNKNOWN (Internal SAC processing pipeline)",
+      "geodetic_realization": "UNKNOWN (Unrecorded in mentor metadata; link to MOON_ME_DE421 unverified)",
+      "mentor_match_score": "MEDIUM_HIGH",
+      "metadata_match_status": "NEAR_MATCH",
+      "content_match_status": "UNVERIFIED_ABSENCE_OF_CANDIDATE_RASTER",
+      "lineage_status": "PLAUSIBLE_BUT_UNVERIFIED",
+      "final_classification": "CANDIDATE_UNVERIFIED",
+      "evidence_notes": "Contextually compatible with SIH26166 problem statement ('using Chandrayaan-2 optical images (OHRC, TMC and IIRS)'). Native 5m resolution matches TMC-2 GSD. Multi-strip mosaic capability resolves Pair 01 width and Pair 02/03 static identity. However, GeoTIFF tags (305, 306, 270, 315) are completely blank, filename is OHRC-derived, no PDS4 label accompanies the reference, and no candidate mosaic raster was delivered or independently identified to perform exact pixel hash verification."
+    },
+    {
+      "candidate_id": "CAND_03_NASA_LROC_NAC_SOUTH_POLE_MOSAIC_1M",
+      "institution": "NASA / ASU / LROC Science Team",
+      "product_name": "LROC NAC South Pole Controlled Mosaic (84\u00b0S\u201390\u00b0S)",
+      "product_type": "Multi-Image Controlled Optical Mosaic",
+      "instrument": "LROC NAC (Narrow Angle Camera)",
+      "source_url": "https://lroc.sese.asu.edu/data / https://ode.rsl.wustl.edu/moon/",
+      "official_status": "OFFICIAL_ARCHIVED_PRODUCT",
+      "pixel_scale": "1.000 m/px (native mosaic scale)",
+      "projection": "Polar Stereographic (phi_0=-90\u00b0, lambda_0=0\u00b0, k_0=1.0)",
+      "radius": "1,737,400.0 m",
+      "frame": "Mean Earth / Polar Axis (MOON_ME_DE421 via LOLA control)",
+      "dimensions": "60,000 \u00d7 60,000 px circumpolar tiles",
+      "bounds": "84\u00b0S to 90\u00b0S circumpolar coverage",
+      "tiepoint": "Standard ISIS3 / PDS projected coordinates",
+      "pixel_scale_tag": "(1.0, 1.0, 0.0)",
+      "data_type": "Byte (uint8)",
+      "nodata": "0",
+      "control_source": "LOLA laser altimetry tracks + pairwise NAC feature tiepoint bundle adjustment",
+      "bundle_adjustment": "Rigorous photogrammetric network solution tied to LOLA reference frame",
+      "geodetic_realization": "MOON_ME_DE421",
+      "mentor_match_score": "LOW_MEDIUM",
+      "metadata_match_status": "MISMATCH_ON_SCALE_AND_GRID",
+      "content_match_status": "REQUIRES_DOWNSAMPLING_HYPOTHESIS",
+      "lineage_status": "UNCONFIRMED_SECONDARY_DERIVATIVE_HYPOTHESIS",
+      "final_classification": "CANDIDATE_REJECTED_AS_DIRECT_SOURCE",
+      "evidence_notes": "Official LROC NAC polar mosaics are published at 1.0 m/px or 2.0 m/px, never natively at 5.0 m/px. ModelPixelScaleTag in mentor reference is exactly (5.0, 5.0, 0.0), mismatching LROC's (1.0, 1.0, 0.0). To originate from this mosaic, the mentor reference would require a 5:1 downsampling, which introduces resampling algorithm dependencies (bilinear, bicubic, box-average) that prevent direct product identification."
+    },
+    {
+      "candidate_id": "CAND_04_NASA_LOLA_SOUTH_POLE_LDEM_5M",
+      "institution": "NASA GSFC / LOLA Science Team / PDS Geosciences",
+      "product_name": "LOLA South Pole High-Resolution DTM (LDEM 5m/px)",
+      "product_type": "Digital Elevation Model (DEM/DTM)",
+      "instrument": "Lunar Orbiter Laser Altimeter (LOLA)",
+      "source_url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/ / Barker et al. (2021)",
+      "official_status": "OFFICIAL_ARCHIVED_PRODUCT",
+      "pixel_scale": "5.000 m/px",
+      "projection": "Polar Stereographic (phi_0=-90\u00b0, lambda_0=0\u00b0, k_0=1.0)",
+      "radius": "1,737,400.0 m",
+      "frame": "MOON_ME_DE421",
+      "dimensions": "Local landing site tiles (e.g., 10,000 \u00d7 10,000 px)",
+      "bounds": "South polar landing sites (> 84\u00b0S)",
+      "tiepoint": "Polar Stereographic meters",
+      "pixel_scale_tag": "(5.0, 5.0, 0.0)",
+      "data_type": "Float32 or Int16 (elevation in meters)",
+      "nodata": "-32768 or -9999.0",
+      "control_source": "Direct orbit determination & laser altimetry crossover solution",
+      "bundle_adjustment": "Orbit crossover constraint minimization",
+      "geodetic_realization": "MOON_ME_DE421",
+      "mentor_match_score": "ZERO",
+      "metadata_match_status": "MISMATCH_ON_MODALITY_AND_DTYPE",
+      "content_match_status": "MISMATCH_ELEVATION_VS_OPTICAL",
+      "lineage_status": "REJECTED",
+      "final_classification": "CANDIDATE_REJECTED",
+      "evidence_notes": "LOLA LDEM is a topographic digital elevation model stored as Float32 or Int16 elevation values in meters. The mentor reference rasters are single-band 8-bit Byte (uint8) optical reflectance images depicting surface visual albedo and solar shadows. Modality mismatch conclusively rejects this candidate."
+    },
+    {
+      "candidate_id": "CAND_05_LROC_WAC_POLAR_MOSAIC_100M",
+      "institution": "NASA / ASU",
+      "product_name": "LROC WAC South Pole Morphologic Mosaic",
+      "product_type": "Wide-Angle Optical Mosaic",
+      "instrument": "LROC WAC (Wide Angle Camera)",
+      "source_url": "https://lroc.sese.asu.edu/data",
+      "official_status": "OFFICIAL_ARCHIVED_PRODUCT",
+      "pixel_scale": "100.000 m/px",
+      "projection": "Polar Stereographic (phi_0=-90\u00b0, lambda_0=0\u00b0, k_0=1.0)",
+      "radius": "1,737,400.0 m",
+      "frame": "MOON_ME_DE421",
+      "dimensions": "Circumpolar (60\u00b0S to 90\u00b0S)",
+      "bounds": "Circumpolar south pole",
+      "tiepoint": "Standard ASU polar tile",
+      "pixel_scale_tag": "(100.0, 100.0, 0.0)",
+      "data_type": "Byte (uint8)",
+      "nodata": "0",
+      "control_source": "LOLA DTM + GLD100",
+      "bundle_adjustment": "Photogrammetric network tied to LOLA",
+      "geodetic_realization": "MOON_ME_DE421",
+      "mentor_match_score": "ZERO",
+      "metadata_match_status": "MISMATCH_ON_SCALE",
+      "content_match_status": "MISMATCH_RESOLUTION",
+      "lineage_status": "REJECTED",
+      "final_classification": "CANDIDATE_REJECTED",
+      "evidence_notes": "Resolution is 100 m/px, 20 times coarser than mentor reference (5.0 m/px). Cannot produce the fine crater morphology observed in the 5 m/px reference rasters."
+    },
+    {
+      "candidate_id": "CAND_06_USGS_ASTROPEDIA_POLAR_BASEMAP",
+      "institution": "USGS Astrogeology Science Center",
+      "product_name": "USGS Astropedia Curated Lunar South Pole Basemap",
+      "product_type": "Curated Web GIS Basemap",
+      "instrument": "Multi-Sensor (LROC WAC / LOLA / Clementine)",
+      "source_url": "https://astrogeology.usgs.gov/search",
+      "official_status": "DERIVED_WEB_PRODUCT",
+      "pixel_scale": "20.0\u2013100.0 m/px (no 5m circumpolar optical mosaic published)",
+      "projection": "Polar Stereographic",
+      "radius": "1,737,400.0 m",
+      "frame": "IAU_MOON / MOON_ME (product dependent)",
+      "dimensions": "Variable",
+      "bounds": "Circumpolar south pole",
+      "tiepoint": "Standard GeoTIFF tags",
+      "pixel_scale_tag": "Variable",
+      "data_type": "Byte (uint8)",
+      "nodata": "0",
+      "control_source": "LOLA / LROC",
+      "bundle_adjustment": "Varies by underlying dataset",
+      "geodetic_realization": "Variable / Product Dependent",
+      "mentor_match_score": "ZERO",
+      "metadata_match_status": "MISMATCH_NO_CATALOG_ENTRY",
+      "content_match_status": "UNVERIFIED",
+      "lineage_status": "REJECTED",
+      "final_classification": "CANDIDATE_REJECTED",
+      "evidence_notes": "No official 5.0 m/px optical South Pole basemap covering 84\u00b0S\u201390\u00b0S exists in the USGS Astropedia catalog. USGS polar products are either 100m WAC mosaics or LOLA-derived elevation models."
+    },
+    {
+      "candidate_id": "CAND_07_MENTOR_CUSTOM_BENCHMARK_REFERENCE",
+      "institution": "SIH 2026 Problem Statement Mentors / ISRO SAC Organizers",
+      "product_name": "Mentor Pre-Generated Benchmark Reference Crop (SIH26166)",
+      "product_type": "Custom Benchmark Delivery Crop",
+      "instrument": "Multi-modal reference cropped from pre-existing static basemap",
+      "source_url": "Distributed locally via data_for_sih_2026.zip",
+      "official_status": "BENCHMARK_DELIVERY_SPECIFIC_ARTIFACT",
+      "pixel_scale": "5.000 m/px",
+      "projection": "Polar Stereographic (phi_0=-90\u00b0, lambda_0=0\u00b0, k_0=1.0)",
+      "radius": "1,737,400.0 m",
+      "frame": "Generic GCS_Moon / D_Moon (Physical realization unrecorded)",
+      "dimensions": "Pair 01: 5916\u00d74232; Pair 02: 2593\u00d76279; Pair 03: 2416\u00d76316; Pair 04: 3164\u00d76322 px",
+      "bounds": "Pair-specific bounding boxes near 84\u00b0S\u201389.5\u00b0S",
+      "tiepoint": "Integer coordinate offset: (0, 0, 0, E_0, N_0, 0)",
+      "pixel_scale_tag": "(5.0, 5.0, 0.0)",
+      "data_type": "Byte (uint8)",
+      "nodata": "None declared (0 present in pixel range)",
+      "control_source": "UNRECORDED in GeoTIFF metadata",
+      "bundle_adjustment": "UNRECORDED in GeoTIFF metadata",
+      "geodetic_realization": "UNKNOWN (Not linked to MOON_ME_DE421)",
+      "mentor_match_score": "EXACT_DELIVERY_CONTAINER_MATCH",
+      "metadata_match_status": "MATCH_AS_DELIVERY_CONTAINER",
+      "content_match_status": "MATCH_AS_DELIVERY_CONTAINER",
+      "lineage_status": "DELIVERY_CONTAINER_VERIFIED_UPSTREAM_PROVENANCE_UNRESOLVED",
+      "final_classification": "BENCHMARK_CONTAINER_IDENTIFIED_UPSTREAM_PROVENANCE_UNRESOLVED",
+      "evidence_notes": "Candidate 07 identifies the benchmark delivery container, but upstream cartographic product provenance remains unresolved. Positively accounts for the physical delivery files created on Feb 17, 2026, the synthetic naming convention ('..._reference_at_5m.tif' taking the OHRC source product ID), the generic ESRI/GDAL GeoKeys, the absence of sensor tags (305, 306, 270, 315), and the common grid phase (E mod 5 = 3, N mod 5 = 2). All four delivered reference rasters are phase-aligned to the same 5 m projected coordinate lattice. The modulo-5 tiepoint analysis demonstrates common grid phase, not common master-file provenance."
+    }
+  ]
+}

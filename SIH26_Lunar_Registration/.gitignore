@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local agent/tool metadata
+.agents/
+
+# Temporary development files
+scratch/
+err.txt
+out.txt
+
+# Temporary application outputs
+app/test_output.pdf
+
+# Sensitive external configuration
+**/usgs_isis_rclone.conf
+
+# Local/downloaded research binaries
+research/**/geometry_visibility_diagnostic/3d_inputs/downloads/*.bsp
+research/**/geometry_visibility_diagnostic/3d_inputs/downloads/*.bc
+research/**/geometry_visibility_diagnostic/3d_inputs/downloads/*.bin
+research/**/geometry_visibility_diagnostic/3d_inputs/*.bsp
