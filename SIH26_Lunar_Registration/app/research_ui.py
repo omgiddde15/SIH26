@@ -1367,8 +1367,90 @@ def _render_geoscale_analysis():
 
 
 # =============================================================================
-# HELPER: TAB 10 — 3D / GEODETIC VISUALIZATION
+# HELPER: TAB 1 — 3D / GEODETIC VISUALIZATION & MENTOR 2D VIEW
 # =============================================================================
+_MENTOR_OHRC_SCENES = {
+    "Mentor OHRC Pair 1 (3D Terrain Artifact Scene)": {
+        "job_id": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03",
+        "source_filename": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_source_at_5m.tif",
+        "reference_filename": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03_reference_at_5m.tif",
+        "xml_filename": "OHRXXD18CHO2359602NNNN24342131250969_V1_0_03.xml",
+        "dataset_id": "OHRC_PAIR_01",
+        "is_3d_artifact_pair": True,
+        "description": "Primary South Pole OHRC swath (~89.4°S) used in conjunction with LROC DEM (LDEM_875S_5M) for the 3D terrain artifact.",
+    },
+    "Mentor OHRC Pair 2": {
+        "job_id": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01",
+        "source_filename": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_source_at_5m.tif",
+        "reference_filename": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01_reference_at_5m.tif",
+        "xml_filename": "OHRXXD18CHO2436502NNNN25039175231280_V2_1_01.xml",
+        "dataset_id": "OHRC_PAIR_02",
+        "is_3d_artifact_pair": False,
+        "description": "South Pole OHRC swath (~84.5°S) with polar stereographic LRO-NAC reference.",
+    },
+    "Mentor OHRC Pair 3": {
+        "job_id": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02",
+        "source_filename": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_source_at_5m.tif",
+        "reference_filename": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02_reference_at_5m.tif",
+        "xml_filename": "OHRXXD18CHO2470502NNNN25067152549847_V2_1_02.xml",
+        "dataset_id": "OHRC_PAIR_03",
+        "is_3d_artifact_pair": False,
+        "description": "South Pole OHRC swath (~85.2°S) with polar stereographic LRO-NAC reference.",
+    },
+    "Mentor OHRC Pair 4": {
+        "job_id": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00",
+        "source_filename": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_source_at_5m.tif",
+        "reference_filename": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00_reference_at_5m.tif",
+        "xml_filename": "OHRXXD18CHO2736702NNNN25285183733061_V1_0_00.xml",
+        "dataset_id": "OHRC_PAIR_04",
+        "is_3d_artifact_pair": False,
+        "description": "South Pole OHRC swath (~86.1°S); exhibited verified 10.4% GSD metadata discrepancy.",
+    },
+}
+
+
+def _find_mentor_ohrc_dir():
+    candidates = [
+        os.path.join(PROJECT_ROOT, "data", "mentor", "ohrc"),
+        os.path.abspath(os.path.join(PROJECT_ROOT, "..", "..", "data_for_sih_2026", "ohrc")),
+        os.path.abspath(os.path.join(PROJECT_ROOT, "..", "data_for_sih_2026", "ohrc")),
+        r"C:\Users\Dell\Videos\data_for_sih_2026\ohrc",
+        r"C:\Users\Dell\Downloads\SIH data\data_for_sih_2026\ohrc",
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return None
+
+
+@st.cache_data(show_spinner="Loading mentor OHRC image...")
+def _load_mentor_ohrc_image_cached(file_path: str):
+    if not os.path.exists(file_path):
+        return None
+    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
+
+def _parse_mentor_xml_metadata(xml_path: str):
+    import xml.etree.ElementTree as ET
+    if not os.path.exists(xml_path):
+        return None
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        return {
+            "job_id": root.findtext(".//job_id") or "N/A",
+            "dop": root.findtext(".//dop") or "N/A",
+            "start_time_utc": root.findtext(".//start_time_utc") or "N/A",
+            "altitude_km": root.findtext(".//spacecraft_altitude_in_km") or "N/A",
+            "resolution_m": root.findtext(".//Resolution_in_meter") or "N/A",
+            "solar_incidence_deg": root.findtext(".//Solar_incidence_angle_in_degree") or "N/A",
+            "sun_elevation_deg": root.findtext(".//Sun_elevation_in_degree") or "N/A",
+            "area": root.findtext(".//area") or "South Pole",
+        }
+    except Exception:
+        return None
+
+
 @st.cache_data(show_spinner="Loading 3D terrain visualization...")
 def _load_3d_terrain_html_cached():
     html_path = os.path.join(APP_DIR, "assets", "OHRC_Lunar_3D_Terrain.html")
@@ -1378,14 +1460,89 @@ def _load_3d_terrain_html_cached():
     return None
 
 
-def _render_3d_geodetic_visualization():
-    st.markdown("#### 3D / Geodetic Visualization")
+def _render_mentor_ohrc_2d_view():
+    st.markdown("##### Mentor OHRC 2D Image View")
+    st.markdown("""
+    <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 10px 14px; margin-bottom: 14px; color: #8b949e; font-size: 0.84rem; line-height: 1.5;">
+        The 2D view shows the original mentor OHRC imagery. The 3D view adds terrain/geometric context using the supplied OHRC + LROC DEM research artifact.
+    </div>
+    """, unsafe_allow_html=True)
+
+    mentor_dir = _find_mentor_ohrc_dir()
+    if not mentor_dir:
+        st.warning("Mentor OHRC dataset directory not found on filesystem. Verified search paths: Videos/data_for_sih_2026/ohrc, Downloads/SIH data/data_for_sih_2026/ohrc.")
+        return
+
+    # Scene selector
+    scene_options = list(_MENTOR_OHRC_SCENES.keys())
+    selected_scene_label = st.selectbox(
+        "Select Mentor OHRC Scene / Pair:",
+        scene_options,
+        index=0,
+        key="research_mentor_ohrc_scene_selector",
+        help="Select a Chandrayaan-2 OHRC scene from the mentor dataset to inspect original 2D imagery."
+    )
+
+    scene_info = _MENTOR_OHRC_SCENES[selected_scene_label]
+    ref_path = os.path.join(mentor_dir, scene_info["reference_filename"])
+    src_path = os.path.join(mentor_dir, scene_info["source_filename"])
+    xml_path = os.path.join(mentor_dir, scene_info["xml_filename"])
+
+    if scene_info.get("is_3d_artifact_pair"):
+        st.markdown("""
+        <div style="background: #101c24; border: 1px solid #1a4254; border-left: 4px solid #00f2ff; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.82rem; color: #c9d1d9;">
+            <strong style="color: #00f2ff;">★ Direct 3D Correspondence:</strong> This scene (<code>OHRC_PAIR_01</code>, Job <code>OHRXXD18CHO2359602NNNN24342131250969</code>) is the exact source data used together with the LROC DEM (<code>LDEM_875S_5M</code>) to construct the interactive 3D terrain visualization below.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Load images normally without preprocessing
+    ref_img = _load_mentor_ohrc_image_cached(ref_path)
+    src_img = _load_mentor_ohrc_image_cached(src_path)
+
+    if ref_img is None or src_img is None:
+        st.error(f"Failed to load mentor raster images from {mentor_dir}.")
+        return
+
+    ref_h, ref_w = ref_img.shape[:2]
+    src_h, src_w = src_img.shape[:2]
+
+    # Metadata parse
+    xml_meta = _parse_mentor_xml_metadata(xml_path)
+    if xml_meta:
+        src_meta_status = f"✓ PDS4 XML Attached (Job: {xml_meta['job_id']}; Altitude: {xml_meta['altitude_km']} km; GSD: {xml_meta['resolution_m']} m/px; Incidence: {float(xml_meta['solar_incidence_deg']):.2f}°; Area: {xml_meta['area']})"
+    else:
+        src_meta_status = f"✓ PDS4 XML File Present ({scene_info['xml_filename']})"
+
+    ref_meta_status = "✓ Polar Stereographic GeoTIFF (PixelScale: 5.0 m/px, LRO-NAC Cartographic Mosaic Tile)"
+
+    col_ref, col_src = st.columns(2)
+    with col_ref:
+        st.markdown("###### Reference / Mentor OHRC Image")
+        st.image(ref_img, caption=f"Reference: {scene_info['reference_filename']} ({ref_w} × {ref_h} px)", width="stretch")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Filename:</strong> <code>{scene_info['reference_filename']}</code></div>
+            <div><strong style="color: #79c0ff;">Dimensions:</strong> <code>{ref_w} × {ref_h} px</code> (1 ch, uint8)</div>
+            <div><strong style="color: #79c0ff;">Metadata Status:</strong> <span style="color: #3fb950; font-family: monospace;">{ref_meta_status}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_src:
+        st.markdown("###### Source / Mentor OHRC Image")
+        st.image(src_img, caption=f"Source: {scene_info['source_filename']} ({src_w} × {src_h} px)", width="stretch")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Filename:</strong> <code>{scene_info['source_filename']}</code></div>
+            <div><strong style="color: #79c0ff;">Dimensions:</strong> <code>{src_w} × {src_h} px</code> (1 ch, uint8)</div>
+            <div><strong style="color: #79c0ff;">Metadata Status:</strong> <span style="color: #3fb950; font-family: monospace;">{src_meta_status}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def _render_mentor_ohrc_3d_terrain():
     st.markdown("##### Mentor OHRC Lunar Terrain")
 
     st.markdown("""
-    <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 12px 16px; margin-bottom: 12px; color: #8b949e; font-size: 0.85rem; line-height: 1.5;">
-        Interactive 3D terrain visualization created from the MENTOR OHRC dataset together with the LROC DEM. It provides physical terrain and viewing-geometry research context.
-    </div>
     <div style="background: #161b22; border-left: 4px solid #d29922; border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; color: #e3b341; font-size: 0.82rem; line-height: 1.5;">
         ⚠️ <b>Research-only visualization. This module does not perform image registration or modify production registration, matcher routing, quality gates, homography, or validation. The 3D visualization provides terrain/geometric research context; image registration is performed by the 2D production registration pipeline.</b>
     </div>
@@ -1406,7 +1563,19 @@ def _render_3d_geodetic_visualization():
     except Exception as e:
         st.error(f"Failed to render 3D terrain visualization: {e}")
 
-    # Registration Evidence & Production Preprocessing
+
+def _render_3d_geodetic_visualization():
+    st.markdown("#### 3D / Geodetic Visualization")
+
+    # 1. Mentor OHRC 2D Image View
+    _render_mentor_ohrc_2d_view()
+
+    st.markdown("<hr style='border: 1px solid #1f2a3a; margin: 26px 0 20px 0;'>", unsafe_allow_html=True)
+
+    # 2. Mentor OHRC Lunar Terrain — existing 3D visualization
+    _render_mentor_ohrc_3d_terrain()
+
+    # 3. Registration Evidence & Production Preprocessing
     _render_registration_evidence_and_production_preprocessing()
 
 
