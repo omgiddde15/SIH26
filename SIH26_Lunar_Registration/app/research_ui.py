@@ -47,16 +47,15 @@ def _format_rmse(val):
 def render_research_lab():
     """
     Renders the complete Research Lab UI in distinct research tabs:
-      1. Matcher Benchmark
-      2. Ablation Study
-      3. Adaptive Matcher
-      4. Locked LoFTR Baseline
-      5. LOPO Validation
-      6. Multimodal & Feasibility
-      7. Mentor Benchmark
-      8. Historical Benchmark
+      1. 3D / Geodetic Visualization
+      2. Matcher Benchmark
+      3. Ablation Study
+      4. Adaptive Matcher
+      5. Locked LoFTR Baseline
+      6. LOPO Validation
+      7. Multimodal & Feasibility
+      8. Mentor Benchmark
       9. GeoScale
-      10. 3D / Geodetic Visualization
     """
     st.markdown("""
     <div style="background: #101c24; border: 1px solid #1a4254; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px;">
@@ -79,7 +78,8 @@ def render_research_lab():
     </div>
     """, unsafe_allow_html=True)
 
-    tab_bm, tab_ablation, tab_adaptive, tab_baseline, tab_lopo, tab_multi, tab_mentor, tab_hist, tab_geoscale, tab_3d = st.tabs([
+    tab_3d, tab_bm, tab_ablation, tab_adaptive, tab_baseline, tab_lopo, tab_multi, tab_mentor, tab_geoscale = st.tabs([
+        "3D / Geodetic Visualization",
         "Matcher Benchmark",
         "Ablation Study",
         "Adaptive Matcher Diagnostics",
@@ -87,70 +87,62 @@ def render_research_lab():
         "LOPO Validation",
         "Multimodal & Feasibility",
         "Mentor Benchmark",
-        "Historical Benchmark",
         "GeoScale",
-        "3D / Geodetic Visualization",
     ])
 
     # =========================================================================
-    # TAB 1: MATCHER BENCHMARK (SIFT vs. LoFTR vs. SuperGlue)
+    # TAB 1: 3D / GEODETIC VISUALIZATION
+    # =========================================================================
+    with tab_3d:
+        _render_3d_geodetic_visualization()
+
+    # =========================================================================
+    # TAB 2: MATCHER BENCHMARK (SIFT vs. LoFTR vs. SuperGlue)
     # =========================================================================
     with tab_bm:
         _render_matcher_benchmark()
 
     # =========================================================================
-    # TAB 2: ABLATION STUDY (Fair 54-Point Evaluation)
+    # TAB 3: ABLATION STUDY (Fair 54-Point Evaluation)
     # =========================================================================
     with tab_ablation:
         _render_ablation_study()
 
     # =========================================================================
-    # TAB 3: ADAPTIVE MATCHER (Rule-Based Exploratory Router)
+    # TAB 4: ADAPTIVE MATCHER (Rule-Based Exploratory Router)
     # =========================================================================
     with tab_adaptive:
         _render_adaptive_matcher()
 
     # =========================================================================
-    # TAB 4: LOCKED LoFTR BASELINE (TRUE Baseline - No Adaptive Components)
+    # TAB 5: LOCKED LoFTR BASELINE (TRUE Baseline - No Adaptive Components)
     # =========================================================================
     with tab_baseline:
         _render_locked_loftr_baseline()
 
     # =========================================================================
-    # TAB 5: LOPO VALIDATION (Leave-One-Pair-Out Cross-Validation)
+    # TAB 6: LOPO VALIDATION (Leave-One-Pair-Out Cross-Validation)
     # =========================================================================
     with tab_lopo:
         _render_lopo_validation()
 
     # =========================================================================
-    # TAB 6: MULTIMODAL & FEASIBILITY (RIFT2, MIND, SSC, Rotation, Scale, Sub-Pixel)
+    # TAB 7: MULTIMODAL & FEASIBILITY (RIFT2, MIND, SSC, Rotation, Scale, Sub-Pixel)
     # =========================================================================
     with tab_multi:
         _render_multimodal_feasibility()
 
     # =========================================================================
-    # TAB 7: MENTOR BENCHMARK (SIH Mentor Dataset Benchmark + Phase 24A + Geodetic Status)
+    # TAB 8: MENTOR BENCHMARK (SIH Mentor Dataset Benchmark + Phase 24A + Geodetic Status)
     # =========================================================================
     with tab_mentor:
         _render_mentor_dataset_benchmark()
-
-    # =========================================================================
-    # TAB 8: HISTORICAL BENCHMARK (Earlier Validation Configuration)
-    # =========================================================================
-    with tab_hist:
-        _render_historical_benchmark()
 
     # =========================================================================
     # TAB 9: GEOSCALE (Geospatial & Metadata Consistency Analysis)
     # =========================================================================
     with tab_geoscale:
         _render_geoscale_analysis()
-
-    # =========================================================================
-    # TAB 10: 3D / GEODETIC VISUALIZATION
-    # =========================================================================
-    with tab_3d:
-        _render_3d_geodetic_visualization()
 
 
 # =============================================================================
