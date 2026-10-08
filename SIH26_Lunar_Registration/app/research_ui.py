@@ -1380,14 +1380,14 @@ def _load_3d_terrain_html_cached():
 
 def _render_3d_geodetic_visualization():
     st.markdown("#### 3D / Geodetic Visualization")
-    st.markdown("##### OHRC Lunar Terrain")
+    st.markdown("##### Mentor OHRC Lunar Terrain")
 
     st.markdown("""
     <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 12px 16px; margin-bottom: 12px; color: #8b949e; font-size: 0.85rem; line-height: 1.5;">
-        Interactive 3D terrain visualization using the supplied OHRC + LROC DEM research artifact.
+        Interactive 3D terrain visualization created from the MENTOR OHRC dataset together with the LROC DEM. It provides physical terrain and viewing-geometry research context.
     </div>
     <div style="background: #161b22; border-left: 4px solid #d29922; border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; color: #e3b341; font-size: 0.82rem; line-height: 1.5;">
-        ⚠️ <b>Research-only visualization. This module does not modify production registration, matcher routing, quality gates, homography, or validation.</b>
+        ⚠️ <b>Research-only visualization. This module does not perform image registration or modify production registration, matcher routing, quality gates, homography, or validation. The 3D visualization provides terrain/geometric research context; image registration is performed by the 2D production registration pipeline.</b>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1405,4 +1405,486 @@ def _render_3d_geodetic_visualization():
             st.error("Failed to load 3D terrain HTML content.")
     except Exception as e:
         st.error(f"Failed to render 3D terrain visualization: {e}")
+
+    # Registration Evidence & Production Preprocessing
+    _render_registration_evidence_and_production_preprocessing()
+
+
+# =============================================================================
+# HELPER: REGISTRATION EVIDENCE & PRODUCTION PREPROCESSING
+# =============================================================================
+_CANONICAL_CASES = {
+    "Pair 04 — Optical Nominal (SIFT)": {
+        "source": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_04", "source.png"),
+        "reference": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_04", "reference.png"),
+        "label": "Pair 04 — Optical Nominal",
+        "description": "Nominal optical terrain; high texture, low perspective distortion."
+    },
+    "Pair 03 — Illumination Variation (LoFTR)": {
+        "source": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_03", "source.png"),
+        "reference": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_03", "reference.png"),
+        "label": "Pair 03 — Illumination Variation",
+        "description": "Challenging solar illumination variation, distinct shadow boundaries."
+    },
+    "Pair 01 — Scale Variation (Multi-Scale)": {
+        "source": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_01", "source.png"),
+        "reference": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_01", "reference.png"),
+        "label": "Pair 01 — Scale Variation",
+        "description": "Significant GSD scale variation requiring multi-scale feature profiling."
+    },
+    "Pair 02 — Memory-Safe Failure (Quality Gate)": {
+        "source": os.path.join(PROJECT_ROOT, "data", "pair02", "source.png"),
+        "reference": os.path.join(PROJECT_ROOT, "data", "pair02", "reference.png"),
+        "fallback_source": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_02", "source.png"),
+        "fallback_reference": os.path.join(PROJECT_ROOT, "data", "validation_pairs", "pair_02", "reference.png"),
+        "label": "Pair 02 — Memory-Safe Failure",
+        "description": "Difficult contrast; triggers resource guard, tiled processing, and safe quality-gate rejection."
+    },
+    "Pair 05 — Real Lunar Swath (OHRC Polar)": {
+        "source": os.path.join(PROJECT_ROOT, "data", "pair05", "ch2_ohr_ncp_20200824T0806596861.png"),
+        "reference": os.path.join(PROJECT_ROOT, "data", "pair05", "ch2_ohr_ncp_20200824T1003365280.png"),
+        "label": "Pair 05 — Real Lunar Swath",
+        "description": "Full-size Chandrayaan-2 OHRC polar swath strip."
+    },
+}
+
+
+def _resolve_evidence_case(case_selection: str):
+    """
+    Returns (res, s_img, r_img, s_name, r_name, case_label) for the selected case.
+    Prioritizes real session execution or executes canonical cases through the exact production pipeline.
+    """
+    if case_selection == "Active Session Execution":
+        try:
+            active_res = st.session_state.get("registration_result")
+            active_src = st.session_state.get("source_img_data")
+            active_ref = st.session_state.get("reference_img_data")
+            active_src_name = st.session_state.get("source_filename", "source.png")
+            active_ref_name = st.session_state.get("reference_filename", "reference.png")
+            if active_res is not None and active_src is not None and active_ref is not None:
+                return active_res, active_src, active_ref, active_src_name, active_ref_name, "Active Session Execution"
+        except Exception:
+            pass
+        return None, None, None, None, None, "Active Session Execution"
+
+    try:
+        cache = st.session_state.setdefault("research_evidence_cache", {})
+    except Exception:
+        cache = {}
+    if case_selection in cache:
+        item = cache[case_selection]
+        return item["res"], item["source"], item["reference"], item["s_name"], item["r_name"], item["label"]
+
+    info = _CANONICAL_CASES.get(case_selection)
+    if not info:
+        return None, None, None, None, None, case_selection
+
+    s_path = info["source"]
+    r_path = info["reference"]
+    if not (os.path.exists(s_path) and os.path.exists(r_path)):
+        s_path = info.get("fallback_source", s_path)
+        r_path = info.get("fallback_reference", r_path)
+
+    if not (os.path.exists(s_path) and os.path.exists(r_path)):
+        return None, None, None, None, None, case_selection
+
+    s_img = cv2.imread(s_path)
+    r_img = cv2.imread(r_path)
+    if s_img is None or r_img is None:
+        return None, None, None, None, None, case_selection
+
+    from adaptive_adapter import safe_run_adaptive_registration
+    res = safe_run_adaptive_registration(s_img, r_img)
+
+    s_name = os.path.basename(s_path)
+    r_name = os.path.basename(r_path)
+    cache[case_selection] = {
+        "res": res,
+        "source": s_img,
+        "reference": r_img,
+        "s_name": s_name,
+        "r_name": r_name,
+        "label": info["label"],
+    }
+    return res, s_img, r_img, s_name, r_name, info["label"]
+
+
+def _render_section_a_image_pair(res, s_img, r_img, s_name, r_name):
+    st.markdown("#### SECTION A — IMAGE PAIR")
+    s_h, s_w = s_img.shape[:2]
+    r_h, r_w = r_img.shape[:2]
+    s_ch = s_img.shape[2] if len(s_img.shape) > 2 else 1
+    r_ch = r_img.shape[2] if len(r_img.shape) > 2 else 1
+
+    s_meta = res.get("source_metadata")
+    r_meta = res.get("reference_metadata")
+    s_meta_status = f"✓ Metadata attached ({len(s_meta)} attributes)" if isinstance(s_meta, dict) and s_meta else "No embedded metadata attached (Visual raster input)"
+    r_meta_status = f"✓ Metadata attached ({len(r_meta)} attributes)" if isinstance(r_meta, dict) and r_meta else "No embedded metadata attached (Visual raster input)"
+
+    col_r, col_s = st.columns(2)
+    with col_r:
+        st.markdown("##### Reference Image (Fixed)")
+        st.image(r_img, caption=f"Reference: {r_name} ({r_w} × {r_h} px)", width="stretch")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Filename:</strong> <code>{r_name}</code></div>
+            <div><strong style="color: #79c0ff;">Dimensions:</strong> <code>{r_w} × {r_h} px</code> ({r_ch} ch, <code>{str(r_img.dtype)}</code>)</div>
+            <div><strong style="color: #79c0ff;">Metadata Status:</strong> {r_meta_status}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_s:
+        st.markdown("##### Source Image (Moving)")
+        st.image(s_img, caption=f"Source: {s_name} ({s_w} × {s_h} px)", width="stretch")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Filename:</strong> <code>{s_name}</code></div>
+            <div><strong style="color: #79c0ff;">Dimensions:</strong> <code>{s_w} × {s_h} px</code> ({s_ch} ch, <code>{str(s_img.dtype)}</code>)</div>
+            <div><strong style="color: #79c0ff;">Metadata Status:</strong> {s_meta_status}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def _render_section_b_actual_preprocessing(res, s_img, r_img):
+    st.markdown("#### SECTION B — ACTUAL PREPROCESSING")
+
+    telemetry = res.get("preprocessing_telemetry") or {}
+    r_proc = res.get("processed_reference")
+    s_proc = res.get("processed_source")
+
+    s_h, s_w = s_img.shape[:2]
+    r_h, r_w = r_img.shape[:2]
+
+    # Telemetry statuses directly from runtime execution
+    gray_applied = telemetry.get("grayscale_applied", False)
+    r_gray_status = "Applied (Single-channel conversion)" if gray_applied else "Bypassed for this execution (Single-channel input)"
+    s_gray_status = "Applied (Single-channel conversion)" if gray_applied else "Bypassed for this execution (Single-channel input)"
+
+    contrast_norm = telemetry.get("contrast_norm_applied", False)
+    r_contrast_status = "Applied (Global contrast normalization)" if contrast_norm else "Bypassed for this execution"
+    s_contrast_status = "Applied (Global contrast normalization)" if contrast_norm else "Bypassed for this execution"
+
+    clahe_applied = telemetry.get("clahe_applied", False)
+    clahe_params = telemetry.get("clahe_params")
+    if clahe_applied:
+        clip_lim = clahe_params.get("clip_limit", 2.0) if isinstance(clahe_params, dict) else 2.0
+        grid_sz = clahe_params.get("tile_grid_size", (8, 8)) if isinstance(clahe_params, dict) else (8, 8)
+        clahe_status_text = f"Applied (cv2.createCLAHE, clipLimit={clip_lim}, tileGridSize={grid_sz})"
+    else:
+        clahe_status_text = "Bypassed for this execution (SIFT operates directly on standard grayscale intensity)"
+
+    scale_r = float(telemetry.get("matching_scale_reference", res.get("scale_ref", 1.0)))
+    scale_s = float(telemetry.get("matching_scale_source", res.get("scale_source", 1.0)))
+
+    r_scale_status = f"{scale_r:.4f}x ({scale_r*100:.1f}%)" if scale_r < 1.0 else "1.0000x (100.0% — No downscaling applied)"
+    s_scale_status = f"{scale_s:.4f}x ({scale_s*100:.1f}%)" if scale_s < 1.0 else "1.0000x (100.0% — No downscaling applied)"
+
+    dims_r = telemetry.get("matching_dims_reference", (r_w, r_h))
+    dims_s = telemetry.get("matching_dims_source", (s_w, s_h))
+    r_dim_status = f"{dims_r[0]} × {dims_r[1]} px" + (" (1:1 native matching)" if scale_r >= 1.0 else "")
+    s_dim_status = f"{dims_s[0]} × {dims_s[1]} px" + (" (1:1 native matching)" if scale_s >= 1.0 else "")
+
+    rescaling_applied = bool(telemetry.get("rescaling_applied", (scale_s < 1.0 or scale_r < 1.0)))
+    back_s = telemetry.get("back_mapping_source")
+    back_r = telemetry.get("back_mapping_reference")
+    if rescaling_applied and back_s and back_r:
+        coord_status = f"Applied: Matching coordinates mapped back to original image frame (Back-mapping factors: {back_s[0]:.4f}×{back_s[1]:.4f} src, {back_r[0]:.4f}×{back_r[1]:.4f} ref)"
+    else:
+        coord_status = "Bypassed for this execution (1.0000x 1:1 original coordinates; no rescaling required)"
+
+    col_pr, col_ps = st.columns(2)
+    with col_pr:
+        st.markdown("##### Original Reference → Actual Processed Reference")
+        c_r1, c_r2 = st.columns(2)
+        with c_r1:
+            st.image(r_img, caption=f"Original Reference ({r_w} × {r_h} px)", width="stretch")
+        with c_r2:
+            if r_proc is not None:
+                st.image(r_proc, caption=f"Processed Reference ({r_dim_status})", width="stretch")
+            else:
+                st.info("No processed reference array available.")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Grayscale:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in r_gray_status else '#8b949e'};">{r_gray_status}</span></div>
+            <div><strong style="color: #79c0ff;">Contrast Normalization:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in r_contrast_status else '#8b949e'};">{r_contrast_status}</span></div>
+            <div><strong style="color: #79c0ff;">CLAHE:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in clahe_status_text else '#8b949e'};">{clahe_status_text}</span></div>
+            <div><strong style="color: #79c0ff;">Scale Factor:</strong> <span style="font-family: monospace; color: #00f2ff;">{r_scale_status}</span></div>
+            <div><strong style="color: #79c0ff;">Matching Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{r_dim_status}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_ps:
+        st.markdown("##### Original Source → Actual Processed Source")
+        c_s1, c_s2 = st.columns(2)
+        with c_s1:
+            st.image(s_img, caption=f"Original Source ({s_w} × {s_h} px)", width="stretch")
+        with c_s2:
+            if s_proc is not None:
+                st.image(s_proc, caption=f"Processed Source ({s_dim_status})", width="stretch")
+            else:
+                st.info("No processed source array available.")
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #1f2a3a; border-radius: 6px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.6; color: #c9d1d9;">
+            <div><strong style="color: #79c0ff;">Grayscale:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in s_gray_status else '#8b949e'};">{s_gray_status}</span></div>
+            <div><strong style="color: #79c0ff;">Contrast Normalization:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in s_contrast_status else '#8b949e'};">{s_contrast_status}</span></div>
+            <div><strong style="color: #79c0ff;">CLAHE:</strong> <span style="font-family: monospace; color: {'#3fb950' if 'Applied' in clahe_status_text else '#8b949e'};">{clahe_status_text}</span></div>
+            <div><strong style="color: #79c0ff;">Scale Factor:</strong> <span style="font-family: monospace; color: #00f2ff;">{s_scale_status}</span></div>
+            <div><strong style="color: #79c0ff;">Matching Dimensions:</strong> <span style="font-family: monospace; color: #00f2ff;">{s_dim_status}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="background: #0d1117; border: 1px solid #1f2a3a; border-left: 3px solid #3fb950; border-radius: 4px; padding: 8px 12px; margin-top: 10px;">
+        <div style="font-size: 0.78rem; font-weight: 700; color: #3fb950; letter-spacing: 0.5px;">Coordinate Rescaling Telemetry</div>
+        <div style="font-family: monospace; font-size: 0.82rem; color: #c9d1d9; margin-top: 3px;">{coord_status}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def _render_section_c_pipeline_trace(res, s_img, r_img):
+    st.markdown("#### SECTION C — PIPELINE TRACE")
+    is_success = bool(res.get("success", False))
+    matcher_used = res.get("final_matcher_used") or res.get("primary_matcher") or "LoFTR"
+    diff_profile = res.get("difficulty_profile") or res.get("adaptive_raw", {}).get("difficulty_profile", {}) or {}
+    routing = res.get("routing_decision") or res.get("adaptive_raw", {}).get("decision", {}) or {}
+    q_gate = res.get("quality_gate") or res.get("adaptive_raw", {}).get("quality_gate", {}) or {}
+    q_passed = bool(q_gate.get("passed", is_success))
+    s_h, s_w = s_img.shape[:2]
+    r_h, r_w = r_img.shape[:2]
+
+    fit_rmse_str = f"{res['fit_rmse']:.4f} px" if (is_success and res.get("fit_rmse") is not None) else "N/A"
+    check_rmse_str = f"{res['check_rmse']:.4f} px" if (is_success and res.get("check_rmse") is not None) else "N/A (Bypassed due to quality-gate rejection)"
+    inliers_str = str(res.get("final_inliers", "N/A")) if is_success else "N/A"
+    canvas_str = f"{r_w}×{r_h} px (Reference Geometry)" if is_success else "Bypassed for this execution (No canvas generated)"
+    held_out_valid = bool(res.get("held_out_valid", False))
+    val_status_str = f"PASSED (Hold-Out Check, RMSE={res.get('check_rmse'):.4f} px)" if (is_success and held_out_valid and res.get("check_rmse") is not None) else ("PASSED (Geometric Consensus)" if is_success else "UNAVAILABLE (Quality Gate Rejection)")
+    gate_reason_str = "; ".join(q_gate.get("reasons", [])) if (not q_passed and q_gate.get("reasons")) else ("Verified nominal" if q_passed else str(res.get("error_message", "Quality gate criteria unmet")))
+    rule_str = routing.get("rule_triggered", "Deterministic Router") if isinstance(routing, dict) else "Deterministic Heuristic"
+    outcome_str = "Registration validated and accepted for production export." if is_success else ("Quality Gate Rejected: " + str(res.get("error_message", "Controlled flight-safety rejection.")))
+
+    stages = [
+        ("1. Source + Reference", "COMPLETE", "#3fb950", f"Source: {s_w}×{s_h} px | Reference: {r_w}×{r_h} px"),
+        ("2. Characterization", "COMPLETE", "#3fb950", f"Resolution: {diff_profile.get('resolution_class', 'STANDARD')} | Contrast: {diff_profile.get('contrast_class', 'MEDIUM')} | Texture: {diff_profile.get('texture_class', 'MEDIUM')} | Scale: {diff_profile.get('scale_class', 'NORMAL')} (Scale ratio: {diff_profile.get('scale_ratio', 1.0)})"),
+        ("3. Preprocessing", "COMPLETE", "#3fb950", f"Scale Src: {res.get('scale_source', 1.0):.4f}x, Ref: {res.get('scale_ref', 1.0):.4f}x | CLAHE: {'Applied' if matcher_used in ('LoFTR', 'SuperGlue') else 'Bypassed'}"),
+        ("4. Adaptive Routing", "COMPLETE", "#3fb950", f"Selected Matcher: {res.get('primary_matcher', matcher_used)} | Rule: {rule_str} (Fallback: {'Yes (' + str(res.get('fallback_choice')) + ')' if res.get('fallback_used') else 'None'})"),
+        ("5. Matcher Execution", "COMPLETE" if (res.get("candidate_matches") is not None and res.get("candidate_matches", 0) > 0) else "FAILED", "#3fb950" if (res.get("candidate_matches") is not None and res.get("candidate_matches", 0) > 0) else "#f85149", f"Matcher: {matcher_used} | Candidates: {res.get('candidate_matches', 'N/A')} | Initial Inliers: {res.get('initial_inliers', 'N/A')} | Matcher Runtime: {res.get('runtime', 0.0):.2f}s"),
+        ("6. Quality Gate", "PASS" if q_passed else "FAIL", "#3fb950" if q_passed else "#f85149", f"Status: {'PASSED' if q_passed else 'REJECTED'} | Initial Inlier Ratio: {res.get('initial_inlier_ratio', 0.0)*100:.2f}% (Threshold: >=20.0%) | Notes: {gate_reason_str}"),
+        ("7. 3×3 Spatial Selection", "COMPLETE" if is_success else "BYPASSED", "#3fb950" if is_success else "#8b949e", f"Spatial Occupancy: {res.get('spatial_occupancy', 0.0)*100:.1f}% ({res.get('occupied_cells', 9) if is_success else 0}/9 cells) | Spatial CV: {res.get('spatial_cv', 0.0):.4f} | Selected Matches: {res.get('selected_matches', res.get('final_inliers', 'N/A')) if is_success else 'Bypassed'}"),
+        ("8. RANSAC / Homography", "COMPLETE" if is_success else "BYPASSED", "#3fb950" if is_success else "#8b949e", f"RANSAC Status: {'Converged' if is_success else 'Bypassed'} | Final Inliers: {inliers_str} | Fit RMSE: {fit_rmse_str}"),
+        ("9. Warp", "COMPLETE" if is_success else "BYPASSED", "#3fb950" if is_success else "#8b949e", f"Registered Canvas: {canvas_str}"),
+        ("10. Independent Validation", "PASS" if (is_success and held_out_valid) else ("COMPLETE" if is_success else "BYPASSED"), "#3fb950" if is_success else "#8b949e", f"Hold-out Check RMSE: {check_rmse_str} | Status: {val_status_str}"),
+        ("11. Final Outcome", "ACCEPTED" if is_success else "REJECTED", "#3fb950" if is_success else "#f85149", outcome_str),
+    ]
+
+    st.markdown('<div style="background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 14px 16px; margin-bottom: 14px;">', unsafe_allow_html=True)
+    for idx, (s_name, s_state, s_color, s_desc) in enumerate(stages):
+        arrow_html = "<div style='text-align: center; color: #58a6ff; font-weight: bold; font-size: 1.0rem; margin: 4px 0;'>↓</div>" if idx > 0 else ""
+        st.markdown(f"""
+        {arrow_html}
+        <div style="background: #121824; border: 1px solid #1a2333; border-left: 4px solid {s_color}; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="flex: 1; min-width: 200px;">
+                <span style="font-weight: 700; color: #c9d1d9; font-size: 0.84rem;">{s_name}</span>
+                <div style="color: #8b949e; font-size: 0.78rem; font-family: monospace; margin-top: 2px;">{s_desc}</div>
+            </div>
+            <span style="background: rgba(255,255,255,0.06); color: {s_color}; border: 1px solid {s_color}; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; font-family: monospace;">
+                {s_state}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _render_section_d_correspondence_evidence(res):
+    st.markdown("#### SECTION D — CORRESPONDENCE EVIDENCE")
+    match_canvas = res.get("match_visualization")
+    if match_canvas is not None:
+        st.image(match_canvas, caption="Production Inlier Correspondence Canvas (Moving Source on Left → Fixed Reference on Right)", width="stretch")
+    else:
+        st.info("No correspondence visualization generated for this execution. Correspondences failed quality-gate thresholds and were suppressed in accordance with flight-safety policy.")
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Candidate Matches", res.get("candidate_matches", "N/A"))
+    with c2:
+        inliers_val = res.get("final_inliers") if res.get("final_inliers") is not None else res.get("initial_inliers", "N/A")
+        st.metric("Inliers", inliers_val)
+    with c3:
+        ratio_val = res.get("initial_inlier_ratio")
+        ratio_str = f"{ratio_val*100:.2f}%" if ratio_val is not None else "N/A"
+        st.metric("Inlier Ratio", ratio_str)
+    with c4:
+        occ_val = res.get("spatial_occupancy")
+        occ_str = f"{occ_val*100:.1f}%" if occ_val is not None else "N/A"
+        st.metric("Spatial Occupancy", occ_str)
+
+
+def _render_section_e_registered_product(res, s_img, r_img):
+    st.markdown("#### SECTION E — REGISTERED PRODUCT")
+    is_success = bool(res.get("success", False))
+    reg_img = res.get("registered_image")
+    r_h, r_w = r_img.shape[:2]
+
+    if is_success and reg_img is not None:
+        col_r, col_w = st.columns(2)
+        with col_r:
+            st.image(r_img, caption=f"Fixed Target Reference ({r_w} × {r_h} px)", width="stretch")
+        with col_w:
+            st.image(reg_img, caption=f"Registered Source (Warped to Reference Frame, {reg_img.shape[1]} × {reg_img.shape[0]} px)", width="stretch")
+    else:
+        col_r, col_w = st.columns(2)
+        with col_r:
+            st.image(r_img, caption=f"Fixed Target Reference ({r_w} × {r_h} px)", width="stretch")
+        with col_w:
+            st.markdown(f"""
+            <div style="background: #1c1214; border: 1px solid #5a1e22; border-radius: 6px; padding: 24px 18px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 1.1rem; color: #f85149; font-weight: 700; margin-bottom: 8px;">
+                    ⚠️ Quality Gate Rejection
+                </div>
+                <div style="color: #c9d1d9; font-size: 0.84rem; line-height: 1.5;">
+                    No registered image was produced for this execution.<br>
+                    In strict accordance with lunar flight-safety protocol, moving rasters failing quality gates are never warped or fabricated.
+                </div>
+                <div style="color: #8b949e; font-size: 0.78rem; font-family: monospace; margin-top: 10px;">
+                    Reason: {res.get('error_message', 'Quality gate criteria unmet')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    matcher_used = res.get("final_matcher_used") or res.get("primary_matcher") or "N/A"
+    c_matches = res.get("candidate_matches", "N/A")
+    inliers_val = res.get("final_inliers") if res.get("final_inliers") is not None else res.get("initial_inliers", "N/A")
+    ratio_val = res.get("initial_inlier_ratio")
+    ratio_str = f"{ratio_val*100:.2f}%" if ratio_val is not None else "N/A"
+    occ_val = res.get("spatial_occupancy")
+    occ_str = f"{occ_val*100:.1f}%" if occ_val is not None else "N/A"
+    fit_rmse = f"{res.get('fit_rmse'):.4f} px" if res.get("fit_rmse") is not None else "N/A"
+    check_rmse = f"{res.get('check_rmse'):.4f} px" if res.get("check_rmse") is not None else "N/A"
+    held_out_valid = bool(res.get("held_out_valid", False))
+    if is_success:
+        if held_out_valid and res.get("check_rmse") is not None:
+            val_result = f"PASSED (Hold-Out Validated, RMSE={res.get('check_rmse'):.4f} px)"
+        elif held_out_valid:
+            val_result = "PASSED (Hold-Out Validated)"
+        else:
+            val_result = "PASSED (Geometric Consensus)"
+    else:
+        val_result = "REJECTED (Quality Gate)"
+
+    st.markdown(f"""
+    <div style="background: #101c24; border: 1px solid #1a4254; border-radius: 6px; padding: 12px 16px; margin-top: 12px;">
+        <div style="font-size: 0.86rem; font-weight: 700; color: #58a6ff; margin-bottom: 8px; letter-spacing: 0.5px;">Registration Performance Summary</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 0.80rem;">
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Matcher:</span> <strong style="color: #00f2ff; font-family: monospace;">{matcher_used}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Candidates:</span> <strong style="color: #c9d1d9; font-family: monospace;">{c_matches}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Inliers:</span> <strong style="color: #c9d1d9; font-family: monospace;">{inliers_val}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Inlier Ratio:</span> <strong style="color: #c9d1d9; font-family: monospace;">{ratio_str}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Spatial Occupancy:</span> <strong style="color: #c9d1d9; font-family: monospace;">{occ_str}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Fit RMSE:</span> <strong style="color: #c9d1d9; font-family: monospace;">{fit_rmse}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Held-out RMSE:</span> <strong style="color: #c9d1d9; font-family: monospace;">{check_rmse}</strong>
+            </div>
+            <div style="background: #0d1117; padding: 8px 10px; border-radius: 4px; border: 1px solid #1f2a3a;">
+                <span style="color: #8b949e;">Validation Result:</span> <strong style="color: {'#3fb950' if is_success else '#f85149'}; font-family: monospace;">{val_result}</strong>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def _render_section_f_ps_connection():
+    st.markdown("#### SECTION F — PS CONNECTION")
+    st.markdown("##### How this addresses the SIH problem")
+
+    st.markdown("""
+    <div style="background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 14px 18px; margin-bottom: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <div style="background: #121824; border: 1px solid #1a2333; border-top: 3px solid #58a6ff; border-radius: 4px; padding: 10px 14px;">
+                <div style="font-weight: 700; color: #58a6ff; font-size: 0.85rem; margin-bottom: 4px;">Illumination variation</div>
+                <div style="color: #8b949e; font-size: 0.80rem; line-height: 1.5;">
+                    → production preprocessing / illumination-aware matching where actually used
+                </div>
+            </div>
+            <div style="background: #121824; border: 1px solid #1a2333; border-top: 3px solid #3fb950; border-radius: 4px; padding: 10px 14px;">
+                <div style="font-weight: 700; color: #3fb950; font-size: 0.85rem; margin-bottom: 4px;">Viewpoint variation</div>
+                <div style="color: #8b949e; font-size: 0.80rem; line-height: 1.5;">
+                    → correspondence + geometric verification + homography
+                </div>
+            </div>
+            <div style="background: #121824; border: 1px solid #1a2333; border-top: 3px solid #f0883e; border-radius: 4px; padding: 10px 14px;">
+                <div style="font-weight: 700; color: #f0883e; font-size: 0.85rem; margin-bottom: 4px;">Scale variation</div>
+                <div style="color: #8b949e; font-size: 0.80rem; line-height: 1.5;">
+                    → characterization + adaptive matching scale + coordinate back-mapping
+                </div>
+            </div>
+            <div style="background: #121824; border: 1px solid #1a2333; border-top: 3px solid #a371f7; border-radius: 4px; padding: 10px 14px;">
+                <div style="font-weight: 700; color: #a371f7; font-size: 0.85rem; margin-bottom: 4px;">Reliability</div>
+                <div style="color: #8b949e; font-size: 0.80rem; line-height: 1.5;">
+                    → quality gate + spatial distribution + independent hold-out validation
+                </div>
+            </div>
+        </div>
+        <div style="color: #6e7681; font-size: 0.76rem; font-style: italic; margin-top: 12px; border-top: 1px solid #1a2333; padding-top: 8px;">
+            ⚠️ Research evidence view. The 3D visualization does not perform registration; registration is executed strictly by the 2D production pipeline.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def _render_registration_evidence_and_production_preprocessing():
+    st.markdown("<hr style='border: 1px solid #1f2a3a; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("### Registration Evidence & Production Preprocessing")
+    st.caption("Factual runtime telemetry, verified pipeline stages, and exact preprocessing outputs from the canonical production registration pipeline.")
+
+    # Case Selection
+    has_session_run = st.session_state.get("registration_result") is not None
+    session_label = "Active Session Execution" + (" (Active)" if has_session_run else " (No active run in session)")
+    options = [session_label] + list(_CANONICAL_CASES.keys())
+
+    selected_option = st.selectbox(
+        "Select Registration Execution to Inspect:",
+        options,
+        index=0 if has_session_run else 1,
+        key="research_evidence_case_selector",
+        help="Choose between the active in-session execution or any of the canonical benchmark cases."
+    )
+
+    case_key = "Active Session Execution" if selected_option == session_label else selected_option
+
+    res, s_img, r_img, s_name, r_name, case_label = _resolve_evidence_case(case_key)
+
+    if res is None or s_img is None or r_img is None:
+        st.warning("No registration execution data found for this selection. Run a registration on the Registration page, or choose a canonical benchmark pair from the dropdown above.")
+        return
+
+    st.markdown(f"""
+    <div style="background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div><strong style="color: #58a6ff;">Inspecting Case:</strong> <span style="font-family: monospace; color: #c9d1d9;">{case_label}</span></div>
+        <div style="font-size: 0.78rem; color: #8b949e;">Pipeline Mode: <span style="color: #00f2ff; font-weight: 700;">{res.get('pipeline_mode', 'Adaptive Production Engine')}</span></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    _render_section_a_image_pair(res, s_img, r_img, s_name, r_name)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    _render_section_b_actual_preprocessing(res, s_img, r_img)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    _render_section_c_pipeline_trace(res, s_img, r_img)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    _render_section_d_correspondence_evidence(res)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    _render_section_e_registered_product(res, s_img, r_img)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    _render_section_f_ps_connection()
+
 

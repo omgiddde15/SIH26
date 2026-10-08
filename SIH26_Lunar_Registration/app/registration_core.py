@@ -485,6 +485,21 @@ def register_images(source_image, reference_image, max_per_cell=6, ransac_thresh
         "final_matcher_used": "LoFTR",
         "routing_rule": "Baseline Locked",
         "confidences": confidence.tolist() if isinstance(confidence, np.ndarray) else confidence,
+        "processed_source": s_match,
+        "processed_reference": r_match,
+        "preprocessing_telemetry": {
+            "grayscale_applied": True,
+            "clahe_applied": True,
+            "contrast_norm_applied": False,
+            "clahe_params": {"clip_limit": 2.0, "tile_grid_size": (8, 8)},
+            "matching_scale_source": float(scale_s),
+            "matching_scale_reference": float(scale_r),
+            "matching_dims_source": (int(s_w_match), int(s_h_match)),
+            "matching_dims_reference": (int(r_w_match), int(r_h_match)),
+            "rescaling_applied": bool(resizing_applied),
+            "back_mapping_source": (float(sx0), float(sy0)),
+            "back_mapping_reference": (float(sx1), float(sy1)),
+        },
         "success": True,
     }
 

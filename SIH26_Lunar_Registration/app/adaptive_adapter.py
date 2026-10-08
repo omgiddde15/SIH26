@@ -314,6 +314,9 @@ def safe_run_adaptive_registration(
             "match_source_shape": (compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[2], compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[1]) if adaptive_res.get("primary_choice") == "LoFTR" else (source_image.shape[0], source_image.shape[1]),
             "match_ref_shape": (compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[2], compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[1]) if adaptive_res.get("primary_choice") == "LoFTR" else (reference_image.shape[0], reference_image.shape[1]),
             "resizing_applied": bool(compute_matching_scale(source_image.shape[:2], max_dim=1600, max_budget=1800000)[0] < 1.0 or compute_matching_scale(reference_image.shape[:2], max_dim=1600, max_budget=1800000)[0] < 1.0) if adaptive_res.get("primary_choice") == "LoFTR" else False,
+            "processed_source": adaptive_res.get("processed_source"),
+            "processed_reference": adaptive_res.get("processed_reference"),
+            "preprocessing_telemetry": adaptive_res.get("preprocessing_telemetry"),
             **_normalise_tiled_loftr_telemetry(failed_matcher_result, adaptive_res),
         }
 
@@ -449,5 +452,8 @@ def safe_run_adaptive_registration(
         "match_source_shape": (s_hm, s_wm),
         "match_ref_shape": (r_hm, r_wm),
         "resizing_applied": bool(scale_s < 1.0 or scale_r < 1.0),
+        "processed_source": adaptive_res.get("processed_source"),
+        "processed_reference": adaptive_res.get("processed_reference"),
+        "preprocessing_telemetry": adaptive_res.get("preprocessing_telemetry"),
         **tiled_telemetry,
     }

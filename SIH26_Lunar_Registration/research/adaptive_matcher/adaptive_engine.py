@@ -812,6 +812,23 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
     s_gray = cv2.cvtColor(source_img, cv2.COLOR_BGR2GRAY) if len(source_img.shape) == 3 else source_img
     r_gray = cv2.cvtColor(reference_img, cv2.COLOR_BGR2GRAY) if len(reference_img.shape) == 3 else reference_img
 
+    sift_prep_telemetry = {
+        "grayscale_applied": bool(len(source_img.shape) == 3 or len(reference_img.shape) == 3),
+        "contrast_norm_applied": False,
+        "clahe_applied": False,
+        "clahe_params": None,
+        "matching_scale_source": 1.0,
+        "matching_scale_reference": 1.0,
+        "matching_dims_source": (s_w, s_h),
+        "matching_dims_reference": (r_w, r_h),
+        "rescaling_applied": False,
+    }
+    sift_prep_arrays = {
+        "processed_source": s_gray,
+        "processed_reference": r_gray,
+        "preprocessing_telemetry": sift_prep_telemetry,
+    }
+
     sift = cv2.SIFT_create(contrastThreshold=0.03, edgeThreshold=10)
     kp0, des0 = sift.detectAndCompute(s_gray, None)
     kp1, des1 = sift.detectAndCompute(r_gray, None)
@@ -825,6 +842,7 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
             "runtime": time.perf_counter() - t0,
             "n_candidates": 0,
             "n_inliers": 0,
+            **sift_prep_arrays,
         }
 
     bf = cv2.BFMatcher(cv2.NORM_L2)
@@ -846,6 +864,7 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
             "runtime": time.perf_counter() - t0,
             "n_candidates": len(good_matches),
             "n_inliers": 0,
+            **sift_prep_arrays,
         }
 
     pts0 = np.float32([kp0[m.queryIdx].pt for m in good_matches])
@@ -863,6 +882,7 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
             "runtime": t_feat,
             "n_candidates": len(good_matches),
             "n_inliers": 0,
+            **sift_prep_arrays,
         }
 
     inls = mask.ravel() == 1
@@ -876,6 +896,7 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
             "runtime": t_feat,
             "n_candidates": len(good_matches),
             "n_inliers": n_inl,
+            **sift_prep_arrays,
         }
 
     inl_pts0 = pts0[inls]
@@ -900,6 +921,7 @@ def run_sift_matching(source_img: np.ndarray, reference_img: np.ndarray, ratio_t
         "spatial_cv": cv_val,
         "runtime": t_feat,
         "failure_reason": None,
+        **sift_prep_arrays,
     }
 
 
@@ -938,6 +960,25 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
     sy0 = float(s_h) / float(s_hm)
     sx1 = float(r_w) / float(r_wm)
     sy1 = float(r_h) / float(r_hm)
+
+    loftr_prep_telemetry = {
+        "grayscale_applied": bool(len(source_img.shape) == 3 or len(reference_img.shape) == 3),
+        "contrast_norm_applied": False,
+        "clahe_applied": True,
+        "clahe_params": {"clip_limit": 2.0, "tile_grid_size": (8, 8)},
+        "matching_scale_source": float(scale_s),
+        "matching_scale_reference": float(scale_r),
+        "matching_dims_source": (int(s_wm), int(s_hm)),
+        "matching_dims_reference": (int(r_wm), int(r_hm)),
+        "rescaling_applied": bool(scale_s < 1.0 or scale_r < 1.0),
+        "back_mapping_source": (float(sx0), float(sy0)),
+        "back_mapping_reference": (float(sx1), float(sy1)),
+    }
+    loftr_prep_arrays = {
+        "processed_source": s_m,
+        "processed_reference": r_m,
+        "preprocessing_telemetry": loftr_prep_telemetry,
+    }
 
     if loftr_model is None:
         loftr_model = load_loftr_matcher()
@@ -1049,6 +1090,7 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
                 "spatial_cv": 0.0,
                 "tiled_loftr": True,
                 **memory_check,
+                **loftr_prep_arrays,
             }
 
     if len(kpts0) < 4:
@@ -1067,6 +1109,7 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
             "n_inliers": 0,
             **memory_check,
             **tiled_telemetry,
+            **loftr_prep_arrays,
         }
 
     if not tiled_telemetry:
@@ -1091,6 +1134,7 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
             "n_inliers": 0,
             **memory_check,
             **tiled_telemetry,
+            **loftr_prep_arrays,
         }
 
     inls = mask.ravel() == 1
@@ -1106,6 +1150,7 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
             "n_inliers": n_inl,
             **memory_check,
             **tiled_telemetry,
+            **loftr_prep_arrays,
         }
 
     inl_pts0 = kpts0[inls]
@@ -1132,6 +1177,7 @@ def run_loftr_matching(source_img: np.ndarray, reference_img: np.ndarray, loftr_
         "failure_reason": None,
         **memory_check,
         **tiled_telemetry,
+        **loftr_prep_arrays,
     }
 
 
@@ -1186,6 +1232,25 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
     s_c = s_clahe[:s_crop_h, :s_crop_w]
     r_c = r_clahe[:r_crop_h, :r_crop_w]
 
+    sg_prep_telemetry = {
+        "grayscale_applied": bool(len(source_img.shape) == 3 or len(reference_img.shape) == 3),
+        "contrast_norm_applied": False,
+        "clahe_applied": True,
+        "clahe_params": {"clip_limit": 2.0, "tile_grid_size": (8, 8)},
+        "matching_scale_source": 1.0,
+        "matching_scale_reference": 1.0,
+        "matching_dims_source": (int(s_crop_w), int(s_crop_h)),
+        "matching_dims_reference": (int(r_crop_w), int(r_crop_h)),
+        "rescaling_applied": False,
+        "back_mapping_source": (1.0, 1.0),
+        "back_mapping_reference": (1.0, 1.0),
+    }
+    sg_prep_arrays = {
+        "processed_source": s_c,
+        "processed_reference": r_c,
+        "preprocessing_telemetry": sg_prep_telemetry,
+    }
+
     t_src = torch.from_numpy(s_c.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
     t_ref = torch.from_numpy(r_c.astype(np.float32) / 255.0)[None, None].to(_DEVICE)
 
@@ -1211,6 +1276,7 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
             "runtime": time.perf_counter() - t0,
             "n_candidates": int(np.sum(valid)),
             "n_inliers": 0,
+            **sg_prep_arrays,
         }
 
     m_kpts0 = kpts0[valid]
@@ -1229,6 +1295,7 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
             "runtime": t_feat,
             "n_candidates": len(m_kpts0),
             "n_inliers": 0,
+            **sg_prep_arrays,
         }
 
     inls = mask.ravel() == 1
@@ -1242,6 +1309,7 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
             "runtime": t_feat,
             "n_candidates": len(m_kpts0),
             "n_inliers": n_inl,
+            **sg_prep_arrays,
         }
 
     inl_pts0 = m_kpts0[inls]
@@ -1266,6 +1334,7 @@ def run_superglue_matching(source_img: np.ndarray, reference_img: np.ndarray, sg
         "spatial_cv": cv_val,
         "runtime": t_feat,
         "failure_reason": None,
+        **sg_prep_arrays,
     }
 
 
@@ -1507,6 +1576,13 @@ def run_adaptive_registration(
             )
             res_dict["ssc_results"] = [rec_ssc_nat, rec_ssc_scale]
             res_dict["ssc_comparison"] = pd.DataFrame([rec_ssc_nat, rec_ssc_scale])
+
+        target_res = res_dict.get("fallback_result") if (res_dict.get("fallback_used") and res_dict.get("fallback_result")) else res_dict.get("primary_result")
+        if target_res and isinstance(target_res, dict) and "processed_source" in target_res:
+            res_dict.setdefault("processed_source", target_res.get("processed_source"))
+            res_dict.setdefault("processed_reference", target_res.get("processed_reference"))
+            res_dict.setdefault("preprocessing_telemetry", target_res.get("preprocessing_telemetry"))
+
         return res_dict
 
     # Step 1: Inexpensive image characterization
