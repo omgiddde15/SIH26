@@ -46,7 +46,7 @@ def _format_rmse(val):
 
 def render_research_lab():
     """
-    Renders the complete Research Lab UI in eight distinct tabs:
+    Renders the complete Research Lab UI in distinct research tabs:
       1. Matcher Benchmark
       2. Ablation Study
       3. Adaptive Matcher
@@ -55,6 +55,8 @@ def render_research_lab():
       6. Multimodal & Feasibility
       7. Mentor Benchmark
       8. Historical Benchmark
+      9. GeoScale
+      10. 3D / Geodetic Visualization
     """
     st.markdown("""
     <div style="background: #101c24; border: 1px solid #1a4254; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px;">
@@ -77,7 +79,7 @@ def render_research_lab():
     </div>
     """, unsafe_allow_html=True)
 
-    tab_bm, tab_ablation, tab_adaptive, tab_baseline, tab_lopo, tab_multi, tab_mentor, tab_hist, tab_geoscale = st.tabs([
+    tab_bm, tab_ablation, tab_adaptive, tab_baseline, tab_lopo, tab_multi, tab_mentor, tab_hist, tab_geoscale, tab_3d = st.tabs([
         "Matcher Benchmark",
         "Ablation Study",
         "Adaptive Matcher Diagnostics",
@@ -87,6 +89,7 @@ def render_research_lab():
         "Mentor Benchmark",
         "Historical Benchmark",
         "GeoScale",
+        "3D / Geodetic Visualization",
     ])
 
     # =========================================================================
@@ -142,6 +145,12 @@ def render_research_lab():
     # =========================================================================
     with tab_geoscale:
         _render_geoscale_analysis()
+
+    # =========================================================================
+    # TAB 10: 3D / GEODETIC VISUALIZATION
+    # =========================================================================
+    with tab_3d:
+        _render_3d_geodetic_visualization()
 
 
 # =============================================================================
@@ -1363,3 +1372,45 @@ def _render_geoscale_analysis():
                 st.dataframe(df_inv, width="stretch", hide_index=True)
             except Exception as e:
                 st.warning(f"Could not load inventory: {e}")
+
+
+# =============================================================================
+# HELPER: TAB 10 — 3D / GEODETIC VISUALIZATION
+# =============================================================================
+@st.cache_data(show_spinner="Loading 3D terrain visualization...")
+def _load_3d_terrain_html_cached():
+    html_path = os.path.join(APP_DIR, "assets", "OHRC_Lunar_3D_Terrain.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return None
+
+
+def _render_3d_geodetic_visualization():
+    st.markdown("#### 3D / Geodetic Visualization")
+    st.markdown("##### OHRC Lunar Terrain")
+
+    st.markdown("""
+    <div style="background: #0d1117; border-left: 4px solid #58a6ff; padding: 12px 16px; margin-bottom: 12px; color: #8b949e; font-size: 0.85rem; line-height: 1.5;">
+        Interactive 3D terrain visualization using the supplied OHRC + LROC DEM research artifact.
+    </div>
+    <div style="background: #161b22; border-left: 4px solid #d29922; border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; color: #e3b341; font-size: 0.82rem; line-height: 1.5;">
+        ⚠️ <b>Research-only visualization. This module does not modify production registration, matcher routing, quality gates, homography, or validation.</b>
+    </div>
+    """, unsafe_allow_html=True)
+
+    html_path = os.path.join(APP_DIR, "assets", "OHRC_Lunar_3D_Terrain.html")
+    if not os.path.exists(html_path):
+        st.error(f"3D terrain visualization file not found at: {html_path}")
+        return
+
+    try:
+        import streamlit.components.v1 as components
+        html_content = _load_3d_terrain_html_cached()
+        if html_content:
+            components.html(html_content, height=800, scrolling=True)
+        else:
+            st.error("Failed to load 3D terrain HTML content.")
+    except Exception as e:
+        st.error(f"Failed to render 3D terrain visualization: {e}")
+
