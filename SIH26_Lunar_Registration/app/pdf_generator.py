@@ -650,23 +650,44 @@ def generate_scientific_pdf_report(
 ) -> bytes:
     """
     Builds the definitive 7-page aerospace scientific evidence report in PDF format.
-    Strictly consumes the accepted registration result object and structured telemetry payload.
+    Strictly consumes the current registration run's actual result object and structured telemetry payload.
+
+    Guarantees:
+    - Fully dynamic, run-specific PDF report generated directly from the current registration.
+    - Never falls back to or substitutes the canonical historical evidence PDF.
+    - Accurately renders acceptance or safe rejection status, metrics, and figures.
     
     Returns:
         bytes: Raw PDF bytes suitable for writing to file or transmitting via HTTP.
     """
-    if timestamp is None:
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    run_id = res.get("run_id") or timestamp or res.get("timestamp")
+    if not run_id:
+        run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = str(run_id)
 
-    # The canonical PDF (evidence_report_20260926_194342.pdf) is the immutable single source of truth.
-    # We strictly use the canonical PDF base and apply the clean Page 1 hero header overlay.
-    try:
-        return generate_canonical_evidence_pdf(
-            timestamp=timestamp or "20260926_194342",
-            is_accepted=res.get("registration_accepted", res.get("success", True))
-        )
-    except Exception as e:
-        pass
+    if (not s_filename or s_filename == "source.jpeg") and res.get("source_filename"):
+        s_filename = str(res["source_filename"])
+    elif (not s_filename or s_filename == "source.jpeg") and res.get("s_filename"):
+        s_filename = str(res["s_filename"])
+
+    if (not r_filename or r_filename == "reference.jpeg") and res.get("reference_filename"):
+        r_filename = str(res["reference_filename"])
+    elif (not r_filename or r_filename == "reference.jpeg") and res.get("r_filename"):
+        r_filename = str(res["r_filename"])
+
+    if s_img is None or not isinstance(s_img, np.ndarray) or s_img.size == 0:
+        s_w = int(res.get("source_dimensions", {}).get("width", 800) if isinstance(res.get("source_dimensions"), dict) else 800)
+        s_h = int(res.get("source_dimensions", {}).get("height", 800) if isinstance(res.get("source_dimensions"), dict) else 800)
+        s_img = np.zeros((s_h, s_w, 3), dtype=np.uint8)
+    else:
+        s_h, s_w = s_img.shape[:2]
+
+    if r_img is None or not isinstance(r_img, np.ndarray) or r_img.size == 0:
+        r_w = int(res.get("reference_dimensions", {}).get("width", 800) if isinstance(res.get("reference_dimensions"), dict) else 800)
+        r_h = int(res.get("reference_dimensions", {}).get("height", 800) if isinstance(res.get("reference_dimensions"), dict) else 800)
+        r_img = np.zeros((r_h, r_w, 3), dtype=np.uint8)
+    else:
+        r_h, r_w = r_img.shape[:2]
 
     tel = telemetry or {}
     geo_data = tel.get("geospatial_provenance", {})
@@ -778,7 +799,7 @@ def generate_scientific_pdf_report(
 
     s_h, s_w = s_img.shape[:2]
     r_h, r_w = r_img.shape[:2]
-    runtime = float(res.get("runtime", 0.0))
+    runtime = float(res.get("runtime_seconds", res.get("runtime", 0.0)))
     device = str(res.get("device", "CPU")).upper()
     primary_matcher = str(res.get("primary_matcher", "LoFTR"))
     final_matcher = str(res.get("final_matcher_used", res.get("matcher", primary_matcher)))
@@ -812,33 +833,76 @@ def generate_scientific_pdf_report(
         f"<b>Scale:</b> {terrain_info['scale']}"
     )
     
-    cand_matches = int(res.get("candidate_matches", 0))
-    init_inliers = int(res.get("initial_inliers", 0))
-    init_ratio = float(res.get("initial_inlier_ratio", 0.0)) * 100.0 if res.get("initial_inlier_ratio", 0.0) <= 1.0 else float(res.get("initial_inlier_ratio", 0.0))
-    final_inliers = int(res.get("final_inliers", 0))
-    final_ratio = float(res.get("final_inlier_ratio", 0.0)) * 100.0 if res.get("final_inlier_ratio", 0.0) <= 1.0 else float(res.get("final_inlier_ratio", 0.0))
+    status_field = str(res.get("status", "")).strip().upper()
+    if "REJECT" in status_field or "FAIL" in status_field:
+        is_accepted = False
+    elif "SUCCESS" in status_field or "ACCEPT" in status_field:
+        is_accepted = True
+    elif "registration_accepted" in res:
+        is_accepted = bool(res.get("registration_accepted"))
+    elif "success" in res:
+        is_accepted = bool(res.get("success"))
+    else:
+        is_accepted = False
+
+    rejection_reason = str(res.get("rejection_reason") or res.get("reason") or res.get("safe_rejection_reason") or "").strip()
+    if not is_accepted and not rejection_reason:
+        rejection_reason = "Safety thresholds not met (inlier count or spatial occupancy below tolerance)."
+
+    cand_matches = int(res.get("candidate_matches") if res.get("candidate_matches") is not None else res.get("candidate_count", res.get("total_correspondences", 0)))
+    init_inliers = int(res.get("initial_inliers") if res.get("initial_inliers") is not None else res.get("inliers", 0))
+    raw_init_ratio = res.get("initial_inlier_ratio")
+    if raw_init_ratio is None:
+        raw_init_ratio = (init_inliers / float(cand_matches)) if cand_matches > 0 else 0.0
+    init_ratio = float(raw_init_ratio) * 100.0 if float(raw_init_ratio) <= 1.0 else float(raw_init_ratio)
+
+    final_inliers = int(res.get("final_inliers") if res.get("final_inliers") is not None else res.get("inliers", init_inliers))
+    raw_final_ratio = res.get("final_inlier_ratio")
+    if raw_final_ratio is None:
+        raw_final_ratio = res.get("inlier_ratio")
+    if raw_final_ratio is None:
+        raw_final_ratio = (final_inliers / float(cand_matches)) if cand_matches > 0 else 0.0
+    final_ratio = float(raw_final_ratio) * 100.0 if float(raw_final_ratio) <= 1.0 else float(raw_final_ratio)
     
-    occupied_cells = int(res.get("occupied_cells", 9 if final_inliers >= 9 else 0))
+    occupied_cells = int(res.get("occupied_cells", res.get("spatial_occupied_cells", 9 if (is_accepted and final_inliers >= 9) else (final_inliers if final_inliers < 9 else 0))))
     total_cells = int(res.get("total_cells", 9))
-    occupancy_ratio = float(res.get("occupancy_ratio", res.get("spatial_occupancy", 1.0 if occupied_cells == 9 else 0.0)))
+    if res.get("spatial_occupancy") is not None:
+        occupancy_ratio = float(res.get("spatial_occupancy"))
+    elif res.get("occupancy_ratio") is not None:
+        occupancy_ratio = float(res.get("occupancy_ratio"))
+    else:
+        occupancy_ratio = (occupied_cells / float(total_cells)) if total_cells > 0 else 0.0
+
     spatial_cv = float(res.get("spatial_cv", 0.0))
-    reproj_rmse = float(res.get("rmse", res.get("fit_rmse", 0.0)))
+    reproj_rmse = float(res.get("reprojection_rmse") if res.get("reprojection_rmse") is not None else res.get("rmse", res.get("fit_rmse", 0.0)))
     
-    val_status = val_data.get("status", "VALIDATED — SUB-PIXEL RMSE" if reproj_rmse < 1.0 else "VALIDATED — HELD-OUT")
-    val_rmse_disp = val_data.get("rmse_disp", f"{res.get('check_rmse', reproj_rmse):.4f} px")
-    is_subpixel = val_data.get("is_subpixel", "SUB-PIXEL" in val_status)
+    ind_rmse_val = res.get("independent_validation_rmse") or res.get("check_rmse")
+    if ind_rmse_val is not None:
+        val_rmse_disp = f"{float(ind_rmse_val):.4f} px"
+        val_status = val_data.get("status", "VALIDATED — SUB-PIXEL RMSE" if float(ind_rmse_val) < 1.0 else "VALIDATED — HELD-OUT")
+        is_subpixel = float(ind_rmse_val) < 1.0
+    elif not is_accepted:
+        val_status = val_data.get("status", "SAFE REJECTION — EVALUATION WITHHELD")
+        val_rmse_disp = val_data.get("rmse_disp", "N/A (Rejected)")
+        is_subpixel = False
+    else:
+        val_status = val_data.get("status", "VALIDATED — SUB-PIXEL RMSE" if reproj_rmse < 1.0 else "VALIDATED — HELD-OUT")
+        val_rmse_disp = val_data.get("rmse_disp", f"{res.get('check_rmse', reproj_rmse):.4f} px" if reproj_rmse > 0 else "N/A")
+        is_subpixel = val_data.get("is_subpixel", "SUB-PIXEL" in val_status)
 
     # ============================================================
     # PAGE 1 — REGISTRATION SUMMARY
     # ============================================================
     # Page 1 Hero Header (New visual header layout)
-    is_accepted = bool(res.get("success", False)) or bool(res.get("registration_accepted", False))
     outcome_badge = "ACCEPTED REGISTRATION" if is_accepted else "SAFE REJECTION"
     story.append(Page1HeroHeader(timestamp=timestamp, is_accepted=is_accepted, status_text=outcome_badge, width=540, height=76))
     story.append(Spacer(1, 8))
 
     banner_text = "<b>● REGISTRATION COMPLETE — GEOMETRIC MODEL ESTIMATED</b>" if is_accepted else "<b>✕ SAFE REJECTION PROTOCOL ACTIVE</b>"
-    banner_sub = f"Run Timestamp: {timestamp} UTC | Latency: {runtime:.3f}s | Engine: {device}"
+    if is_accepted:
+        banner_sub = f"Run Timestamp: {timestamp} UTC | Latency: {runtime:.3f}s | Engine: {device}"
+    else:
+        banner_sub = f"Run Timestamp: {timestamp} UTC | Latency: {runtime:.3f}s | Status: Safe Rejection"
     banner_color = "#065f46" if is_accepted else "#991b1b"
     banner_sub_color = "#166534" if is_accepted else "#b91c1c"
     banner_bg = colors.HexColor("#ecfdf5") if is_accepted else colors.HexColor("#fef2f2")
@@ -856,16 +920,28 @@ def generate_scientific_pdf_report(
     story.append(Spacer(1, 8))
 
     story.append(Paragraph("1. Registration Summary", sec_heading_style))
-    p1_data = [
-        [Paragraph("Source Image", table_cell_bold), Paragraph(s_filename, table_cell_style), Paragraph("Reference Image", table_cell_bold), Paragraph(r_filename, table_cell_style)],
-        [Paragraph("Source Raster Frame", table_cell_bold), Paragraph(f"{s_w} × {s_h} px", table_cell_style), Paragraph("Reference Raster Frame", table_cell_bold), Paragraph(f"{r_w} × {r_h} px", table_cell_style)],
-        [Paragraph("Primary Matcher", table_cell_bold), Paragraph(primary_matcher, table_cell_style), Paragraph("Selected Active Matcher", table_cell_bold), Paragraph(final_matcher, table_cell_style)],
-        [Paragraph("Adaptive Decision", table_cell_bold), Paragraph(adapt_disp, table_cell_style), Paragraph("Fallback Status", table_cell_bold), Paragraph(fb_status, table_cell_style)],
-        [Paragraph("Terrain Profile / Difficulty", table_cell_bold), Paragraph(terrain_disp, table_cell_style), Paragraph("Final Geometric Inliers", table_cell_bold), Paragraph(f"{final_inliers} pts ({final_ratio:.1f}%)", table_cell_style)],
-        [Paragraph("Spatial Occupancy", table_cell_bold), Paragraph(f"{occupied_cells}/{total_cells} ({occupancy_ratio*100:.1f}%)", table_cell_style), Paragraph("Spatial CV", table_cell_bold), Paragraph(f"{spatial_cv:.3f} (≤ 0.85)", table_cell_style)],
-        [Paragraph("Reprojection RMSE", table_cell_bold), Paragraph(f"{reproj_rmse:.4f} px", table_cell_style), Paragraph("Validation Status", table_cell_bold), Paragraph(val_status, table_cell_style)],
-        [Paragraph("Validation RMSE", table_cell_bold), Paragraph(val_rmse_disp, table_cell_style), Paragraph("Sub-Pixel Verification", table_cell_bold), Paragraph("Verified (< 1.0 px)" if is_subpixel else "Held-out Nominal (≥ 1.0 px)", table_cell_style)],
-    ]
+    if is_accepted:
+        p1_data = [
+            [Paragraph("Source Image", table_cell_bold), Paragraph(s_filename, table_cell_style), Paragraph("Reference Image", table_cell_bold), Paragraph(r_filename, table_cell_style)],
+            [Paragraph("Source Raster Frame", table_cell_bold), Paragraph(f"{s_w} × {s_h} px", table_cell_style), Paragraph("Reference Raster Frame", table_cell_bold), Paragraph(f"{r_w} × {r_h} px", table_cell_style)],
+            [Paragraph("Primary Matcher", table_cell_bold), Paragraph(primary_matcher, table_cell_style), Paragraph("Selected Active Matcher", table_cell_bold), Paragraph(final_matcher, table_cell_style)],
+            [Paragraph("Adaptive Decision", table_cell_bold), Paragraph(adapt_disp, table_cell_style), Paragraph("Fallback Status", table_cell_bold), Paragraph(fb_status, table_cell_style)],
+            [Paragraph("Terrain Profile / Difficulty", table_cell_bold), Paragraph(terrain_disp, table_cell_style), Paragraph("Final Geometric Inliers", table_cell_bold), Paragraph(f"{final_inliers} pts ({final_ratio:.1f}%)", table_cell_style)],
+            [Paragraph("Spatial Occupancy", table_cell_bold), Paragraph(f"{occupied_cells}/{total_cells} ({occupancy_ratio*100:.1f}%)", table_cell_style), Paragraph("Spatial CV", table_cell_bold), Paragraph(f"{spatial_cv:.3f} (≤ 0.85)", table_cell_style)],
+            [Paragraph("Reprojection RMSE", table_cell_bold), Paragraph(f"{reproj_rmse:.4f} px", table_cell_style), Paragraph("Validation Status", table_cell_bold), Paragraph(val_status, table_cell_style)],
+            [Paragraph("Validation RMSE", table_cell_bold), Paragraph(val_rmse_disp, table_cell_style), Paragraph("Sub-Pixel Verification", table_cell_bold), Paragraph("Verified (< 1.0 px)" if is_subpixel else "Held-out Nominal (≥ 1.0 px)", table_cell_style)],
+        ]
+    else:
+        p1_data = [
+            [Paragraph("Source Image", table_cell_bold), Paragraph(s_filename, table_cell_style), Paragraph("Reference Image", table_cell_bold), Paragraph(r_filename, table_cell_style)],
+            [Paragraph("Source Raster Frame", table_cell_bold), Paragraph(f"{s_w} × {s_h} px", table_cell_style), Paragraph("Reference Raster Frame", table_cell_bold), Paragraph(f"{r_w} × {r_h} px", table_cell_style)],
+            [Paragraph("Primary Matcher", table_cell_bold), Paragraph(primary_matcher, table_cell_style), Paragraph("Selected Active Matcher", table_cell_bold), Paragraph(final_matcher, table_cell_style)],
+            [Paragraph("Adaptive Decision", table_cell_bold), Paragraph(adapt_disp, table_cell_style), Paragraph("Fallback Status", table_cell_bold), Paragraph(fb_status, table_cell_style)],
+            [Paragraph("Terrain Profile / Difficulty", table_cell_bold), Paragraph(terrain_disp, table_cell_style), Paragraph("Final Geometric Inliers", table_cell_bold), Paragraph(f"{final_inliers} pts ({final_ratio:.1f}%)", table_cell_style)],
+            [Paragraph("Spatial Occupancy", table_cell_bold), Paragraph(f"{occupied_cells}/{total_cells} ({occupancy_ratio*100:.1f}%)", table_cell_style), Paragraph("Spatial CV", table_cell_bold), Paragraph(f"{spatial_cv:.3f} (≤ 0.85)", table_cell_style)],
+            [Paragraph("Registration Outcome", table_cell_bold), Paragraph("<font color='#991b1b'><b>SAFE REJECTION</b></font>", table_cell_style), Paragraph("Validation Status", table_cell_bold), Paragraph("SAFE REJECTION", table_cell_style)],
+            [Paragraph("Rejection Reason", table_cell_bold), Paragraph(f"<font color='#991b1b'>{rejection_reason}</font>", table_cell_style), Paragraph("Geometric Homography", table_cell_bold), Paragraph("Withheld (Zero Fabrication)", table_cell_style)],
+        ]
     p1_table = Table(p1_data, colWidths=[120, 150, 130, 140])
     p1_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.white),
@@ -877,20 +953,34 @@ def generate_scientific_pdf_report(
     story.append(Spacer(1, 8))
 
     story.append(Paragraph("2. Registration Overview", sec_heading_style))
-    narrative_p = Paragraph(
-        f"The LunarReg Adaptive Registration System successfully converged for moving source image "
-        f"<b>{s_filename}</b> ({s_w}×{s_h} px) against reference raster <b>{r_filename}</b> ({r_w}×{r_h} px). "
-        f"The adaptive routing pipeline characterized the input pair under terrain profile "
-        f"<b>{terrain_info['resolution']} resolution, {terrain_info['contrast']} contrast, {terrain_info['texture']} texture</b> and selected "
-        f"<b>{final_matcher}</b> via <b>{adapt_info['rule_name']} ({adapt_info['rule_meaning']})</b> as the optimal feature extractor. "
-        f"Initial matching yielded <b>{cand_matches}</b> candidate correspondences "
-        f"which passed the quality gate with <b>{init_inliers}</b> initial RANSAC inliers ({init_ratio:.1f}%). "
-        f"3×3 spatial binning selected <b>{final_inliers}</b> geometrically consensus correspondences distributed across "
-        f"<b>{occupied_cells} of 9</b> grid cells (CV={spatial_cv:.3f}), mitigating degenerate planar fits. "
-        f"Planar projective homography (H3x3) was solved via closed-form Direct Linear Transform (DLT) with internal reprojection RMSE of <b>{reproj_rmse:.4f} px</b>. "
-        f"Independent validation on strictly held-out checkpoints confirmed generalized alignment error of <b>{val_rmse_disp}</b>.",
-        body_style
-    )
+    if is_accepted:
+        narrative_p = Paragraph(
+            f"The LunarReg Adaptive Registration System successfully converged for moving source image "
+            f"<b>{s_filename}</b> ({s_w}×{s_h} px) against reference raster <b>{r_filename}</b> ({r_w}×{r_h} px). "
+            f"The adaptive routing pipeline characterized the input pair under terrain profile "
+            f"<b>{terrain_info['resolution']} resolution, {terrain_info['contrast']} contrast, {terrain_info['texture']} texture</b> and selected "
+            f"<b>{final_matcher}</b> via <b>{adapt_info['rule_name']} ({adapt_info['rule_meaning']})</b> as the optimal feature extractor. "
+            f"Initial matching yielded <b>{cand_matches}</b> candidate correspondences "
+            f"which passed the quality gate with <b>{init_inliers}</b> initial RANSAC inliers ({init_ratio:.1f}%). "
+            f"3×3 spatial binning selected <b>{final_inliers}</b> geometrically consensus correspondences distributed across "
+            f"<b>{occupied_cells} of 9</b> grid cells (CV={spatial_cv:.3f}), mitigating degenerate planar fits. "
+            f"Planar projective homography (H3x3) was solved via closed-form Direct Linear Transform (DLT) with internal reprojection RMSE of <b>{reproj_rmse:.4f} px</b>. "
+            f"Independent validation on strictly held-out checkpoints confirmed generalized alignment error of <b>{val_rmse_disp}</b>.",
+            body_style
+        )
+    else:
+        narrative_p = Paragraph(
+            f"The LunarReg Adaptive Registration System triggered the <b>Safe Rejection Protocol</b> for moving source image "
+            f"<b>{s_filename}</b> ({s_w}×{s_h} px) against reference raster <b>{r_filename}</b> ({r_w}×{r_h} px). "
+            f"<b>Rejection Reason:</b> {rejection_reason}. "
+            f"The adaptive pipeline characterized the input pair under terrain profile "
+            f"<b>{terrain_info['resolution']} resolution, {terrain_info['contrast']} contrast, {terrain_info['texture']} texture</b> with matcher <b>{final_matcher}</b>. "
+            f"Feature extraction identified <b>{cand_matches}</b> candidate correspondences, resulting in <b>{final_inliers}</b> inliers across "
+            f"<b>{occupied_cells} of 9</b> spatial grid cells (CV={spatial_cv:.3f}). "
+            f"Because safety thresholds were not satisfied, downstream homography transformation and image warping were withheld "
+            f"to guarantee lunar science integrity.",
+            body_style
+        )
     story.append(narrative_p)
     story.append(PageBreak())
 
@@ -1377,24 +1467,43 @@ def generate_scientific_pdf_report(
     story.append(Spacer(1, 8))
 
     story.append(Paragraph("2. Final Result", sec_heading_style))
-    verdict_badge = "● REGISTRATION COMPLETE: VALIDATED" if is_subpixel or "VALIDATED" in val_status else "● REGISTRATION COMPLETE"
-    verdict_table = Table(
-        [[Paragraph(
-            f"<font color='#065f46' size=9><b>{verdict_badge}</b></font><br/>"
-            f"<font color='#166534' size=7>"
+    if is_accepted:
+        verdict_badge = "● REGISTRATION COMPLETE: VALIDATED" if is_subpixel or "VALIDATED" in val_status else "● REGISTRATION COMPLETE"
+        verdict_color = "#065f46"
+        verdict_sub_color = "#166534"
+        verdict_bg = colors.HexColor("#ecfdf5")
+        verdict_border = colors.HexColor("#10b981")
+        verdict_sub = (
             f"Final Matcher: <b>{final_matcher}</b> &nbsp;|&nbsp; "
             f"Consensus Inliers: <b>{final_inliers} pts</b> &nbsp;|&nbsp; "
             f"Spatial CV: <b>{spatial_cv:.3f}</b> &nbsp;|&nbsp; "
             f"Reprojection RMSE: <b>{reproj_rmse:.4f} px</b> &nbsp;|&nbsp; "
             f"Independent Validation RMSE: <b>{val_rmse_disp}</b>"
-            f"</font>",
+        )
+    else:
+        verdict_badge = "✕ SAFE REJECTION: GEOMETRIC MODEL WITHHELD"
+        verdict_color = "#991b1b"
+        verdict_sub_color = "#b91c1c"
+        verdict_bg = colors.HexColor("#fef2f2")
+        verdict_border = colors.HexColor("#ef4444")
+        verdict_sub = (
+            f"<b>Status:</b> Safe Rejection Protocol Active &nbsp;|&nbsp; "
+            f"<b>Reason:</b> {rejection_reason}<br/>"
+            f"Consensus Inliers: <b>{final_inliers} pts</b> &nbsp;|&nbsp; "
+            f"Spatial Occupancy: <b>{occupied_cells}/{total_cells}</b> &nbsp;|&nbsp; "
+            f"Transformation: <b>Withheld (Zero-Fabrication Policy)</b>"
+        )
+    verdict_table = Table(
+        [[Paragraph(
+            f"<font color='{verdict_color}' size=9><b>{verdict_badge}</b></font><br/>"
+            f"<font color='{verdict_sub_color}' size=7>{verdict_sub}</font>",
             table_cell_style
         )]],
         colWidths=[540]
     )
     verdict_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ecfdf5")),
-        ("BORDER", (0, 0), (-1, -1), 1, colors.HexColor("#10b981")),
+        ("BACKGROUND", (0, 0), (-1, -1), verdict_bg),
+        ("BORDER", (0, 0), (-1, -1), 1, verdict_border),
         ("PADDING", (0, 0), (-1, -1), 5),
     ]))
     story.append(verdict_table)
@@ -1418,10 +1527,11 @@ def generate_scientific_pdf_report(
     story.append(audit_box)
     story.append(Spacer(1, 8))
 
+    sign_status = val_status if is_accepted else "SAFE REJECTION — MODEL WITHHELD"
     sign_rows = [
         [Paragraph("Pipeline Execution Summary", table_header_style), Paragraph("Project Evaluation", table_header_style)],
         [Paragraph(f"Run ID: <code>{timestamp}</code><br/>Compute: <code>{device}</code> | Latency: <code>{runtime:.3f}s</code>", table_cell_style),
-         Paragraph(f"Project: <code>LunarReg</code><br/>Status: <code>{val_status}</code>", table_cell_style)]
+         Paragraph(f"Project: <code>LunarReg</code><br/>Status: <code>{sign_status}</code>", table_cell_style)]
     ]
     sign_table = Table(sign_rows, colWidths=[270, 270])
     sign_table.setStyle(TableStyle([

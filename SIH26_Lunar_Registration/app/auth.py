@@ -26,6 +26,26 @@ import streamlit as st
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(APP_DIR)
 
+__all__ = [
+    "DB_DIR",
+    "DB_PATH",
+    "HERO_IMAGE_PATH",
+    "init_auth_db",
+    "hash_password",
+    "verify_password",
+    "create_user",
+    "authenticate_user",
+    "is_authenticated",
+    "set_authenticated",
+    "logout_user",
+    "DEMO_USER_NAME",
+    "DEMO_USER_EMAIL",
+    "get_or_create_demo_user",
+    "is_demo_session",
+    "handle_quick_demo_access",
+    "render_auth_page",
+]
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -306,6 +326,84 @@ def logout_user() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Quick Demo Access for Evaluation / Demonstration
+# ---------------------------------------------------------------------------
+
+DEMO_USER_NAME = "LunarReg Demo User"
+DEMO_USER_EMAIL = "lunarreg.demo@example.com"
+
+
+def get_or_create_demo_user() -> Tuple[str, str, str]:
+    """
+    Ensure the dedicated demo evaluator account exists in the database.
+    Returns (user_id, full_name, email).
+    Never overwrites existing real accounts or user passwords.
+    """
+    email_norm = DEMO_USER_EMAIL.strip().lower()
+    with _get_conn() as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(
+            "SELECT id, full_name, email FROM users WHERE email = ?",
+            (email_norm,),
+        )
+        row = cur.fetchone()
+        if row is not None:
+            return (str(row["id"]), row["full_name"], row["email"])
+
+    # If demo user does not exist, provision using a random secure password
+    demo_pass = secrets.token_urlsafe(24)
+    create_user(DEMO_USER_NAME, email_norm, demo_pass)
+
+    with _get_conn() as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(
+            "SELECT id, full_name, email FROM users WHERE email = ?",
+            (email_norm,),
+        )
+        row = cur.fetchone()
+        if row is not None:
+            return (str(row["id"]), row["full_name"], row["email"])
+        else:
+            return ("demo_1", DEMO_USER_NAME, email_norm)
+
+
+def is_demo_session() -> bool:
+    """Return True if the active authenticated session is a Quick Demo session."""
+    return bool(
+        is_authenticated()
+        and st.session_state.get("auth_is_demo", False)
+        and str(st.session_state.get("auth_email", "")).lower() == DEMO_USER_EMAIL.lower()
+    )
+
+
+def handle_quick_demo_access() -> None:
+    """
+    Callback for the Quick Demo Access button.
+    Runs as a pre-rerun callback before the next script render cycle.
+    1. Clear any stale authentication/session state.
+    2. Provision or retrieve the dedicated demo user.
+    3. Set authenticated state with demo identity.
+    4. Set navigation target to 'overview'.
+    Streamlit will automatically rerun the script following this callback.
+    DO NOT call st.rerun() inside this callback!
+    """
+    # 1. Clear complete per-browser session to remove any stale results/imagery/metadata
+    logout_user()
+
+    # 2. Provision or retrieve dedicated demo user
+    uid, name, eml = get_or_create_demo_user()
+
+    # 3. Set authenticated session with demo identity
+    set_authenticated(uid, name, eml)
+    st.session_state["auth_is_demo"] = True
+
+    # 4. Clean navigation state starting at Overview
+    st.session_state["nav_page"] = "overview"
+    st.session_state["sidebar_page"] = "Overview"
+    st.session_state["pending_nav_target"] = "overview"
+
+
+# ---------------------------------------------------------------------------
 # UI helpers
 # ---------------------------------------------------------------------------
 
@@ -313,7 +411,11 @@ def _auth_css() -> str:
     return """
     <style>
         /* Hide sidebar and Streamlit chrome on auth page */
-        section[data-testid="stSidebar"] { display: none !important; }
+        section[data-testid="stSidebar"],
+        div[data-testid="collapsedControl"],
+        div[data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
         .stApp > header[data-testid="stHeader"] {
             height: 0 !important;
             visibility: hidden !important;
@@ -564,42 +666,107 @@ def _auth_css() -> str:
         [data-testid="stForm"] label,
         [data-testid="stMarkdownContainer"] p {
             color: #8b949e !important;
-            font-size: 0.78rem !important;
+            font-size: 0.76rem !important;
+        }
+        [data-testid="stTextInput"] {
+            margin-bottom: 2px !important;
+        }
+        [data-testid="stForm"] > div {
+            gap: 10px !important;
         }
         [data-testid="stTextInput"] > div > div > input {
-            background: rgba(6,10,14,0.6) !important;
+            background: rgba(6,10,14,0.65) !important;
             color: #e6edf3 !important;
             border: 1px solid rgba(40,56,78,0.6) !important;
-            border-radius: 10px !important;
-            padding: 12px 14px !important;
-            font-size: 0.95rem !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 0.90rem !important;
+            min-height: 38px !important;
         }
         [data-testid="stTextInput"] > div > div > input:focus {
             border-color: #58a6ff !important;
             box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15) !important;
         }
 
-        .auth-primary-btn button {
-            background: linear-gradient(180deg, #2f7bff 0%, #1f63e0 100%) !important;
-            color: white !important;
-            border: 1px solid #3d86ff !important;
-            border-radius: 10px !important;
-            padding: 10px 14px !important;
-            font-weight: 700 !important;
-            font-size: 0.92rem !important;
+        .auth-primary-btn button,
+        .lunar-auth-card [data-testid="stFormSubmitButton"] button {
+            background: linear-gradient(180deg, #18283f 0%, #111c2e 100%) !important;
+            color: #c9d1d9 !important;
+            border: 1px solid #283e5e !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            font-weight: 600 !important;
+            font-size: 0.88rem !important;
             letter-spacing: 0.2px !important;
             width: 100% !important;
-            min-height: 42px !important;
-            box-shadow:
-                0 1px 0 rgba(255, 255, 255, 0.12) inset,
-                0 6px 20px rgba(31, 99, 224, 0.25);
+            min-height: 38px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
         }
-        .auth-primary-btn button:hover {
-            background: linear-gradient(180deg, #3c88ff 0%, #2569e6 100%) !important;
-            border-color: #4d94ff !important;
+        .auth-primary-btn button:hover,
+        .lunar-auth-card [data-testid="stFormSubmitButton"] button:hover {
+            background: linear-gradient(180deg, #223756 0%, #18283f 100%) !important;
+            border-color: #3b5a87 !important;
+            color: #ffffff !important;
+        }
+        .auth-primary-btn button p,
+        .lunar-auth-card [data-testid="stFormSubmitButton"] button p {
+            color: inherit !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+            margin: 0 !important;
+        }
+
+        /* Quick Demo Access Action Button - Prominent Accent Treatment */
+        .lunar-auth-card .stButton,
+        .lunar-auth-card div[data-testid="stButton"] {
+            width: 100% !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .lunar-auth-card .stButton > button,
+        .lunar-auth-card div[data-testid="stButton"] > button {
+            background: linear-gradient(180deg, #1b4273 0%, #122e52 100%) !important;
+            color: #ffffff !important;
+            border: 1.5px solid #388bfd !important;
+            border-radius: 8px !important;
+            padding: 11px 18px !important;
+            min-height: 44px !important;
+            font-weight: 700 !important;
+            font-size: 0.94rem !important;
+            letter-spacing: 0.35px !important;
+            width: 100% !important;
             box-shadow:
-                0 1px 0 rgba(255, 255, 255, 0.15) inset,
-                0 10px 26px rgba(31, 99, 224, 0.35);
+                0 4px 16px rgba(10, 45, 90, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            cursor: pointer !important;
+        }
+        .lunar-auth-card .stButton > button:hover,
+        .lunar-auth-card div[data-testid="stButton"] > button:hover {
+            background: linear-gradient(180deg, #225694 0%, #173b68 100%) !important;
+            border-color: #58a6ff !important;
+            color: #ffffff !important;
+            box-shadow:
+                0 0 18px rgba(88, 166, 255, 0.40),
+                0 6px 20px rgba(2, 10, 25, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+            transform: translateY(-1px);
+        }
+        .lunar-auth-card .stButton > button:active,
+        .lunar-auth-card div[data-testid="stButton"] > button:active {
+            transform: translateY(0px);
+            background: #122e52 !important;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+        }
+        .lunar-auth-card .stButton > button p,
+        .lunar-auth-card div[data-testid="stButton"] > button p {
+            color: #ffffff !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+            letter-spacing: inherit !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         .auth-footnote {
@@ -655,7 +822,7 @@ def _auth_css() -> str:
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: clamp(20px, 5vh, 48px) clamp(24px, 5vw, 64px) !important;
+            padding: clamp(10px, 2.5vh, 24px) clamp(20px, 4vw, 56px) !important;
             box-sizing: border-box !important;
             overflow-y: auto !important;
         }
@@ -673,17 +840,19 @@ def _auth_css() -> str:
         }
         section.main [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2)
         [data-testid="stVerticalBlockBorderWrapper"] > div {
-            padding: 30px 32px 24px !important;
+            padding: 20px 28px 16px !important;
         }
-        .auth-unified-header { margin-bottom: 4px; }
-        .auth-unified-header .auth-brand { margin-bottom: 10px; }
-        .auth-unified-header .auth-subtitle { font-size: .68rem; letter-spacing: .32em; margin-bottom: 9px; }
-        .auth-unified-header .auth-tagline { margin-bottom: 8px; }
-        .auth-unified-header .auth-rule { margin-bottom: 18px; }
-        .auth-unified-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid #1a2333; }
-        .auth-unified-feature { color: #b8c5d4; font-size: .78rem; line-height: 1.7; }
-        .auth-unified-feature span { color: #7dd3fc; font-weight: 800; padding-right: 8px; }
-        .auth-unified-footer .auth-footnote { margin-top: 12px; }
+        .auth-unified-header { margin-bottom: 2px; }
+        .auth-unified-header .auth-brand { margin-bottom: 4px; gap: 10px; }
+        .auth-unified-header .auth-brand-mark { width: 34px; height: 34px; font-size: 1.05rem; }
+        .auth-unified-header .auth-brand-name { font-size: 1.55rem; }
+        .auth-unified-header .auth-subtitle { font-size: .65rem; letter-spacing: .28em; margin: 0 0 3px 44px; }
+        .auth-unified-header .auth-tagline { font-size: .84rem; margin: 0 0 3px 44px; }
+        .auth-unified-header .auth-rule { margin: 4px 0 8px 44px; height: 2px; }
+        .auth-unified-footer { margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a2333; }
+        .auth-unified-feature { color: #b8c5d4; font-size: .74rem; line-height: 1.45; }
+        .auth-unified-feature span { color: #7dd3fc; font-weight: 800; padding-right: 6px; }
+        .auth-unified-footer .auth-footnote { margin-top: 5px; font-size: .68rem; }
         .hero-support { max-width: 340px; margin-top: 16px; color: rgba(226,232,240,.9); font-size: .92rem; line-height: 1.55; }
         @media (max-width: 980px) {
             section.main, section.main > div { height: auto !important; overflow: visible !important; }
@@ -873,8 +1042,32 @@ def render_auth_page() -> None:
                         st.success(f"Welcome back, {name.split()[0]}! Redirecting…")
                         st.rerun()
 
+                # --- QUICK DEMO ACCESS FOR SIH / EVALUATORS ---
                 st.markdown(
-                    '<p style="text-align:center; color:#8b949e; font-size:.78rem; margin:6px 0 0;">'
+                    '<div style="display: flex; align-items: center; margin: 10px 0 8px 0;">'
+                    '<div style="flex-grow: 1; height: 1px; background: #212c3d;"></div>'
+                    '<span style="padding: 0 10px; color: #8b949e; font-size: 0.68rem; font-weight: 600; letter-spacing: 1.5px;">OR</span>'
+                    '<div style="flex-grow: 1; height: 1px; background: #212c3d;"></div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+
+                st.button(
+                    "Quick Demo Access",
+                    key="btn_quick_demo_access",
+                    type="secondary",
+                    width="stretch",
+                    on_click=handle_quick_demo_access,
+                )
+
+                st.markdown(
+                    '<p style="text-align: center; color: #8b949e; font-size: 0.72rem; margin: 3px 0 8px 0; letter-spacing: 0.2px;">'
+                    'For evaluation / demonstration</p>',
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    '<p style="text-align: center; color: #6e7681; font-size: 0.74rem; margin: 2px 0 0 0;">'
                     'Don&apos;t have an account? Switch to the <strong>Sign Up</strong> tab.</p>',
                     unsafe_allow_html=True,
                 )

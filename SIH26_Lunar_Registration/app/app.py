@@ -28,7 +28,25 @@ from research_ui import render_research_lab
 from registration_core import compute_matching_scale, register_images
 from adaptive_adapter import safe_run_adaptive_registration
 from pdf_generator import generate_scientific_pdf_report, validate_pdf_report
-from auth import init_auth_db, is_authenticated, render_auth_page, logout_user
+from auth import (
+    init_auth_db,
+    is_authenticated,
+    render_auth_page,
+    logout_user,
+    is_demo_session,
+    handle_quick_demo_access,
+    DEMO_USER_NAME,
+    DEMO_USER_EMAIL,
+)
+from metadata_parser import (
+    parse_metadata_xml,
+    parse_metadata_file,
+    handle_uploaded_metadata_file,
+    clear_metadata_state,
+    render_inputs_metadata_summary,
+    render_results_metadata_section,
+    METADATA_DISPLAY_KEYS,
+)
 
 # Disable SSL verification for model weight downloads on constrained platforms
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -215,6 +233,239 @@ def make_json_safe(obj, max_array_size: int = 32):
     if isinstance(obj, (list, tuple, set)):
         return [make_json_safe(x, max_array_size) for x in obj]
     return str(obj)
+
+# ============================================================
+# 1C. LOCKED HEAVY CASES (ONLINE DEPLOYMENT RESOURCE LIMITATION)
+# ============================================================
+
+TYCHO_DRIVE_LINK = os.getenv(
+    "TYCHO_DRIVE_LINK",
+    "https://drive.google.com/drive/folders/1ALdwDcXbJcapSKLXjuEgriU3nwab1535"
+)
+LARGE_LOFTR_DRIVE_LINK = os.getenv(
+    "LARGE_LOFTR_DRIVE_LINK",
+    "https://drive.google.com/drive/folders/1ALdwDcXbJcapSKLXjuEgriU3nwab1535"
+)
+
+LOCKED_CASE_DOCUMENTED_RESULTS: Dict[str, Dict[str, Any]] = {
+    "tycho": {
+        "case_id": "tycho",
+        "label": "Tycho Research / Stress Test",
+        "category": "RESEARCH / STRESS",
+        "drive_link": TYCHO_DRIVE_LINK,
+        "metrics_label": "DOCUMENTED LOCAL RESULT",
+        "header_pill": "LIVE EXECUTION LOCKED",
+        "status_tag": "Live registration was not executed.",
+        "resource_notice": (
+            "This computationally intensive case is not executed on the current online CPU/compute environment. "
+            "The documented local execution, video demonstration, and results are available on Drive."
+        ),
+        "validation_rmse": "1.5088 px",
+        "metrics": [
+            ("LoFTR candidates", "1,709"),
+            ("LoFTR initial inliers", "8"),
+            ("LoFTR inlier ratio", "0.47%"),
+            ("SIFT fallback", "182 candidates / 51 initial inliers / 28.02%"),
+            ("Final selected points", "24"),
+            ("Occupancy", "4/9"),
+            ("Geometric RMSE", "1.192 px"),
+            ("Hold-out RMSE", "1.5088 px"),
+            ("Total CPU runtime", "164.190 s"),
+            ("Documented tiled execution", "16 tiles, 20% overlap"),
+            ("Memory estimate", "2.839 GB > 2.60 GB cap"),
+        ]
+    },
+    "large_image": {
+        "case_id": "large_image",
+        "label": "Large Image Tiled LoFTR Stress Test",
+        "category": "ADDITIONAL VERIFIED PROTOTYPE",
+        "drive_link": LARGE_LOFTR_DRIVE_LINK,
+        "metrics_label": "DOCUMENTED LOCAL RESULT",
+        "header_pill": "LIVE EXECUTION LOCKED",
+        "status_tag": "Live registration was not executed.",
+        "resource_notice": (
+            "This computationally intensive case is not executed on the current online CPU/compute environment. "
+            "The documented local execution, video demonstration, and results are available on Drive."
+        ),
+        "validation_rmse": "0.2763 px",
+        "metrics": [
+            ("Source", "1200 × 5053"),
+            ("Reference", "1200 × 3527"),
+            ("LoFTR candidates", "5,979"),
+            ("Initial inliers", "5,800"),
+            ("Initial inlier ratio", "97.01%"),
+            ("Final selected points", "54"),
+            ("Occupancy", "9/9"),
+            ("Geometric RMSE", "0.279 px"),
+            ("Validation RMSE", "0.2763 px"),
+            ("CPU runtime", "57.760 s"),
+        ]
+    }
+}
+
+LOCKED_DEMO_CASES = set(LOCKED_CASE_DOCUMENTED_RESULTS.keys())
+
+
+def is_case_locked(case_id_or_info: Any = None) -> bool:
+    """Check if a case ID or demo_case_info dict represents a locked heavy case."""
+    if case_id_or_info is None:
+        case_id_or_info = st.session_state.get("demo_case_info")
+    if not case_id_or_info:
+        return False
+    if isinstance(case_id_or_info, str):
+        return case_id_or_info in LOCKED_DEMO_CASES
+    if isinstance(case_id_or_info, dict):
+        if case_id_or_info.get("is_locked"):
+            return True
+        cid = case_id_or_info.get("case_id")
+        return cid in LOCKED_DEMO_CASES
+    return False
+
+
+def get_locked_case_data(case_id_or_info: Any = None) -> Optional[Dict[str, Any]]:
+    """Retrieve the documented result record for a locked heavy case."""
+    if case_id_or_info is None:
+        case_id_or_info = st.session_state.get("demo_case_info")
+    if not case_id_or_info:
+        return None
+    cid = case_id_or_info if isinstance(case_id_or_info, str) else case_id_or_info.get("case_id")
+    return LOCKED_CASE_DOCUMENTED_RESULTS.get(cid)
+
+
+def clear_registration_run_state(session_state: Any) -> None:
+    """
+    Clear all live registration results, export payloads, homography,
+    and stage states from prior runs to prevent stale result leakage.
+    """
+    session_state.pop("registration_result", None)
+    session_state.pop("export_package", None)
+    session_state.pop("stage_states", None)
+    session_state.pop("export_error", None)
+    session_state.pop("homography", None)
+    session_state.pop("validation_results", None)
+    session_state.pop("pipeline_mode", None)
+    session_state["is_running"] = False
+
+
+def render_locked_case_panel(case_info: Any = None, page_context: str = "inputs") -> bool:
+    """
+    Single reusable helper: identifies a locked heavy case and renders the locked panel.
+    Returns True if a locked case was handled, False otherwise.
+    Prevents stale result leakage and heavy execution.
+    """
+    if case_info is None:
+        case_info = st.session_state.get("demo_case_info")
+    if not is_case_locked(case_info):
+        return False
+
+    case_data = get_locked_case_data(case_info)
+    if not case_data:
+        return False
+
+    clear_registration_run_state(st.session_state)
+
+    src_fn = st.session_state.get("source_filename", "Source Image")
+    ref_fn = st.session_state.get("reference_filename", "Reference Image")
+
+    if page_context in ("results", "validation", "export"):
+        page_title = "Results" if page_context == "results" else ("Independent Validation" if page_context == "validation" else "Deliverables")
+        st.markdown(
+            f"<div style='font-size: 0.80rem; color: #8b949e; margin-bottom: 8px;'>"
+            f"Viewing {page_title} for: <span style='color: #58a6ff; font-weight: 600;'>{src_fn}</span> ↔ <span style='color: #58a6ff; font-weight: 600;'>{ref_fn}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    label = case_data["label"]
+    drive_link = case_data["drive_link"]
+    res_notice = case_data["resource_notice"]
+    metrics_label = case_data["metrics_label"]
+    metrics = case_data["metrics"]
+
+    metrics_html = "".join([
+        f"""<div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #1f242c; font-size: 0.79rem;">
+            <span style="color: #8b949e;">{k}:</span>
+            <span style="font-family: monospace; font-weight: 600; color: #e6edf3;">{v}</span>
+        </div>"""
+        for k, v in metrics
+    ])
+
+    st.markdown(f"""
+    <div style="background: #121824; border: 1px solid #30363d; border-left: 4px solid #f0883e; border-radius: 6px; padding: 16px 20px; margin: 10px 0 14px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-family: monospace; font-size: 0.74rem; font-weight: 800; background: rgba(240, 136, 62, 0.18); color: #f0883e; border: 1px solid #f0883e; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">
+                    LIVE EXECUTION LOCKED
+                </span>
+                <span style="font-size: 1.02rem; font-weight: 700; color: #f0f6fc;">
+                    {label}
+                </span>
+            </div>
+            <span style="font-family: monospace; font-size: 0.74rem; font-weight: 700; color: #f85149; background: #221518; border: 1px solid #da3633; padding: 3px 9px; border-radius: 4px;">
+                Live registration was not executed.
+            </span>
+        </div>
+        <div style="font-size: 0.86rem; color: #c9d1d9; line-height: 1.5; margin-bottom: 12px;">
+            {res_notice}
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+            <a href="{drive_link}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #238636; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 0.85rem; padding: 7px 14px; border-radius: 6px; border: 1px solid rgba(240, 246, 252, 0.1);">
+                View Recorded Video &amp; Results
+            </a>
+        </div>
+        <div style="background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #21262d; padding-bottom: 6px;">
+                <span style="font-size: 0.76rem; font-weight: 800; color: #58a6ff; letter-spacing: 0.6px; font-family: monospace;">
+                    ● {metrics_label}
+                </span>
+                <span style="font-size: 0.72rem; color: #8b949e; font-style: italic;">
+                    Read-only verified baseline • Not recomputed online
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 16px;">
+                {metrics_html}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if page_context == "results":
+        s_act = st.session_state.get("source_img_data")
+        r_act = st.session_state.get("reference_img_data")
+        if s_act is not None and r_act is not None:
+            c_rp1, c_rp2 = st.columns(2)
+            with c_rp1:
+                st.image(
+                    cv2.cvtColor(s_act, cv2.COLOR_BGR2RGB),
+                    caption=f"Source: {src_fn} [{s_act.shape[1]}×{s_act.shape[0]} px]",
+                    use_container_width=True
+                )
+            with c_rp2:
+                st.image(
+                    cv2.cvtColor(r_act, cv2.COLOR_BGR2RGB),
+                    caption=f"Reference: {ref_fn} [{r_act.shape[1]}×{r_act.shape[0]} px]",
+                    use_container_width=True
+                )
+        col_res_lk, _ = st.columns([2, 5])
+        with col_res_lk:
+            if st.button("← Return to Inputs", type="primary", key="btn_locked_res_inputs", width="stretch"):
+                navigate_to_page("inputs")
+    elif page_context == "validation":
+        col_val_lk1, col_val_lk2 = st.columns([1, 1])
+        with col_val_lk1:
+            if st.button("← Return to Inputs", type="primary", key="btn_locked_val_inputs", width="stretch"):
+                navigate_to_page("inputs")
+        with col_val_lk2:
+            if st.button("View Documented Results →", key="btn_locked_val_results", width="stretch"):
+                navigate_to_page("results")
+    elif page_context == "export":
+        col_exp_lk1, _ = st.columns([1, 1])
+        with col_exp_lk1:
+            if st.button("← Return to Inputs", type="primary", key="btn_locked_exp_inputs", width="stretch"):
+                navigate_to_page("inputs")
+
+    return True
+
 
 # ============================================================
 # 1C. LOCKED HEAVY CASES (ONLINE DEPLOYMENT RESOURCE LIMITATION)
@@ -675,33 +926,19 @@ def build_registration_export_package(res, s_active, r_active, s_filename="sourc
     }
 
     # 4. Scientific PDF Evidence Report (Standalone 7-Page Mission Report)
-    try:
-        pdf_bytes = generate_scientific_pdf_report(
-            res,
-            s_active,
-            r_active,
-            s_filename=s_filename,
-            r_filename=r_filename,
-            timestamp=timestamp,
-            telemetry=pdf_telemetry
-        )
-        is_valid_pdf, pdf_val_msg = validate_pdf_report(pdf_bytes)
-        if not is_valid_pdf:
-            try:
-                pdf_bytes = generate_scientific_pdf_report(
-                    res, s_active, r_active, s_filename=s_filename, r_filename=r_filename, timestamp=timestamp
-                )
-            except Exception:
-                pass
-    except Exception as pdf_err:
-        import traceback
-        traceback.print_exc()
-        try:
-            pdf_bytes = generate_scientific_pdf_report(
-                res, s_active, r_active, s_filename=s_filename, r_filename=r_filename, timestamp=timestamp
-            )
-        except Exception:
-            pdf_bytes = b""
+    # 4. Scientific PDF Evidence Report (Standalone 7-Page Mission Report from Current Run)
+    pdf_bytes = generate_scientific_pdf_report(
+        res,
+        s_active,
+        r_active,
+        s_filename=s_filename,
+        r_filename=r_filename,
+        timestamp=timestamp,
+        telemetry=pdf_telemetry
+    )
+    is_valid_pdf, pdf_val_msg = validate_pdf_report(pdf_bytes)
+    if not is_valid_pdf:
+        raise RuntimeError(f"Live PDF report validation failed for current run: {pdf_val_msg}")
 
     # 5. Complete Registration Package (ZIP) — Standardized 5-Deliverable Mission Archive
     zip_buffer = io.BytesIO()
@@ -767,7 +1004,7 @@ def load_mentor_pair(s_path: str, r_path: str, is_iirs: bool = False):
         return s_bgr, r_bgr
 
 
-def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="reference.jpeg"):
+def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="reference.jpeg", s_meta=None, r_meta=None):
     """
     Factual metadata and geospatial prior resolver.
     Strictly queries existing project metadata catalogs (image_footprints.csv, actual_geo_matches.csv,
@@ -849,6 +1086,19 @@ def resolve_image_metadata_and_geo(s_img, r_img, s_name="source.jpeg", r_name="r
     else:
         metadata["reference"]["acquisition_id"] = "Mission metadata not available for this image."
         metadata["reference"]["geo_bounds"] = "Mission metadata not available for this image."
+
+    # 2a-2. User-Uploaded Metadata Integration (descriptive only)
+    if s_meta and isinstance(s_meta, dict) and s_meta.get("valid"):
+        raw_s = s_meta.get("raw_fields", {})
+        if raw_s.get("product_identifier"):
+            metadata["source"]["acquisition_id"] = raw_s["product_identifier"]
+        metadata["source"]["user_metadata"] = s_meta
+
+    if r_meta and isinstance(r_meta, dict) and r_meta.get("valid"):
+        raw_r = r_meta.get("raw_fields", {})
+        if raw_r.get("product_identifier"):
+            metadata["reference"]["acquisition_id"] = raw_r["product_identifier"]
+        metadata["reference"]["user_metadata"] = r_meta
 
     # 2b. Mentor-Provided Dataset Lookup (mentor_dataset_registry.json)
     mentor_reg_path = os.path.join(PROJECT_DIR, "research", "multimodal", "mentor_data_audit", "mentor_dataset_registry.json")
@@ -3106,22 +3356,34 @@ def render_independent_validation_ui(val_data: Dict[str, Any], res: Optional[Dic
         </div>
         """, unsafe_allow_html=True)
 
-st.set_page_config(
-    page_title="LunarReg | Adaptive Lunar Image Registration System",
-    page_icon="🌙",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+try:
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    _in_streamlit = get_script_run_ctx() is not None
+except Exception:
+    _in_streamlit = True
 
-# ============================================================
-# AUTHENTICATION GATE
-# ============================================================
+is_authed = is_authenticated() and st.session_state.get("nav_page") != "login" and st.session_state.get("pending_nav_target") != "login"
 
-init_auth_db()
+if _in_streamlit:
+    st.set_page_config(
+        page_title="LunarReg | Adaptive Lunar Image Registration System",
+        page_icon="🌙",
+        layout="wide",
+        initial_sidebar_state="expanded" if is_authed else "collapsed"
+    )
 
-if not is_authenticated():
-    render_auth_page()
-    st.stop()
+    init_auth_db()
+
+    if st.session_state.get("nav_page") == "login" or st.session_state.get("pending_nav_target") == "login":
+        logout_user()
+        st.session_state.pop("pending_nav_target", None)
+        st.session_state.pop("nav_page", None)
+        render_auth_page()
+        st.stop()
+
+    if not is_authenticated():
+        render_auth_page()
+        st.stop()
 
 # ============================================================
 # SIDEBAR NAVIGATION
@@ -3153,11 +3415,16 @@ def _sync_active_page() -> None:
 def _sign_out() -> None:
     """End the authenticated session from a pre-rerun button callback."""
     logout_user()
+    st.session_state["nav_page"] = "login"
+    st.session_state["pending_nav_target"] = "login"
 
 
 def navigate_to_page(target: str) -> None:
     """Safely queues an app-level navigation change and reruns."""
-    if target in PAGES:
+    if target == "login":
+        logout_user()
+        target_id = "login"
+    elif target in PAGES:
         target_id = PAGES[target]
     elif target in PAGES.values():
         target_id = target
@@ -3170,7 +3437,12 @@ def navigate_to_page(target: str) -> None:
 # Consume pending navigation BEFORE any widget with key="sidebar_page" is instantiated!
 if "pending_nav_target" in st.session_state:
     target_id = st.session_state.pop("pending_nav_target")
-    if target_id in PAGES.values():
+    if target_id == "login":
+        logout_user()
+        st.session_state.pop("nav_page", None)
+        render_auth_page()
+        st.stop()
+    elif target_id in PAGES.values():
         st.session_state["nav_page"] = target_id
         st.session_state["sidebar_page"] = PAGE_LABELS.get(target_id, "Overview")
     elif target_id in PAGES:
@@ -3280,6 +3552,12 @@ with st.sidebar:
     )
 
     user_name = st.session_state.get("auth_name", "Researcher")
+    demo_badge_sidebar = (
+        '<div style="background: #0d1e38; border: 1px solid #1c3b64; border-radius: 4px; padding: 2px 7px; margin: 5px 0 2px 0; font-size: 0.69rem; color: #79c0ff; font-weight: 600; letter-spacing: 0.3px; display: inline-block;">'
+        'Evaluation Mode — Demo session'
+        '</div>'
+        if st.session_state.get("auth_is_demo") else ""
+    )
     st.markdown(
         f"""
         <div style="margin: 4px 0 4px 0; padding-top: 4px; border-top: 1px solid #1f2a3a;">
@@ -3289,6 +3567,7 @@ with st.sidebar:
             <div style="font-size: 0.78rem; color: #58a6ff; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 {user_name}
             </div>
+            {demo_badge_sidebar}
         </div>
         """,
         unsafe_allow_html=True,
@@ -3581,6 +3860,11 @@ st.markdown("""
         color: #00f2ff;
         border: 1px solid #0e4c68;
     }
+    .status-evaluation {
+        background: #0d1e38;
+        color: #79c0ff;
+        border: 1px solid #1c3b64;
+    }
 
     /* Metric Cards */
     .metric-card {
@@ -3827,7 +4111,10 @@ if nav_page == "research_lab":
             <div class="header-desc" style="text-transform: none !important; font-variant: normal !important; font-size: 0.70rem; color: #6e7681;">Chandrayaan-2 Cross-Sensor Image Registration</div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-            <span class="status-badge status-locked">● Research Lab</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="status-badge status-locked">● Research Lab</span>
+                {('<span class="status-badge status-evaluation">Evaluation Mode — Demo session</span>') if st.session_state.get('auth_is_demo') else ''}
+            </div>
             <div style="font-size: 0.70rem; color: #6e7681; font-family: monospace;">Environment: {detect_runtime_environment()}</div>
         </div>
     </div>
@@ -3957,7 +4244,10 @@ st.markdown(f"""
             <div class="header-desc" style="text-transform: none !important; font-variant: normal !important; font-size: 0.72rem; color: #6e7681; margin-top: 2px;">Chandrayaan-2 Cross-Sensor Image Registration</div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
-            <span class="status-badge status-ready">● System Ready</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="status-badge status-ready">● System Ready</span>
+                {('<span class="status-badge status-evaluation">Evaluation Mode — Demo session</span>') if st.session_state.get('auth_is_demo') else ''}
+            </div>
             <div style="font-size: 0.72rem; color: #8b949e; font-family: monospace;">{detect_runtime_environment()}</div>
         </div>
     </div>
@@ -4006,6 +4296,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Pair 04 (Optical Nominal) successfully!", icon="🌙")
             else:
                 st.error("Pair 04 benchmark files not found in data/validation_pairs/pair_04/.")
@@ -4029,6 +4320,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Pair 03 (Illumination Variation) successfully!", icon="🌙")
             else:
                 st.error("Pair 03 benchmark files not found in data/validation_pairs/pair_03/.")
@@ -4052,6 +4344,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Pair 01 (Scale Variation) successfully!", icon="🌙")
             else:
                 st.error("Pair 01 benchmark files not found in data/validation_pairs/pair_01/.")
@@ -4078,6 +4371,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Cross-Sensor Crop Pair successfully!", icon="🌙")
             else:
                 st.error("Cross-sensor crop files not found in data/ directory.")
@@ -4109,6 +4403,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Real Lunar Pair 05 (OHRC Polar Swath) successfully!", icon="🌙")
             else:
                 st.error("Pair 05 image files not found in data/pair05/ directory.")
@@ -4138,6 +4433,7 @@ if is_inputs:
                 "note": "Memory-safe stress demonstration. Documented local result only. Live execution locked on online deployment."
             }
             clear_registration_run_state(st.session_state)
+            clear_metadata_state(st.session_state)
             st.toast("Loaded Large Image Tiled LoFTR Stress Test (Live Execution Locked).", icon="🔒")
 
     with c_a3:
@@ -4163,6 +4459,7 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Pair 02 memory-safe case.", icon="🌙")
             else:
                 st.error("Pair 02 benchmark files not found in data/validation_pairs/pair_02/.")
@@ -4196,6 +4493,7 @@ if is_inputs:
                 "note": "Research / Stress Test. Documented local result only. Live execution locked on online deployment."
             }
             clear_registration_run_state(st.session_state)
+            clear_metadata_state(st.session_state)
             st.toast("Loaded Tycho Test Pair (Live Execution Locked).", icon="🔒")
 
     with c_r2:
@@ -4218,9 +4516,12 @@ if is_inputs:
                     st.session_state.pop("registration_result", None)
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
+                    clear_metadata_state(st.session_state)
                     st.toast("Loaded Locked LoFTR Baseline reference pair!", icon="🌙")
             else:
                 st.error("Pair 04 benchmark files not found in data/validation_pairs/pair_04/.")
+    # Show locked-case panel if a locked case is active
+    render_locked_case_panel(page_context="inputs")
 
     # Show locked-case panel if a locked case is active
     render_locked_case_panel(page_context="inputs")
@@ -4229,9 +4530,9 @@ if is_inputs:
     col_in1, col_in2 = st.columns(2)
 
     with col_in1:
-        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Moving / Source Image (Chandrayaan-2)</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Source Image</div>', unsafe_allow_html=True)
         src_file = st.file_uploader(
-            "Upload Source Image (Moving)",
+            "Source Image",
             type=["jpg", "jpeg", "png", "tif"],
             key="u_source",
             label_visibility="collapsed"
@@ -4244,10 +4545,22 @@ if is_inputs:
                 st.session_state["source_filename"] = src_file.name
                 st.session_state.pop("demo_case_info", None)
 
+        st.markdown('<div style="font-weight: 700; font-size: 0.85rem; color: #79c0ff; margin: 8px 0 4px 0;">Source Metadata <span style="font-size: 0.74rem; color: #8b949e; font-weight: normal;">(Optional, .xml)</span></div>', unsafe_allow_html=True)
+        src_meta_file = st.file_uploader(
+            "Source Metadata",
+            type=["xml"],
+            key="u_source_metadata",
+            label_visibility="collapsed"
+        )
+        if src_meta_file is not None:
+            handle_uploaded_metadata_file(src_meta_file, "source", st.session_state)
+        elif st.session_state.get("source_metadata_file") and "u_source_metadata" in st.session_state:
+            clear_metadata_state(st.session_state, role="source")
+
     with col_in2:
-        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Reference Image (Delivered Lunar Reference)</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-weight: 700; font-size: 0.90rem; color: #58a6ff; margin: 2px 0 6px 0;">Reference Image</div>', unsafe_allow_html=True)
         ref_file = st.file_uploader(
-            "Upload Reference Image (Fixed)",
+            "Reference Image",
             type=["jpg", "jpeg", "png", "tif"],
             key="u_reference",
             label_visibility="collapsed"
@@ -4259,6 +4572,31 @@ if is_inputs:
                 st.session_state["reference_img_data"] = decoded_r
                 st.session_state["reference_filename"] = ref_file.name
                 st.session_state.pop("demo_case_info", None)
+
+        st.markdown('<div style="font-weight: 700; font-size: 0.85rem; color: #79c0ff; margin: 8px 0 4px 0;">Reference Metadata <span style="font-size: 0.74rem; color: #8b949e; font-weight: normal;">(Optional, .xml)</span></div>', unsafe_allow_html=True)
+        ref_meta_file = st.file_uploader(
+            "Reference Metadata",
+            type=["xml"],
+            key="u_reference_metadata",
+            label_visibility="collapsed"
+        )
+        if ref_meta_file is not None:
+            handle_uploaded_metadata_file(ref_meta_file, "reference", st.session_state)
+        elif st.session_state.get("reference_metadata_file") and "u_reference_metadata" in st.session_state:
+            clear_metadata_state(st.session_state, role="reference")
+
+    # Render error messages if any
+    src_meta_err = st.session_state.get("source_metadata_error")
+    ref_meta_err = st.session_state.get("reference_metadata_error")
+    if src_meta_err:
+        st.error(f"Source Metadata Error: {src_meta_err}")
+    if ref_meta_err:
+        st.error(f"Reference Metadata Error: {ref_meta_err}")
+
+    # Concise user metadata summary panel on Inputs page
+    src_meta_active = st.session_state.get("source_metadata")
+    ref_meta_active = st.session_state.get("reference_metadata")
+    render_inputs_metadata_summary(src_meta_active, ref_meta_active, src_meta_err, ref_meta_err)
 
     # Display previews if images are present in session state
     s_active = st.session_state.get("source_img_data", None)
@@ -4531,6 +4869,7 @@ if is_inputs:
                     st.session_state.pop("export_package", None)
                     st.session_state.pop("stage_states", None)
                     st.session_state["is_running"] = False
+                    clear_metadata_state(st.session_state)
                     st.rerun()
 
         stage_panel_placeholder = st.empty()
@@ -4564,6 +4903,10 @@ if is_inputs:
                         "stage": "input_validation",
                         "runtime": 0.0,
                         "pipeline_mode": "Adaptive Production Engine" if "Adaptive" in engine_opt else "Locked LoFTR Baseline",
+                        "source_metadata": st.session_state.get("source_metadata"),
+                        "reference_metadata": st.session_state.get("reference_metadata"),
+                        "source_metadata_file": st.session_state.get("source_metadata_file"),
+                        "reference_metadata_file": st.session_state.get("reference_metadata_file"),
                     }
                 else:
                     stage_states["stage_1"] = "COMPLETE"
@@ -4576,7 +4919,9 @@ if is_inputs:
                     meta_info = resolve_image_metadata_and_geo(
                         s_active, r_active,
                         st.session_state.get("source_filename", "source.jpeg"),
-                        st.session_state.get("reference_filename", "reference.jpeg")
+                        st.session_state.get("reference_filename", "reference.jpeg"),
+                        st.session_state.get("source_metadata"),
+                        st.session_state.get("reference_metadata")
                     )
                     stage_states["stage_2"] = "COMPLETE"
                 
@@ -4600,6 +4945,10 @@ if is_inputs:
                         if "success" not in res:
                             res["success"] = True
                 
+                    res["source_metadata"] = st.session_state.get("source_metadata")
+                    res["reference_metadata"] = st.session_state.get("reference_metadata")
+                    res["source_metadata_file"] = st.session_state.get("source_metadata_file")
+                    res["reference_metadata_file"] = st.session_state.get("reference_metadata_file")
                     st.session_state["registration_result"] = res
                 
                     if res.get("success", True):
@@ -5015,6 +5364,9 @@ elif is_results:
         s_active = st.session_state.get("source_img_data")
         r_active = st.session_state.get("reference_img_data")
         is_success = res.get("success", True)
+
+        # Concise Metadata section for the current run
+        render_results_metadata_section(res)
 
         if not is_success:
             f_res = res
@@ -5735,21 +6087,8 @@ elif is_export:
                     st.session_state["export_error"] = str(export_err)
                     export_pkg = None
 
-            # Guarantee export package PDF is always the canonical evidence report
-            if export_pkg is not None and "pdf" in export_pkg:
-                try:
-                    canonical_pdf_bytes = generate_scientific_pdf_report(
-                        res,
-                        s_active,
-                        r_active,
-                        s_filename=st.session_state.get("source_filename", "source.jpeg"),
-                        r_filename=st.session_state.get("reference_filename", "reference.jpeg"),
-                        timestamp=export_pkg["homography"]["filename"].replace("homography_", "").replace(".json", "")
-                    )
-                    export_pkg["pdf"]["bytes"] = canonical_pdf_bytes
-                    export_pkg["pdf"]["pages"] = 7
-                except Exception:
-                    pass
+            # The export package already contains the current run-specific PDF report and matching deliverables
+
 
             if export_pkg is None:
                 st.error(f"Evidence / export generation failed: {st.session_state.get('export_error', 'Unable to build export deliverables.')}")
@@ -5891,6 +6230,7 @@ elif is_export:
                     navigate_to_page("validation")
             with col_eb3:
                 if st.button("Register Another Pair →", type="primary", key="btn_exp_to_inputs", width="stretch", help="Return to Inputs to configure or run another image registration."):
+                    clear_metadata_state(st.session_state)
                     navigate_to_page("inputs")
 
 
