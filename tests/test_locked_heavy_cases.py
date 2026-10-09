@@ -247,6 +247,58 @@ class TestLockedHeavyCases(unittest.TestCase):
             self.assertFalse(result)
             self.assertFalse(mock_markdown.called)
 
+    def test_11_no_duplicate_render_calls_in_source(self):
+        """Assert that render_locked_case_panel is called at most once per page context in app.py."""
+        with open(app_module.__file__, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        import re
+        inputs_calls = re.findall(r'render_locked_case_panel\s*\(\s*page_context\s*=\s*["\']inputs["\']\s*\)', code)
+        self.assertEqual(len(inputs_calls), 1, "render_locked_case_panel(page_context='inputs') must be called exactly once")
+
+        overview_calls = re.findall(r'render_locked_case_panel\s*\(\s*page_context\s*=\s*["\']overview["\']\s*\)', code)
+        self.assertEqual(len(overview_calls), 1, "render_locked_case_panel(page_context='overview') must be called exactly once")
+
+    def test_12_single_locked_card_per_page_apptest(self):
+        """Integration test using AppTest: both large_image and tycho render exactly 1 locked card on all pages."""
+        from streamlit.testing.v1 import AppTest
+        cases = [
+            ("large_image", "Large Image Tiled LoFTR Stress Test"),
+            ("tycho", "Tycho Research / Stress Test"),
+        ]
+        pages = ["Inputs", "Overview", "Results", "Validation", "Export"]
+
+        for case_id, label in cases:
+            for page in pages:
+                at = AppTest.from_file(app_module.__file__, default_timeout=30)
+                at.session_state["auth_authenticated"] = True
+                at.session_state["auth_email"] = "researcher@isro.gov.in"
+                at.session_state["auth_name"] = "Dr. Vikram"
+                at.session_state["demo_case_info"] = {
+                    "case_id": case_id,
+                    "label": label,
+                    "is_locked": True,
+                }
+                at.session_state["source_filename"] = "source.png"
+                at.session_state["reference_filename"] = "reference.png"
+                at.run()
+                at.sidebar.radio(key="sidebar_page").set_value(page).run()
+
+                locked_count = sum(1 for m in at.markdown if "LIVE EXECUTION LOCKED" in m.value)
+                self.assertEqual(
+                    locked_count,
+                    1,
+                    f"Expected exactly 1 locked card on page '{page}' for '{case_id}', got {locked_count}"
+                )
+
+                if page == "Overview":
+                    empty_count = sum(1 for m in at.markdown if "No registration result available yet" in m.value)
+                    self.assertEqual(
+                        empty_count,
+                        0,
+                        f"Expected 0 empty result messages on Overview for locked case '{case_id}', got {empty_count}"
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()
