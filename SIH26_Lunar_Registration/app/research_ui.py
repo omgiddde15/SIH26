@@ -1409,30 +1409,74 @@ _MENTOR_OHRC_SCENES = {
 }
 
 
-def _find_mentor_ohrc_dir():
-    candidates = [
+def _get_mentor_search_dirs() -> list:
+    """Return all valid search directories for mentor dataset assets."""
+    dirs = [
         os.path.join(PROJECT_ROOT, "data", "mentor", "ohrc"),
-        os.path.abspath(os.path.join(PROJECT_ROOT, "..", "..", "data_for_sih_2026", "ohrc")),
+        os.path.abspath(os.path.join(APP_DIR, "..", "data", "mentor", "ohrc")),
+        os.path.abspath(os.path.join(os.getcwd(), "data", "mentor", "ohrc")),
+        os.path.abspath(os.path.join(os.getcwd(), "SIH26_Lunar_Registration", "data", "mentor", "ohrc")),
         os.path.abspath(os.path.join(PROJECT_ROOT, "..", "data_for_sih_2026", "ohrc")),
+        os.path.abspath(os.path.join(PROJECT_ROOT, "..", "..", "data_for_sih_2026", "ohrc")),
         r"C:\Users\Dell\Videos\data_for_sih_2026\ohrc",
         r"C:\Users\Dell\Downloads\SIH data\data_for_sih_2026\ohrc",
     ]
-    for c in candidates:
-        if os.path.exists(c):
-            return c
+    seen = set()
+    existing = []
+    for d in dirs:
+        if d and os.path.isdir(d):
+            norm = os.path.normpath(d).lower()
+            if norm not in seen:
+                seen.add(norm)
+                existing.append(d)
+    return existing
+
+
+def _find_mentor_file(filename: str):
+    """Search for a specific mentor dataset file across all bundled and local directories."""
+    for d in _get_mentor_search_dirs():
+        candidate = os.path.join(d, filename)
+        if os.path.exists(candidate):
+            return candidate
     return None
+
+
+def _find_mentor_ohrc_dir():
+    """Return the primary available mentor OHRC directory."""
+    dirs = _get_mentor_search_dirs()
+    return dirs[0] if dirs else None
+
+
+def _is_scene_available(scene_key: str) -> bool:
+    """Check if both the source and reference TIFFs for a mentor scene exist on filesystem."""
+    info = _MENTOR_OHRC_SCENES.get(scene_key)
+    if not info:
+        return False
+    ref_f = _find_mentor_file(info["reference_filename"])
+    src_f = _find_mentor_file(info["source_filename"])
+    return bool(ref_f and src_f)
+
+
+def _format_scene_label(scene_key: str) -> str:
+    """Accurately label scene availability in the selector dropdown."""
+    info = _MENTOR_OHRC_SCENES.get(scene_key, {})
+    if _is_scene_available(scene_key):
+        if info.get("is_3d_artifact_pair"):
+            return f"{scene_key} [Available Online]"
+        return f"{scene_key} [Available Locally]"
+    return f"{scene_key} [Local Dataset Only — Not Bundled Online]"
 
 
 @st.cache_data(show_spinner="Loading mentor OHRC image...")
 def _load_mentor_ohrc_image_cached(file_path: str):
-    if not os.path.exists(file_path):
+    if not file_path or not os.path.exists(file_path):
         return None
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 
 def _parse_mentor_xml_metadata(xml_path: str):
     import xml.etree.ElementTree as ET
-    if not os.path.exists(xml_path):
+    if not xml_path or not os.path.exists(xml_path):
         return None
     try:
         tree = ET.parse(xml_path)
@@ -1470,7 +1514,7 @@ def _render_mentor_ohrc_2d_view():
 
     mentor_dir = _find_mentor_ohrc_dir()
     if not mentor_dir:
-        st.warning("Mentor OHRC dataset directory not found on filesystem. Verified search paths: Videos/data_for_sih_2026/ohrc, Downloads/SIH data/data_for_sih_2026/ohrc.")
+        st.warning("Mentor OHRC dataset directory not found on filesystem. Verified search paths: data/mentor/ohrc, Videos/data_for_sih_2026/ohrc, Downloads/SIH data/data_for_sih_2026/ohrc.")
         return
 
     # Scene selector
@@ -1479,14 +1523,36 @@ def _render_mentor_ohrc_2d_view():
         "Select Mentor OHRC Scene / Pair:",
         scene_options,
         index=0,
+        format_func=_format_scene_label,
         key="research_mentor_ohrc_scene_selector",
         help="Select a Chandrayaan-2 OHRC scene from the mentor dataset to inspect original 2D imagery."
     )
 
     scene_info = _MENTOR_OHRC_SCENES[selected_scene_label]
-    ref_path = os.path.join(mentor_dir, scene_info["reference_filename"])
-    src_path = os.path.join(mentor_dir, scene_info["source_filename"])
-    xml_path = os.path.join(mentor_dir, scene_info["xml_filename"])
+    ref_path = _find_mentor_file(scene_info["reference_filename"])
+    src_path = _find_mentor_file(scene_info["source_filename"])
+    xml_path = _find_mentor_file(scene_info["xml_filename"])
+
+    if not _is_scene_available(selected_scene_label):
+        st.markdown(f"""
+        <div style="background: #121824; border: 1px solid #30363d; border-left: 4px solid #58a6ff; border-radius: 6px; padding: 14px 18px; margin: 12px 0 16px 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-family: monospace; font-size: 0.76rem; font-weight: 700; background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid #58a6ff; padding: 2px 7px; border-radius: 4px;">
+                    EXTENDED LOCAL DATASET
+                </span>
+                <span style="font-size: 0.95rem; font-weight: 600; color: #f0f6fc;">
+                    {selected_scene_label}
+                </span>
+            </div>
+            <div style="font-size: 0.83rem; color: #c9d1d9; line-height: 1.55; margin-bottom: 8px;">
+                {scene_info['description']}
+            </div>
+            <div style="font-size: 0.80rem; color: #8b949e; line-height: 1.5;">
+                Raw TIFF rasters for this pair (<code>{scene_info['reference_filename']}</code> and <code>{scene_info['source_filename']}</code>) are preserved on disk for local research on development workstations (search paths: <code>Videos/data_for_sih_2026/ohrc</code>). To preserve online deployment resources and maintain fast loading times, only <strong>Pair 1</strong> (which directly powers the 3D terrain model below) is bundled in the cloud deployment.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        return
 
     if scene_info.get("is_3d_artifact_pair"):
         st.markdown("""
