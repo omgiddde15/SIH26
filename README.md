@@ -12,7 +12,7 @@
 | Interface | Streamlit |
 | Main technologies | Python, PyTorch, OpenCV, NumPy, Streamlit |
 
-**Live demo:** https://sih26.streamlit.app  
+**Live demo:** https://rqq6zmr3n7eb7pnnovkqxx.streamlit.app/ 
 **GitHub repository:** https://github.com/omgiddde15/SIH26
 
 > LunarReg is a research prototype. It does not claim official SIH ground-truth validation, guaranteed performance on every lunar image pair, universal sun-angle invariance, or successful registration across all OHRC/TMC/IIRS combinations.
