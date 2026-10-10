@@ -410,7 +410,12 @@ def handle_quick_demo_access() -> None:
 def _auth_css() -> str:
     return """
     <style>
-        /* Hide sidebar and Streamlit chrome on auth page */
+        /* Enforce permanent dark theme and hide sidebar/chrome on auth page */
+        :root, html, body, .stApp {
+            color-scheme: dark !important;
+            background-color: #0b0f14 !important;
+            color: #e5e7eb !important;
+        }
         section[data-testid="stSidebar"],
         div[data-testid="collapsedControl"],
         div[data-testid="stSidebarCollapseButton"] {

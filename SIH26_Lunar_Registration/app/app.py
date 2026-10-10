@@ -3395,10 +3395,15 @@ st.markdown("""
         padding-top: 3.40rem !important;
     }
 
-    /* Dark Aerospace Theme */
+    /* Permanent Dark Aerospace Theme */
+    :root, html, body {
+        color-scheme: dark !important;
+        background-color: #0b0f14 !important;
+        color: #e5e7eb !important;
+    }
     .stApp {
-        background-color: #0b0e14;
-        color: #d1d7e0;
+        background-color: #0b0f14 !important;
+        color: #d1d7e0 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
@@ -3757,7 +3762,9 @@ st.markdown("""
     [data-testid="stSidebar"] p {
         margin: 1px 0 !important;
     }
-    [data-testid="stSidebar"] {
+    [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {
+        background-color: #111827 !important;
+        color: #e5e7eb !important;
         padding-top: 0.45rem !important;
         padding-left: 0.60rem !important;
         padding-right: 0.60rem !important;

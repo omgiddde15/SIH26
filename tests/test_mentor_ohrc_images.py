@@ -28,7 +28,7 @@ if _APP_DIR not in sys.path:
     sys.path.insert(0, _APP_DIR)
 _INNER_ROOT = os.path.abspath(os.path.join(_APP_DIR, ".."))
 if _INNER_ROOT not in sys.path:
-    sys.path.insert(0, _INNER_ROOT)
+    sys.path.append(_INNER_ROOT)
 
 import research_ui
 
