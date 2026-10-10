@@ -3399,11 +3399,10 @@ st.markdown("""
     :root, html, body {
         color-scheme: dark !important;
         background-color: #0b0f14 !important;
-        color: #e5e7eb !important;
     }
     .stApp {
         background-color: #0b0f14 !important;
-        color: #d1d7e0 !important;
+        color: #d1d7e0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
@@ -3764,7 +3763,6 @@ st.markdown("""
     }
     [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {
         background-color: #111827 !important;
-        color: #e5e7eb !important;
         padding-top: 0.45rem !important;
         padding-left: 0.60rem !important;
         padding-right: 0.60rem !important;

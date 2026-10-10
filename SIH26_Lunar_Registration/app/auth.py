@@ -414,7 +414,6 @@ def _auth_css() -> str:
         :root, html, body, .stApp {
             color-scheme: dark !important;
             background-color: #0b0f14 !important;
-            color: #e5e7eb !important;
         }
         section[data-testid="stSidebar"],
         div[data-testid="collapsedControl"],
