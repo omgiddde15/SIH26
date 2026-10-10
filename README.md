@@ -229,7 +229,7 @@ The current production geometry uses **OpenCV RANSAC and homography estimation**
 
 ### Online Demo
 
-Open **https://sih26.streamlit.app**.
+Open **https://rqq6zmr3n7eb7pnnovkqxx.streamlit.app/**.
 
 - Use **Quick Demo Access** if it is available on the login page.
 - Start with a lightweight canonical example.
